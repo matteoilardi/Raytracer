@@ -8,3 +8,6 @@
 
 # Clion files
 .idea*
+
+# my VCS
+my_vcs.sh
