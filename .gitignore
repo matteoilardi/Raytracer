@@ -1,6 +1,9 @@
 # Compiled Object files
 *.o
 
+# Cmake stuff
+build/
+
 # Executables
 *.exe
 *.out 
