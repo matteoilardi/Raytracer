@@ -24,7 +24,6 @@ int main() {
 
     assert( (f1*color2).is_close_to(Color(6.0, 7.5, 9.0)) );
     assert( (color2*f1).is_close_to(Color(6.0, 7.5, 9.0)) );
-    assert( (color2*f1).is_close_to(Color(6.0, 7.5, 9.0)) );
 
 
     // Test 3: HdrImage creation, height and width, valid_indexes method, _pixel_offset method
