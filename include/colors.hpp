@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cstdlib>
 
 // Constants
 constexpr double DEFAULT_ERROR_TOLERANCE = 1e-5;  // Default tolerance to decide if two float numbers are close
