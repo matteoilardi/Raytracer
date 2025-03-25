@@ -6,6 +6,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <fstream>
+#include <sstream>
 
 // Constants
 constexpr double DEFAULT_ERROR_TOLERANCE =
@@ -116,3 +118,129 @@ public:
     pixels[offset] = c;
   }
 };
+
+
+
+
+
+
+
+enum class Endianness { little_endian, big_endian };
+
+void write_float(std::ostream &stream, float value, Endianness endianness) {
+  // Convert "value" in a sequence of 32 bit
+  uint32_t double_word{*((uint32_t *)&value)};
+
+  // Extract the four bytes in "double_word" using bit-level operators
+  uint8_t bytes[] = {
+    static_cast<uint8_t>(double_word & 0xFF),         // Least significant byte
+    static_cast<uint8_t>((double_word >> 8) & 0xFF),
+    static_cast<uint8_t>((double_word >> 16) & 0xFF),
+    static_cast<uint8_t>((double_word >> 24) & 0xFF), // Most significant byte
+};
+
+  switch (endianness) {
+    case Endianness::little_endian:
+      for (int i{}; i < 4; ++i)    // Forward loop
+        stream << bytes[i];
+    break;
+
+    case Endianness::big_endian:
+      for (int i{3}; i >= 0; --i)  // Backward loop
+        stream << bytes[i];
+    break;
+  }
+}
+
+// You can use "write_float" to write little/big endian-encoded floats:
+// write_float(stream, 10.0, Endianness::little_endian);
+// write_float(stream, 10.0, Endianness::big_endian);
+
+
+float read_float(std::istream stream, Endianness endianness){
+  uint8_t bytes[4];
+
+  switch (endianness) {
+    case Endianness::little_endian:
+      for (int i{}; i < 4; ++i)   // Forward loop
+        stream >> bytes[i];
+    break;
+
+    case Endianness::big_endian:
+      for (int i{3}; i >= 0; --i)  // Backward loop
+        stream >> bytes[i];
+    break;
+  }
+  uint32_t double_word{
+    (static_cast<uint32_t>(bytes[0]) << 0)
+    | (static_cast<uint32_t>(bytes[1]) << 8)
+    | (static_cast<uint32_t>(bytes[2]) << 16)
+    | (static_cast<uint32_t>(bytes[3]) << 24)
+  };
+
+  //float value{*((float *)&double_word)}; // This line has the same effect as the line below
+  float value;
+  std::memcpy(&value, &double_word, sizeof(float));
+
+  return value;
+}
+
+std::string _read_line(std::ifstream& stream){
+  std::string result;
+  char cur_byte;
+
+  while(stream.get(cur_byte)){
+    if(cur_byte == '\n') { return result; }
+    result += cur_byte;
+  }
+  return result;
+}
+
+std::pair<int, int> _parse_img_size(const std::string& line) {
+  std::istringstream iss(line);
+  int width, height;
+
+  // Read two integers
+  if (!(iss >> width >> height)) {
+    // throw InvalidPfmFileFormat("Invalid image size specification");
+  }
+
+  // Ensure no extra characters after the numbers
+  std::string leftover;
+  if (iss >> leftover) {
+    // throw InvalidPfmFileFormat("Too many elements in image size specification");
+  }
+
+  // Validate width and height
+  if (width < 0 || height < 0) {
+    // throw InvalidPfmFileFormat("Invalid width/height");
+  }
+
+  return {width, height};
+}
+
+
+Endianness _parse_endianness(const std::string& line){
+  std::istringstream iss(line);
+  float value;
+  if (!(iss >> value)) {
+    //throw InvalidPfmFileFormat("Missing endianness specification");
+  }
+
+
+  if(value < 0) { return Endianness::little_endian; }
+  else if(value > 0) { return Endianness::big_endian; }
+  else {
+    //throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero");
+  }
+}
+
+
+
+
+
+// ECCEZIONI
+
+// struct InvalidPfmFileFormat : public std::runtime_error {
+// using std::runtime_error::runtime_error;
+// };
