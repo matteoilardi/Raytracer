@@ -87,6 +87,9 @@ class HdrImage
 {
 
 private:
+
+  //FIXME (Every method used here seems to be out of scope, but I cannot fix it)
+  //TODO (must add 'integration test' for this method, see laboratory 3 slides 42-44)
   /// @brief Read a pfm file and create the corresponding hdr image
   /// based on the 5 functions below (_write_float, _read_float, _read_line, _parse_img_size, _parse_endianness)
   /// which you might want to move here (inside HdrImage?)
@@ -223,6 +226,7 @@ public:
 //  are used to implement the 'read_pfm_file' method of the 'HdrImage' class
 //  you might want to move them somewhere else (e.g. inside HdrImage?)
 
+//TODO  (must add test for these functions, see laboratory 3 slides 33-41)
 /// @brief Takes a float and return its 4 bytes into the stream (NO TEST NEEDED)
 /// @param stream
 /// @param value
@@ -254,6 +258,8 @@ void _write_float(std::ostream &stream, float value, Endianness endianness)
   }
 }
 
+
+//TODO  (must add test for these functions, see laboratory 3 slides 33-41)
 /// @brief Reads a stream of bytes and convert them to floats (NO TEST NEEDED)
 /// @param stream
 /// @param endianness
@@ -283,10 +289,12 @@ float _read_float(std::istream stream, Endianness endianness)
   return value;
 }
 
+
+//TODO  (must add test for these functions, see laboratory 3 slides 33-41)
 /// @brief Read the line of bytes already converting into ascii (MISSING TESTS)
 /// @param stream
 /// @return
-inline std::string _read_line(std::ifstream &stream)
+std::string _read_line(std::ifstream &stream)
 {
   std::string result;
   char cur_byte;
@@ -302,6 +310,7 @@ inline std::string _read_line(std::ifstream &stream)
   return result;
 }
 
+//TODO  (must add test for these functions, see laboratory 3 slides 33-41)
 /// @brief read the image dimensions (columns, rows) from a line (of a pfm file ideally) (TEST NEEDED)
 /// you might want to handle float entries a bit better
 /// @param line
@@ -333,6 +342,8 @@ std::pair<int, int> _parse_img_size(const std::string &line)
   return {width, height};
 }
 
+
+//TODO  (must add test for these functions, see laboratory 3 slides 33-41)
 /// @brief read the endianness from a pfm file
 /// @param line
 /// @return
