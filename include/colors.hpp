@@ -5,15 +5,18 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <fstream>
 #include <sstream>
+
 
 // Constants
 constexpr double DEFAULT_ERROR_TOLERANCE =
     1e-5; // Default tolerance to decide if two float numbers are close
 
 // Namespaces? Avoid for now
+
 
 class Color {
 public:
@@ -25,8 +28,7 @@ public:
       : r(0.0f), g(0.0f), b(0.0f) {
   } // Default constructor (sets color to black)
 
-  Color(float red, float green,
-        float blue) // Constructor with externally assigned values
+  Color(float red, float green, float blue) // Constructor with externally assigned values
       : r(red), g(green), b(blue) {}
 
   // Methods
@@ -70,6 +72,7 @@ public:
     std::cout << "r: " << r << " g: " << g << " b: " << b;
   }
 };
+
 
 class HdrImage {
 public:
@@ -121,12 +124,13 @@ public:
 
 
 
-
-
-
-
 enum class Endianness { little_endian, big_endian };
 
+
+/// @brief Takes a float and return its 4 bytes into the stream (NO TEST NEEDED)
+/// @param stream 
+/// @param value 
+/// @param endianness 
 void write_float(std::ostream &stream, float value, Endianness endianness) {
   // Convert "value" in a sequence of 32 bit
   uint32_t double_word{*((uint32_t *)&value)};
@@ -137,7 +141,7 @@ void write_float(std::ostream &stream, float value, Endianness endianness) {
     static_cast<uint8_t>((double_word >> 8) & 0xFF),
     static_cast<uint8_t>((double_word >> 16) & 0xFF),
     static_cast<uint8_t>((double_word >> 24) & 0xFF), // Most significant byte
-};
+  };
 
   switch (endianness) {
     case Endianness::little_endian:
@@ -152,11 +156,10 @@ void write_float(std::ostream &stream, float value, Endianness endianness) {
   }
 }
 
-// You can use "write_float" to write little/big endian-encoded floats:
-// write_float(stream, 10.0, Endianness::little_endian);
-// write_float(stream, 10.0, Endianness::big_endian);
-
-
+/// @brief Reads a stream of bytes and convert them to floats (NO TEST NEEDED)
+/// @param stream 
+/// @param endianness 
+/// @return 
 float read_float(std::istream stream, Endianness endianness){
   uint8_t bytes[4];
 
@@ -177,7 +180,6 @@ float read_float(std::istream stream, Endianness endianness){
     | (static_cast<uint32_t>(bytes[2]) << 16)
     | (static_cast<uint32_t>(bytes[3]) << 24)
   };
-
   //float value{*((float *)&double_word)}; // This line has the same effect as the line below
   float value;
   std::memcpy(&value, &double_word, sizeof(float));
@@ -185,6 +187,9 @@ float read_float(std::istream stream, Endianness endianness){
   return value;
 }
 
+/// @brief Read the line already converting into ascii (MISSING TESTS)
+/// @param stream 
+/// @return 
 std::string _read_line(std::ifstream& stream){
   std::string result;
   char cur_byte;
@@ -196,24 +201,28 @@ std::string _read_line(std::ifstream& stream){
   return result;
 }
 
+/// you might want to handle float entries a bit better
+/// @brief read the image dimensions (columns, rows) from a line (of a pfm file ideally) (TEST NEEDED)
+/// @param line 
+/// @return 
 std::pair<int, int> _parse_img_size(const std::string& line) {
   std::istringstream iss(line);
   int width, height;
 
   // Read two integers
   if (!(iss >> width >> height)) {
-    // throw InvalidPfmFileFormat("Invalid image size specification");
+    throw InvalidPfmFileFormat("Invalid image size specification");
   }
 
   // Ensure no extra characters after the numbers
   std::string leftover;
   if (iss >> leftover) {
-    // throw InvalidPfmFileFormat("Too many elements in image size specification");
+    throw InvalidPfmFileFormat("Too many elements in image size specification");
   }
 
-  // Validate width and height
+  // Validate width and height are strinctly positive
   if (width < 0 || height < 0) {
-    // throw InvalidPfmFileFormat("Invalid width/height");
+    throw InvalidPfmFileFormat("Invalid width/height");
   }
 
   return {width, height};
