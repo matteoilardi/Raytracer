@@ -82,52 +82,68 @@ public:
   // Default constructor: if dimensions are positive, initializes the pixels
   // vector with width*height copies of Color(); otherwise, creates an empty
   // vector.
-  HdrImage(int32_t h, int32_t w)
-      : height(h), width(w),
-        pixels((h > 0 && w > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
+  HdrImage(int32_t w, int32_t h)
+      : height(w), width(h),
+        pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
 
   // Methods
   // Some methods should be private, but following the convention are declared
   // public with underscore (_) in front.
 
+  void read_pfm_image(std::istream& is){
+    ///
+  };
+
   // _valid_indexes returns true if row and col are nonnegative and within
   // bounds.
-  bool _valid_indexes(int32_t row, int32_t col) const {
-    return (row >= 0 && col >= 0 && row < height && col < width);
+  bool _valid_indexes(int32_t col, int32_t row) const {
+    return (col >= 0 && row >= 0 && col < height && row < width);
   }
 
   // _pixel_offset returns the index of the pixels vector corresponding to the
   // given matrix row and column, using row-major ordering. Uses assert to
   // ensure that the provided indices are valid.
-  int32_t _pixel_offset(int32_t row, int32_t col) const {
+  int32_t _pixel_offset(int32_t col, int32_t row) const {
     // assert(_valid_indexes(row, col) && "Invalid indices in _pixel_offset");
     return row * width + col;
   }
 
   // get_pixel returns the color at the given row and column.
-  Color get_pixel(int32_t row, int32_t col) const {
+  Color get_pixel(int32_t col, int32_t row) const {
     int32_t offset = _pixel_offset(
-        row, col); // Assign _pixel_offset to a variable (useful for debugging)
+        col, row); // Assign _pixel_offset to a variable (useful for debugging)
     return pixels[offset];
   }
 
   // set_pixel sets the pixel at the given row and column to the provided color.
-  void set_pixel(int32_t row, int32_t col, const Color &c) {
+  void set_pixel(int32_t col, int32_t row, const Color &c) {
     int32_t offset = _pixel_offset(
-        row, col); // Assign _pixel_offset to a variable (useful for debugging)
+        col, row); // Assign _pixel_offset to a variable (useful for debugging)
     pixels[offset] = c;
   }
 };
 
 
-
-
-
-
-
 enum class Endianness { little_endian, big_endian };
 
-void write_float(std::ostream &stream, float value, Endianness endianness) {
+
+class InvalidPfmFileFormat : public std::exception {
+  public:
+  // Constructor
+  InvalidPfmFileFormat(std::string em) : error_message(em){}
+
+  // Methods
+  const char* what() const noexcept override {
+    return error_message.c_str();
+  }
+
+  // Property
+  std::string error_message;
+};
+
+
+
+void _write_float(std::ostream &stream, float value, Endianness endianness) {
   // Convert "value" in a sequence of 32 bit
   uint32_t double_word{*((uint32_t *)&value)};
 
@@ -152,12 +168,8 @@ void write_float(std::ostream &stream, float value, Endianness endianness) {
   }
 }
 
-// You can use "write_float" to write little/big endian-encoded floats:
-// write_float(stream, 10.0, Endianness::little_endian);
-// write_float(stream, 10.0, Endianness::big_endian);
 
-
-float read_float(std::istream stream, Endianness endianness){
+float _read_float(std::istream stream, Endianness endianness){
   uint8_t bytes[4];
 
   switch (endianness) {
@@ -185,7 +197,8 @@ float read_float(std::istream stream, Endianness endianness){
   return value;
 }
 
-std::string _read_line(std::ifstream& stream){
+
+std::string _read_line(std::istream& stream){
   std::string result;
   char cur_byte;
 
@@ -202,8 +215,9 @@ std::pair<int, int> _parse_img_size(const std::string& line) {
 
   // Read two integers
   if (!(iss >> width >> height)) {
-    // throw InvalidPfmFileFormat("Invalid image size specification");
+    //throw InvalidPfmFileFormat("Invalid image size specification");
   }
+
 
   // Ensure no extra characters after the numbers
   std::string leftover;
@@ -228,12 +242,11 @@ Endianness _parse_endianness(const std::string& line){
   }
 
 
-  if(value < 0) { return Endianness::little_endian; }
+  if(value == 0) { //throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero");}
+  else if(value < 0) { return Endianness::little_endian; }
   else if(value > 0) { return Endianness::big_endian; }
-  else {
-    //throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero");
-  }
 }
+
 
 
 
