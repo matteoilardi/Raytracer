@@ -126,8 +126,6 @@ public:
   }
 };
 
-
-
 enum class Endianness { little_endian, big_endian };
 
 
@@ -144,8 +142,6 @@ class InvalidPfmFileFormat : public std::exception {
   // Property
   std::string error_message;
 };
-
-
 
 
 /// @brief Takes a float and return its 4 bytes into the stream (NO TEST NEEDED)
@@ -255,15 +251,17 @@ Endianness _parse_endianness(const std::string& line){
   std::istringstream iss(line);
   float value;
   if (!(iss >> value)) {
-    //throw InvalidPfmFileFormat("Missing endianness specification");
+    throw InvalidPfmFileFormat("Missing endianness specification");
   }
 
-
-  if(value == 0) { //throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero");}
+  if(value == 0) { throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero");}
   else if(value < 0) { return Endianness::little_endian; }
   else if(value > 0) { return Endianness::big_endian; }
-}
 
+  // This line will never be reached (all possible cases are covered and the function always return an Endianness)
+  // but the compiler does not realize this and raise a warning otherwise
+  throw std::logic_error("Unreachable code reached in _parse_endianness");
+}
 
 
 
