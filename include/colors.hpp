@@ -10,19 +10,151 @@
 #include <fstream>
 #include <sstream>
 
-
 // Constants
 constexpr double DEFAULT_ERROR_TOLERANCE =
     1e-5; // Default tolerance to decide if two float numbers are close
 
 // Namespaces? Avoid for now
 
+enum class Endianness { little_endian, big_endian };
+
+
+class InvalidPfmFileFormat : public std::exception {
+  public:
+  // Constructor
+  InvalidPfmFileFormat(std::string em) : error_message(em){}
+
+  // Methods
+  const char* what() const noexcept override {
+    return error_message.c_str();
+  }
+
+  // Property
+  std::string error_message;
+};
+
+
+/// @brief Takes a float and return its 4 bytes into the stream (NO TEST NEEDED)
+/// @param stream
+/// @param value
+/// @param endianness
+void _write_float(std::ostream &stream, float value, Endianness endianness) {
+  // Convert "value" in a sequence of 32 bit
+  uint32_t double_word{*((uint32_t *)&value)};
+
+  // Extract the four bytes in "double_word" using bit-level operators
+  uint8_t bytes[] = {
+    static_cast<uint8_t>(double_word & 0xFF),         // Least significant byte
+    static_cast<uint8_t>((double_word >> 8) & 0xFF),
+    static_cast<uint8_t>((double_word >> 16) & 0xFF),
+    static_cast<uint8_t>((double_word >> 24) & 0xFF), // Most significant byte
+  };
+
+  switch (endianness) {
+    case Endianness::little_endian:
+      for (int i{}; i < 4; ++i)    // Forward loop
+        stream << bytes[i];
+    break;
+
+    case Endianness::big_endian:
+      for (int i{3}; i >= 0; --i)  // Backward loop
+        stream << bytes[i];
+    break;
+  }
+}
+
+/// @brief Reads a stream of bytes and convert them to floats (NO TEST NEEDED)
+/// @param stream
+/// @param endianness
+/// @return
+float _read_float(std::istream& stream, Endianness endianness){
+  uint8_t bytes[4];
+
+  switch (endianness) {
+    case Endianness::little_endian:
+      for (int i{}; i < 4; ++i)   // Forward loop
+        stream >> bytes[i];
+    break;
+
+    case Endianness::big_endian:
+      for (int i{3}; i >= 0; --i)  // Backward loop
+        stream >> bytes[i];
+    break;
+  }
+  uint32_t double_word{
+    (static_cast<uint32_t>(bytes[0]) << 0)
+    | (static_cast<uint32_t>(bytes[1]) << 8)
+    | (static_cast<uint32_t>(bytes[2]) << 16)
+    | (static_cast<uint32_t>(bytes[3]) << 24)
+  };
+  //float value{*((float *)&double_word)}; // This line has the same effect as the line below
+  float value;
+  std::memcpy(&value, &double_word, sizeof(float));
+
+  return value;
+}
+
+/// @brief Read the line already converting into ascii (MISSING TESTS)
+/// @param stream
+/// @return
+std::string _read_line(std::istream& stream){
+  std::string result;
+  char cur_byte;
+
+  while(stream.get(cur_byte)){
+    if(cur_byte == '\n') { return result; }
+    result += cur_byte;
+  }
+  return result;
+}
+
+/// you might want to handle float entries a bit better
+/// @brief read the image dimensions (columns, rows) from a line (of a pfm file ideally) (TEST NEEDED)
+/// @param line
+/// @return
+std::pair<int, int> _parse_img_size(const std::string& line) {
+  std::istringstream iss(line);
+  int width, height;
+
+  // Read two integers
+  if (!(iss >> width >> height)) {
+    throw InvalidPfmFileFormat("Invalid image size specification");
+  }
+
+
+  // Ensure no extra characters after the numbers
+  std::string leftover;
+  if (iss >> leftover) {
+    throw InvalidPfmFileFormat("Too many elements in image size specification");
+  }
+
+  // Validate width and height are strinctly positive
+  if (width < 0 || height < 0) {
+    throw InvalidPfmFileFormat("Invalid width/height");
+  }
+
+  return {width, height};
+}
+
+
+Endianness _parse_endianness(const std::string& line){
+  std::istringstream iss(line);
+  float value;
+  if (!(iss >> value)) {
+    //throw InvalidPfmFileFormat("Missing endianness specification");
+  }
+
+
+  if(value == 0) { throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero"); }
+  else if(value < 0) { return Endianness::little_endian; }
+  else if(value > 0) { return Endianness::big_endian; }
+}
+
 
 class Color {
 public:
   // Properties
   float r, g, b; // Use 32-bit format to avoid memory waste
-
   // Constructors
   Color()
       : r(0.0f), g(0.0f), b(0.0f) {
@@ -75,6 +207,44 @@ public:
 
 
 class HdrImage {
+
+ private:
+  void read_pfm_image(std::istream& is){
+    // Read magic
+    std::string magic = _read_line(is);
+    if(magic != "PF\n") { throw InvalidPfmFileFormat("Invalid magicin PFM file"); }
+
+    // Read image size
+    std::string image_size = _read_line(is);
+    std::pair<int, int> wh = _parse_img_size(image_size);
+    width = wh.first;
+    height = wh.second;
+
+    // Read endiannes specification
+    std::string endianness_spec = _read_line(is);
+    Endianness endianness = _parse_endianness(endianness_spec);
+
+    // Read the pixels
+    pixels.resize(width*height);
+    float r, g, b;
+
+    for(int row = height-1; row >= 0; row--){
+      for(int col = 0; col < width; col++){
+        r = _read_float(is, endianness);
+        g = _read_float(is, endianness);
+        b = _read_float(is, endianness);
+
+        if(is.eof()) { throw InvalidPfmFileFormat("Fewer pixels than expected"); }
+
+        set_pixel(col, row, Color(r,g,b));
+      }
+    }
+
+    // Ensure nothing more is left to read
+    std::string leftover;
+  	if (is >> leftover) { throw InvalidPfmFileFormat("More pixels than expected"); }
+  };
+
 public:
   // Properties
   int32_t width, height; // Use int32_t format to allow large dimensions (and
@@ -89,13 +259,23 @@ public:
       : height(w), width(h),
         pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
 
+  HdrImage(std::istream& is){
+    read_pfm_image(is);
+  }
+
+  HdrImage(std::string file_name){
+    std::ifstream is(file_name);
+    read_pfm_image(is);
+    is.close();
+  }
+
+
+
   // Methods
   // Some methods should be private, but following the convention are declared
   // public with underscore (_) in front.
 
-  void read_pfm_image(std::istream& is){
-    ///
-  };
+
 
   // _valid_indexes returns true if row and col are nonnegative and within
   // bounds.
@@ -126,143 +306,6 @@ public:
   }
 };
 
-
-
-enum class Endianness { little_endian, big_endian };
-
-
-class InvalidPfmFileFormat : public std::exception {
-  public:
-  // Constructor
-  InvalidPfmFileFormat(std::string em) : error_message(em){}
-
-  // Methods
-  const char* what() const noexcept override {
-    return error_message.c_str();
-  }
-
-  // Property
-  std::string error_message;
-};
-
-
-
-
-/// @brief Takes a float and return its 4 bytes into the stream (NO TEST NEEDED)
-/// @param stream 
-/// @param value 
-/// @param endianness 
-void _write_float(std::ostream &stream, float value, Endianness endianness) {
-  // Convert "value" in a sequence of 32 bit
-  uint32_t double_word{*((uint32_t *)&value)};
-
-  // Extract the four bytes in "double_word" using bit-level operators
-  uint8_t bytes[] = {
-    static_cast<uint8_t>(double_word & 0xFF),         // Least significant byte
-    static_cast<uint8_t>((double_word >> 8) & 0xFF),
-    static_cast<uint8_t>((double_word >> 16) & 0xFF),
-    static_cast<uint8_t>((double_word >> 24) & 0xFF), // Most significant byte
-  };
-
-  switch (endianness) {
-    case Endianness::little_endian:
-      for (int i{}; i < 4; ++i)    // Forward loop
-        stream << bytes[i];
-    break;
-
-    case Endianness::big_endian:
-      for (int i{3}; i >= 0; --i)  // Backward loop
-        stream << bytes[i];
-    break;
-  }
-}
-
-/// @brief Reads a stream of bytes and convert them to floats (NO TEST NEEDED)
-/// @param stream 
-/// @param endianness 
-/// @return 
-float read_float(std::istream stream, Endianness endianness){
-  uint8_t bytes[4];
-
-  switch (endianness) {
-    case Endianness::little_endian:
-      for (int i{}; i < 4; ++i)   // Forward loop
-        stream >> bytes[i];
-    break;
-
-    case Endianness::big_endian:
-      for (int i{3}; i >= 0; --i)  // Backward loop
-        stream >> bytes[i];
-    break;
-  }
-  uint32_t double_word{
-    (static_cast<uint32_t>(bytes[0]) << 0)
-    | (static_cast<uint32_t>(bytes[1]) << 8)
-    | (static_cast<uint32_t>(bytes[2]) << 16)
-    | (static_cast<uint32_t>(bytes[3]) << 24)
-  };
-  //float value{*((float *)&double_word)}; // This line has the same effect as the line below
-  float value;
-  std::memcpy(&value, &double_word, sizeof(float));
-
-  return value;
-}
-
-/// @brief Read the line already converting into ascii (MISSING TESTS)
-/// @param stream 
-/// @return 
-std::string _read_line(std::ifstream& stream){
-  std::string result;
-  char cur_byte;
-
-  while(stream.get(cur_byte)){
-    if(cur_byte == '\n') { return result; }
-    result += cur_byte;
-  }
-  return result;
-}
-
-/// you might want to handle float entries a bit better
-/// @brief read the image dimensions (columns, rows) from a line (of a pfm file ideally) (TEST NEEDED)
-/// @param line 
-/// @return 
-std::pair<int, int> _parse_img_size(const std::string& line) {
-  std::istringstream iss(line);
-  int width, height;
-
-  // Read two integers
-  if (!(iss >> width >> height)) {
-    throw InvalidPfmFileFormat("Invalid image size specification");
-  }
-
-
-  // Ensure no extra characters after the numbers
-  std::string leftover;
-  if (iss >> leftover) {
-    throw InvalidPfmFileFormat("Too many elements in image size specification");
-  }
-
-  // Validate width and height are strinctly positive
-  if (width < 0 || height < 0) {
-    throw InvalidPfmFileFormat("Invalid width/height");
-  }
-
-  return {width, height};
-}
-
-
-Endianness _parse_endianness(const std::string& line){
-  std::istringstream iss(line);
-  float value;
-  if (!(iss >> value)) {
-    //throw InvalidPfmFileFormat("Missing endianness specification");
-  }
-
-
-  if(value == 0) { //throw InvalidPfmFileFormat("Invalid endianness specification, it cannot be zero");}
-  else if(value < 0) { return Endianness::little_endian; }
-  else if(value > 0) { return Endianness::big_endian; }
-}
 
 
 
