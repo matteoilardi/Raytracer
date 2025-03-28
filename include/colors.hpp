@@ -10,6 +10,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <bit>
+#include <array>
 
 // ------------------------------------------------------------------------------------------------------------
 // CONSTANTS, ENDIANNESS, EXCEPTIONS
@@ -155,23 +157,23 @@ float _read_float(std::istream &stream, Endianness endianness) {
 
   switch (endianness) {
   case Endianness::little_endian:
-    for (int i{}; i < 4; ++i) // Forward loop
-      stream >> bytes[i];
+    for (int i{0}; i < 4; ++i) // Forward loop
+      stream >> std::noskipws >> bytes[i];
     break;
 
   case Endianness::big_endian:
     for (int i{3}; i >= 0; --i) // Backward loop
-      stream >> bytes[i];
+      stream >> std::noskipws >> bytes[i];
     break;
   }
   uint32_t double_word{(static_cast<uint32_t>(bytes[0]) << 0) |
                        (static_cast<uint32_t>(bytes[1]) << 8) |
                        (static_cast<uint32_t>(bytes[2]) << 16) |
                        (static_cast<uint32_t>(bytes[3]) << 24)};
-  // float value{*((float *)&double_word)}; // This line has the same effect as
+  float value{*((float *)&double_word)}; // This line has the same effect as
   // the line below
-  float value;
-  std::memcpy(&value, &double_word, sizeof(float));
+  //float value;
+  //std::memcpy(&value, &double_word, sizeof(float));
 
   return value;
 }
@@ -254,8 +256,6 @@ Endianness _parse_endianness(const std::string &line) {
 class HdrImage {
 
 private:
-  // FIXME Why the exception with eof is not working in the tests (line
-  // 321)??????????????
 
   /// @brief Read a pfm file and create the corresponding hdr image
   /// based on the 5 functions below (_write_float, _read_float, _read_line,
@@ -271,8 +271,8 @@ private:
 
     // Read the image size line and extract width and height.
     std::string img_size_line = _read_line(stream);
-    int width, height;
-    std::tie(width, height) = _parse_img_size(img_size_line);
+    int w, h;
+    std::tie(w, h) = _parse_img_size(img_size_line);
 
     // Read the endianness specification line and parse it.
     std::string endianness_line = _read_line(stream);
@@ -281,9 +281,9 @@ private:
     // Create the image by reading pixel data from bottom to top.
     // (PFM files store scanlines in reverse order.)
 
-    // initialize a black hdr image of the given size with the default
-    // constructor
-    HdrImage image(width, height);
+    width = w;
+    height = h;
+    pixels = std::vector<Color>(static_cast<size_t>(width * height), Color());
 
     float r, g, b;
 
@@ -295,11 +295,10 @@ private:
         g = _read_float(stream, endianness);
         b = _read_float(stream, endianness);
 
-        // if(stream.eof()) { throw InvalidPfmFileFormat("Fewer pixels than
-        // expected"); }
+        if(stream.eof()) { throw InvalidPfmFileFormat("Fewer pixels than expected"); }
 
         // Set the pixel at position (x, y) with the color just read
-        image.set_pixel(x, y, Color(r, g, b));
+        set_pixel(x, y, Color(r, g, b));
       }
     }
 
