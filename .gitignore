@@ -18,3 +18,5 @@ my_vcs.sh
 # 
 prova* 
 
+# clang format files
+.clang-format
