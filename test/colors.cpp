@@ -109,7 +109,9 @@ void test_pfm_read_write_float() {
   std::stringstream ss;
 
   uint32_t n = 3294682275;
-  float x = *((float *)&n);
+  // float x = *((float *)&n); //same effect as line below, but violates C++ strict aliasing rules
+  float x = std::bit_cast<float>(n);
+
   _write_float(ss, x, Endianness::little_endian);
   assert(_read_float(ss, Endianness::little_endian) == x);
 
@@ -171,7 +173,7 @@ void test_pfm_write() {
 
 // FIXME pixel access causes segmentation fault
 void test_pfm_read() {
-  // HdrImage image_from_le = HdrImage("../test/reference_le.pfm");
+  // HdrImage image_from_le("../test/reference_le.pfm");
   // HdrImage image_from_be("../test/reference_be.pfm");
 
   // assert(are_close(image_from_le.get_pixel(0, 0), Color(10, 20, 30)));
@@ -210,11 +212,13 @@ int main() {
   ciao = _read_line(is);
   ciao = _read_line(is);
   ciao = _read_line(is);
+
   while (is) {
     a = _read_float(is, Endianness::little_endian);
     std::cout << a << endl;
   }
   is.close();
+
 
   // Test 1: Creation of a color object, is_close function
   test_basic_color();

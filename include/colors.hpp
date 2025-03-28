@@ -1,4 +1,5 @@
 // Libraries
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -169,9 +170,10 @@ float _read_float(std::istream &stream, Endianness endianness) {
                        (static_cast<uint32_t>(bytes[2]) << 16) |
                        (static_cast<uint32_t>(bytes[3]) << 24)};
   // float value{*((float *)&double_word)}; // This line has the same effect as
-  // the line below
-  float value;
-  std::memcpy(&value, &double_word, sizeof(float));
+  // the line below, but violates C++ strict aliasing rules
+  // std::memcpy(&value, &double_word, sizeof(float)); // This line has the same
+  // effect as the line below, but less expressive
+  float value = std::bit_cast<float>(double_word);
 
   return value;
 }
@@ -295,8 +297,9 @@ private:
         g = _read_float(stream, endianness);
         b = _read_float(stream, endianness);
 
-        // if(stream.eof()) { throw InvalidPfmFileFormat("Fewer pixels than
-        // expected"); }
+        // NOTE Uncomment this line when the exception with eof is working
+        //  if(stream.eof()) { throw InvalidPfmFileFormat("Fewer pixels than
+        //  expected"); }
 
         // Set the pixel at position (x, y) with the color just read
         image.set_pixel(x, y, Color(r, g, b));
@@ -386,8 +389,8 @@ public:
 
   // get_pixel returns the color at the given row and column.
   Color get_pixel(int32_t col, int32_t row) const {
-    int32_t offset = _pixel_offset(
-        col, row); // Assign _pixel_offset to a variable (useful for debugging)
+    // Assign _pixel_offset to a variable (useful for debugging)
+    int32_t offset = _pixel_offset(col, row);
     return pixels[offset];
   }
 
