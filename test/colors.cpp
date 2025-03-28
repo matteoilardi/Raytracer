@@ -213,6 +213,11 @@ void test_pfm_read() {
 
 int main() {
 
+  // Test 0 (bonus): Read a PFM file and print the floats 
+  // We are keeping this test as a reminder/demonstration, since we had issues when printing the floats of in the PFM file.
+  //The reason was that the hexadecimal representation of the float number 10.0 contains the byte 0x20
+  // which is the space character. However, stream reading ignore spaces and this caused the output to be misaligned.
+  // Indeed we started having issues from in the first line (starting from bottom, i.e. second line) where 10.0 first appears.
   float a;
   std::ifstream is("../test/reference_le.pfm");
   std::string ciao;
