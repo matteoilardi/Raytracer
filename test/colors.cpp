@@ -2,6 +2,13 @@
 
 using namespace std;
 
+bool is_little_endian() {
+  uint16_t word{0x1234};
+  uint8_t *ptr{(uint8_t *)&word};
+
+  return ptr[0] == 0x34;
+}
+
 void test_basic_color() {
   Color color1(1.0, 2.0, 3.0);
 
@@ -171,24 +178,27 @@ void test_pfm_write() {
   assert(memcmp(string_be.data(), reference_be, reference_be_len) == 0);
 }
 
-// FIXME pixel access causes segmentation fault
 void test_pfm_read() {
-  // HdrImage image_from_le("../test/reference_le.pfm");
-  // HdrImage image_from_be("../test/reference_be.pfm");
+  HdrImage image_from_le("../test/reference_le.pfm");
+  HdrImage image_from_be("../test/reference_be.pfm");
 
-  // assert(are_close(image_from_le.get_pixel(0, 0), Color(10, 20, 30)));
-  // assert(are_close(image_from_le.get_pixel(0, 1), Color(100, 200, 300)));
-  // assert(are_close(image_from_le.get_pixel(1, 0), Color(40, 50, 60)));
-  // assert(are_close(image_from_le.get_pixel(1, 1), Color(400, 500, 600)));
-  // assert(are_close(image_from_le.get_pixel(2, 0), Color(70, 80, 90)));
-  // assert(are_close(image_from_le.get_pixel(2, 1), Color(700, 800, 900)));
+  assert(are_close(image_from_le.get_pixel(0, 0), Color(10, 20, 30)));
+  assert(are_close(image_from_le.get_pixel(0, 1), Color(100, 200, 300)));
+  assert(are_close(image_from_le.get_pixel(1, 0), Color(40, 50, 60)));
+  assert(are_close(image_from_le.get_pixel(1, 1), Color(400, 500, 600)));
+  assert(are_close(image_from_le.get_pixel(2, 0), Color(70, 80, 90)));
+  assert(are_close(image_from_le.get_pixel(2, 1), Color(700, 800, 900)));
 
-  // assert(are_close(image_from_be.get_pixel(0, 0), Color(10, 20, 30)));
-  // assert(are_close(image_from_be.get_pixel(0, 1), Color(100, 200, 300)));
-  // assert(are_close(image_from_be.get_pixel(1, 0), Color(40, 50, 60)));
-  // assert(are_close(image_from_be.get_pixel(1, 1), Color(400, 500, 600)));
-  // assert(are_close(image_from_be.get_pixel(2, 0), Color(70, 80, 90)));
-  // assert(are_close(image_from_be.get_pixel(2, 1), Color(700, 800, 900)));
+  assert(are_close(image_from_be.get_pixel(0, 0), Color(10, 20, 30)));
+  assert(are_close(image_from_be.get_pixel(0, 1), Color(100, 200, 300)));
+  assert(are_close(image_from_be.get_pixel(1, 0), Color(40, 50, 60)));
+  assert(are_close(image_from_be.get_pixel(1, 1), Color(400, 500, 600)));
+  assert(are_close(image_from_be.get_pixel(2, 0), Color(70, 80, 90)));
+  assert(are_close(image_from_be.get_pixel(2, 1), Color(700, 800, 900)));
+
+  ofstream of("out.txt");
+  image_from_le.write_pfm(of, Endianness::little_endian);
+  of.close();
 
   std::stringstream sstream;
   bool check_exception1 = false;
@@ -198,11 +208,8 @@ void test_pfm_read() {
   } catch (InvalidPfmFileFormat &e) {
     check_exception1 = true;
   }
-  // assert(check_exception1);
+  assert(check_exception1);
 }
-
-// TODO once you understood why the exception with eof doesn't work, uncomment
-// the last assert above
 
 int main() {
 
@@ -247,6 +254,8 @@ int main() {
 
   // Test 9
   test_pfm_read();
+
+  //std::cout << "Is the system little_endian? Answer: " << is_little_endian() << std::endl; YES
 
   return EXIT_SUCCESS;
 }
