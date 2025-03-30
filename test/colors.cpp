@@ -116,8 +116,8 @@ void test_pfm_read_write_float() {
   std::stringstream ss;
 
   uint32_t n = 3294682275;
-  // float x = *((float *)&n); //same effect as line below, but violates C++ strict aliasing rules
-  float x = std::bit_cast<float>(n);
+  float x = *((float *)&n); //same effect as line below, but violates C++ strict aliasing rules
+  // float x = std::bit_cast<float>(n);
 
   _write_float(ss, x, Endianness::little_endian);
   assert(_read_float(ss, Endianness::little_endian) == x);
@@ -211,6 +211,54 @@ void test_pfm_read() {
   assert(check_exception1);
 }
 
+void test_luminosity() {
+  Color color1(1.0, 7.0, 7.0);
+  Color color2(5.0, 4.0, 10.0);
+
+  assert(color1.luminosity() == 4.0);
+  assert(color2.luminosity() == 7.0);
+}
+
+void test_average_luminosity() {
+  HdrImage img(2, 1);
+  img.set_pixel(0, 0, Color(5.0, 10.0, 15.0));
+  img.set_pixel(1, 0, Color(500.0, 1000.0, 1500.0));
+
+  assert(img.average_luminosity(0.0) == 100.0);
+
+  HdrImage img_with_black(1, 1);
+  img_with_black.set_pixel(0, 0, Color());
+
+  assert(are_close(img_with_black.average_luminosity(), DEFAULT_DELTA_LOG));
+}
+
+void test_normalize_image() {
+  HdrImage img(2, 1);
+  img.set_pixel(0, 0, Color(5.0, 10.0, 15.0));
+  img.set_pixel(1, 0, Color(500.0, 1000.0, 1500.0));
+
+  img.normalize_image(10.0, 100.0);
+
+  assert(img.get_pixel(0, 0).is_close_to(Color(5.0e-1, 10.0e-1, 15.0e-1)));
+  assert(img.get_pixel(1, 0).is_close_to(Color(5.0e1, 10.0e1, 15.0e1)));
+}
+
+void test_clamp_image() {
+  HdrImage img(2,1);
+  img.set_pixel(0, 0, Color(2e3, 4e5, 6e1));
+  img.set_pixel(1, 0, Color(1e2, 3e4, 5e7));
+
+  img.clamp_image();
+
+  for(auto pixel : img.pixels) {
+    assert(pixel.r >= 0 && pixel.r <= 1);
+    assert(pixel.g >= 0 && pixel.g <= 1);
+    assert(pixel.b >= 0 && pixel.b <= 1);
+  }
+}
+
+
+
 int main() {
 
   // Test 0 (bonus): Read a PFM file and print the floats 
@@ -259,6 +307,18 @@ int main() {
 
   // Test 9
   test_pfm_read();
+
+  // Test 10
+  test_luminosity();
+
+  // Test 11
+  test_average_luminosity();
+
+  // Test 12
+  test_normalize_image();
+
+  // Test 13
+  test_clamp_image();
 
   //std::cout << "Is the system little_endian? Answer: " << is_little_endian() << std::endl; YES
 

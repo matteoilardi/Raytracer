@@ -1,5 +1,4 @@
 // Libraries
-#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -13,13 +12,18 @@
 #include <vector>
 #include <bit>
 #include <array>
+#include <algorithm>
+#include <optional>
 
 // ------------------------------------------------------------------------------------------------------------
 // CONSTANTS, ENDIANNESS, EXCEPTIONS
 // ------------------------------------------------------------------------------------------------------------
 
-constexpr double DEFAULT_ERROR_TOLERANCE =
+constexpr float DEFAULT_ERROR_TOLERANCE =
     1e-5; // Default tolerance to decide if two float numbers are close
+
+constexpr float DEFAULT_DELTA_LOG =
+    1e-10; // Default quantity added to the argument to prevent caluculating the logarithm of zero
 
 /// @brief endianness is order you read floats with (recall 32_bit_float =4
 /// bytes) (left to right or right to left)
@@ -46,6 +50,16 @@ public:
     return error_message.c_str();
   }
 };
+
+bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
+  return std::fabs(x - y) < error_tolerance;
+}
+
+float _clamp(float x) {
+  return x / (1.0 + x);
+}
+
+
 
 // ------------------------------------------------------------------------------------------------------------
 // COLOR
@@ -74,9 +88,9 @@ public:
   // If no tolerance is provided, DEFAULT_ERROR_TOLERANCE is used.
   bool is_close_to(const Color &other,
                    float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
-    return (std::fabs(r - other.r) < error_tolerance &&
-            std::fabs(g - other.g) < error_tolerance &&
-            std::fabs(b - other.b) < error_tolerance);
+    return (are_close(r, other.r, error_tolerance) &&
+            are_close(g, other.g, error_tolerance) &&
+            are_close(b, other.b, error_tolerance));
   }
 
   // Check if two colors are close calling is_close_to on the first one
@@ -108,6 +122,10 @@ public:
   // Helper method to display the color.
   void display() const {
     std::cout << "r: " << r << " g: " << g << " b: " << b;
+  }
+
+  float luminosity() const {
+    return 0.5 * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula
   }
 };
 
@@ -171,11 +189,11 @@ float _read_float(std::istream &stream, Endianness endianness) {
                        (static_cast<uint32_t>(bytes[1]) << 8) |
                        (static_cast<uint32_t>(bytes[2]) << 16) |
                        (static_cast<uint32_t>(bytes[3]) << 24)};
-  // float value{*((float *)&double_word)}; // This line has the same effect as
+  float value{*((float *)&double_word)}; // This line has the same effect as
   // the line below, but violates C++ strict aliasing rules
   // std::memcpy(&value, &double_word, sizeof(float)); // This line has the same
   // effect as the line below, but less expressive
-  float value = std::bit_cast<float>(double_word);
+  // float value = std::bit_cast<float>(double_word);
 
   return value;
 }
@@ -398,4 +416,32 @@ public:
         col, row); // Assign _pixel_offset to a variable (useful for debugging)
     pixels[offset] = c;
   }
+
+  float average_luminosity(float delta = DEFAULT_DELTA_LOG) const {
+    float cumsum = 0.0;
+    for(auto pixel : pixels) {
+      cumsum += 1.0/pixels.size() * std::log10(delta + pixel.luminosity());
+    }
+
+    return std::pow(10., cumsum);
+  }
+
+  void normalize_image(float alpha, std::optional<float> avg_lum_opt = std::nullopt) {
+    float avg_lum = avg_lum_opt.value_or(average_luminosity());
+
+    for(auto& pixel : pixels) {
+      pixel.r = pixel.r * (alpha / avg_lum);
+      pixel.g = pixel.g * (alpha / avg_lum);
+      pixel.b = pixel.b * (alpha /avg_lum);
+    }
+  }
+
+  void clamp_image(){
+    for(auto& pixel : pixels) {
+      pixel.r = _clamp(pixel.r);
+      pixel.g = _clamp(pixel.g);
+      pixel.b = _clamp(pixel.b);
+    }
+  }
+
 };
