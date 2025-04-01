@@ -1,4 +1,12 @@
-// Libraries
+#pragma once
+
+// ------------------------------------------------------------------------------------------------------------
+// LIBRARIES
+// ------------------------------------------------------------------------------------------------------------
+#include "stb_image_write.h" //external library for LDR images
+#include <algorithm>
+#include <array>
+#include <bit>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -6,14 +14,11 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <bit>
-#include <array>
-#include <algorithm>
-#include <optional>
 
 // ------------------------------------------------------------------------------------------------------------
 // CONSTANTS, ENDIANNESS, EXCEPTIONS
@@ -23,7 +28,8 @@ constexpr float DEFAULT_ERROR_TOLERANCE =
     1e-5; // Default tolerance to decide if two float numbers are close
 
 constexpr float DEFAULT_DELTA_LOG =
-    1e-10; // Default quantity added to the argument to prevent caluculating the logarithm of zero
+    1e-10; // Default quantity added to the argument to prevent caluculating the
+           // logarithm of zero
 
 /// @brief endianness is order you read floats with (recall 32_bit_float =4
 /// bytes) (left to right or right to left)
@@ -51,15 +57,16 @@ public:
   }
 };
 
-bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
+bool are_close(float x, float y,
+               float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
   return std::fabs(x - y) < error_tolerance;
 }
 
-float _clamp(float x) {
-  return x / (1.0 + x);
-}
-
-
+/// @brief normalize a float number (between 0 and 1) using the formula
+/// x/(1+x) (almost x for small x, but saturates to 1 for large x)
+/// @param x
+/// @return
+float _clamp(float x) { return x / (1.0 + x); }
 
 // ------------------------------------------------------------------------------------------------------------
 // COLOR
@@ -124,9 +131,20 @@ public:
     std::cout << "r: " << r << " g: " << g << " b: " << b;
   }
 
+  /// @brief luminosity of the color (computed using Shirley & Morley
+  /// formula)
+  /// @return
   float luminosity() const {
-    return 0.5 * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula
+    return 0.5 *
+           (std::min({r, g, b}) +
+            std::max({r, g, b})); // Shirley & Morley's formula (empirically
+                                  // best formula for luminosity)
   }
+
+  /// @brief luminosity of the color (computed as arithmetic average of rgb,
+  /// instead of Shirley & Morley formula)
+  /// @return
+  float luminosity_arithemic_avg() const { return (r + g + b) / 3; }
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -276,7 +294,6 @@ Endianness _parse_endianness(const std::string &line) {
 class HdrImage {
 
 private:
-
   /// @brief Read a pfm file and create the corresponding hdr image
   /// based on the 5 functions below (_write_float, _read_float, _read_line,
   /// _parse_img_size, _parse_endianness) which you might want to move here
@@ -315,7 +332,9 @@ private:
         g = _read_float(stream, endianness);
         b = _read_float(stream, endianness);
 
-        if(stream.eof()) { throw InvalidPfmFileFormat("Fewer pixels than expected"); }
+        if (stream.eof()) {
+          throw InvalidPfmFileFormat("Fewer pixels than expected");
+        }
 
         // Set the pixel at position (x, y) with the color just read
         set_pixel(x, y, Color(r, g, b));
@@ -417,31 +436,94 @@ public:
     pixels[offset] = c;
   }
 
+  /// @brief compute the average luminosity of the image
+  /// @param delta (default value to prevent taking log(0))
+  /// @return return the average luminosity of the image as float
   float average_luminosity(float delta = DEFAULT_DELTA_LOG) const {
     float cumsum = 0.0;
-    for(auto pixel : pixels) {
-      cumsum += 1.0/pixels.size() * std::log10(delta + pixel.luminosity());
+    for (auto pixel : pixels) {
+      cumsum += std::log10(delta + pixel.luminosity());
     }
 
-    return std::pow(10., cumsum);
+    return std::pow(10., cumsum / pixels.size());
   }
 
-  void normalize_image(float alpha, std::optional<float> avg_lum_opt = std::nullopt) {
+  void normalize_image(float alpha,
+                       std::optional<float> avg_lum_opt = std::nullopt) {
     float avg_lum = avg_lum_opt.value_or(average_luminosity());
 
-    for(auto& pixel : pixels) {
+    for (auto &pixel : pixels) {
       pixel.r = pixel.r * (alpha / avg_lum);
       pixel.g = pixel.g * (alpha / avg_lum);
-      pixel.b = pixel.b * (alpha /avg_lum);
+      pixel.b = pixel.b * (alpha / avg_lum);
     }
   }
 
-  void clamp_image(){
-    for(auto& pixel : pixels) {
+  /// @brief clamp the image rgb values between 0 and 1
+  void clamp_image() {
+    for (auto &pixel : pixels) {
       pixel.r = _clamp(pixel.r);
       pixel.g = _clamp(pixel.g);
       pixel.b = _clamp(pixel.b);
     }
   }
 
+  /// @brief Take a normalized and clamped HDR image, apply gamma correction &
+  /// produce LDR image in desired format
+  /// @param filename name of LDR image to be produced
+  /// @param gamma correction factor (default 1.0)
+  /// @param format LDR image format (default png)
+  void write_ldr_image(const std::string &filename, float gamma = 1.0f,
+                       const std::string &format = "png") const {
+    // Create a buffer to hold all pixels as 8-bit unsigned integers (R, G, B)
+    // Each pixel needs 3 bytes, so we reserve enough memory up front
+    std::vector<uint8_t> buffer;
+    buffer.reserve(width * height * 3);
+
+    // NOTE Not sure about the order of the reading here, it shouldn't matter
+    // here however (?)
+    //  Loop over every pixel in the image (row by row, top to bottom)
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        // Get the Color at pixel (x, y) from the HDR image
+        const Color &c = get_pixel(x, y);
+
+        // Lambda function to:
+        // - Clamp values to [0, 1] (just to be sure) //NOTE maybe remove it?
+        // - Apply gamma correction
+        // - Convert float [0,1] to uint8_t [0,255]
+        auto transform_to_LDR = [gamma](float ch) {
+          float clamped =
+              std::fmax(0.0f, std::fmin(1.0f, ch));          // Clamp to [0,1]
+          float gamma_corrected = std::pow(clamped, 1.0f / gamma); // Apply gamma correction
+          return static_cast<uint8_t>(
+              std::round(gamma_corrected * 255.0f)); // Scale and convert
+        };
+
+        // Convert and store the R, G, B values in the buffer
+        buffer.push_back(transform_to_LDR(c.r));
+        buffer.push_back(transform_to_LDR(c.g));
+        buffer.push_back(transform_to_LDR(c.b));
+      }
+    }
+
+    // Choose the appropriate output format based on the extension string
+    if (format == "png") {
+      // Save as PNG — stride = width * 3 bytes per row
+      stbi_write_png(filename.c_str(), width, height, 3, buffer.data(),
+                     width * 3);
+    } else if (format == "jpg" || format == "jpeg") {
+      // Save as JPEG with quality 95 (out of 100)
+      stbi_write_jpg(filename.c_str(), width, height, 3, buffer.data(), 95);
+    } else if (format == "bmp") {
+      // Save as BMP
+      stbi_write_bmp(filename.c_str(), width, height, 3, buffer.data());
+    } else if (format == "tga") {
+      // Save as TGA
+      stbi_write_tga(filename.c_str(), width, height, 3, buffer.data());
+    } else {
+      // Unsupported format: throw an error
+      throw std::invalid_argument("Unsupported format: " + format);
+    }
+  }
 };

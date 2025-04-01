@@ -5,6 +5,10 @@
 #include "colors.hpp"
 #include <iostream>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+
 using namespace std;
 
 int main(int argv, char **argc) {
