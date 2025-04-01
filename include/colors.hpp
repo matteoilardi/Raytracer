@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+
 // ------------------------------------------------------------------------------------------------------------
 // CONSTANTS, ENDIANNESS, EXCEPTIONS
 // ------------------------------------------------------------------------------------------------------------
@@ -526,4 +527,53 @@ public:
       throw std::invalid_argument("Unsupported format: " + format);
     }
   }
+};
+
+
+// ------------------------------------------------------------------------------------------------------------
+// PARAMETERS CLASS
+// ------------------------------------------------------------------------------------------------------------
+
+/// @brief Class to hold input parameters for image conversion
+class Parameters {
+public:
+    // Default values (can be overridden via command line)
+    std::string input_pfm_file_name = "";
+    float a_factor = 0.2f;                      // Normalization factor a
+    float gamma = 1.0f;                       // Gamma correction value
+    std::string output_png_file_name = "";
+
+    // Method to parse command-line arguments
+    void parse_command_line(int argc, char* argv[]) {
+        // We expect 4 arguments: program name + 4 parameters = argc should be 5
+        if (argc != 5) {
+            throw std::runtime_error("Usage: ./main INPUT_PFM_FILE a_FACTOR GAMMA OUTPUT_PNG_FILE");
+        }
+
+        // Store the input file name (second argument)
+        input_pfm_file_name = argv[1];
+
+        // Convert factor from string to float
+        try {
+            a_factor = std::stof(argv[2]); // std::stof = string to float
+        } catch (...) {
+            // If conversion fails, throw a meaningful error
+            throw std::runtime_error(
+                std::string("Invalid factor ('") + argv[2] + "'), it must be a floating-point number."
+            );
+        }
+
+        // Convert gamma from string to float
+        try {
+            gamma = std::stof(argv[3]);
+        } catch (...) {
+            // Same logic as above: catch *any* error and give a readable message
+            throw std::runtime_error(
+                std::string("Invalid gamma ('") + argv[3] + "'), it must be a floating-point number."
+            );
+        }
+
+        // Store the output file name
+        output_png_file_name = argv[4];
+    }
 };
