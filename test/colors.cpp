@@ -196,10 +196,6 @@ void test_pfm_read() {
   assert(are_close(image_from_be.get_pixel(2, 0), Color(70, 80, 90)));
   assert(are_close(image_from_be.get_pixel(2, 1), Color(700, 800, 900)));
 
-  ofstream of("out.txt");
-  image_from_le.write_pfm(of, Endianness::little_endian);
-  of.close();
-
   std::stringstream sstream;
   bool check_exception1 = false;
   sstream << "PF\n4 5\n1.0\nstop";
@@ -237,7 +233,8 @@ void test_normalize_image() {
   img.set_pixel(0, 0, Color(5.0, 10.0, 15.0));
   img.set_pixel(1, 0, Color(500.0, 1000.0, 1500.0));
 
-  img.normalize_image(10.0, 100.0);
+  //img.normalize_image(10.0, 100.0);
+  img.normalize_image(10.0);
 
   assert(img.get_pixel(0, 0).is_close_to(Color(5.0e-1, 10.0e-1, 15.0e-1)));
   assert(img.get_pixel(1, 0).is_close_to(Color(5.0e1, 10.0e1, 15.0e1)));

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 
 project(raytracer
 	VERSION 1.0
-	DESCRIPTION "Just prints Hello worls so far"
+	DESCRIPTION "Just prints Hello world so far"
 	LANGUAGES CXX
 )
 
