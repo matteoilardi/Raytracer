@@ -12,6 +12,10 @@ build/
 # Clion files
 .idea*
 
+#vscode files
+.json
+.vscode
+
 # my VCS
 my_vcs.sh
 

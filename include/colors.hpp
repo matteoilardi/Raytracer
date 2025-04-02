@@ -3,7 +3,9 @@
 // ------------------------------------------------------------------------------------------------------------
 // LIBRARIES
 // ------------------------------------------------------------------------------------------------------------
-#include "stb_image_write.h" //external library for LDR images
+
+//NOTE checkout functioalities to revert pixel oreder
+#include "stb_image_write.h" //external library for LDR images 
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -19,7 +21,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
 
 // ------------------------------------------------------------------------------------------------------------
 // CONSTANTS, ENDIANNESS, EXCEPTIONS
@@ -449,6 +450,8 @@ public:
     return std::pow(10., cumsum / pixels.size());
   }
 
+  //NOTE you might want to add a check to ensure that the image is not normalized already before
+  // normalizing again
   void normalize_image(float alpha,
                        std::optional<float> avg_lum_opt = std::nullopt) {
     float avg_lum = avg_lum_opt.value_or(average_luminosity());
@@ -460,6 +463,8 @@ public:
     }
   }
 
+  //NOTE you might want to add a check to ensure that the image is not already clamped before
+  // clamping again
   /// @brief clamp the image rgb values between 0 and 1
   void clamp_image() {
     for (auto &pixel : pixels) {
@@ -481,25 +486,23 @@ public:
     std::vector<uint8_t> buffer;
     buffer.reserve(width * height * 3);
 
+    // Lambda function to:
+    // - Apply gamma correction
+    // - Convert float [0,1] to uint8_t [0,255]
+    auto transform_to_LDR = [gamma](float x) {
+      float gamma_corrected =
+          std::pow(x, 1.0f / gamma); // Apply gamma correction
+      return static_cast<uint8_t>(
+          std::round(gamma_corrected * 255.0f)); // Scale and convert
+    };
+
     // NOTE Not sure about the order of the reading here, it shouldn't matter
-    // here however (?)
+    // here however, but see note below when creating LDR image
     //  Loop over every pixel in the image (row by row, top to bottom)
     for (int y = 0; y < height; ++y) {
       for (int x = 0; x < width; ++x) {
         // Get the Color at pixel (x, y) from the HDR image
         const Color &c = get_pixel(x, y);
-
-        // Lambda function to:
-        // - Clamp values to [0, 1] (just to be sure) //NOTE maybe remove it?
-        // - Apply gamma correction
-        // - Convert float [0,1] to uint8_t [0,255]
-        auto transform_to_LDR = [gamma](float ch) {
-          float clamped =
-              std::fmax(0.0f, std::fmin(1.0f, ch));          // Clamp to [0,1]
-          float gamma_corrected = std::pow(clamped, 1.0f / gamma); // Apply gamma correction
-          return static_cast<uint8_t>(
-              std::round(gamma_corrected * 255.0f)); // Scale and convert
-        };
 
         // Convert and store the R, G, B values in the buffer
         buffer.push_back(transform_to_LDR(c.r));
@@ -507,8 +510,10 @@ public:
         buffer.push_back(transform_to_LDR(c.b));
       }
     }
-
-    // Choose the appropriate output format based on the extension string
+    // NOTE depending on the image format, the order of the pixels in the buffer
+    // might vary
+    //  png and jpeg accept top to bottom, left to right
+    //  bmp and tga accept bottom to top, left to right
     if (format == "png") {
       // Save as PNG — stride = width * 3 bytes per row
       stbi_write_png(filename.c_str(), width, height, 3, buffer.data(),
@@ -529,7 +534,6 @@ public:
   }
 };
 
-
 // ------------------------------------------------------------------------------------------------------------
 // PARAMETERS CLASS
 // ------------------------------------------------------------------------------------------------------------
@@ -537,43 +541,44 @@ public:
 /// @brief Class to hold input parameters for image conversion
 class Parameters {
 public:
-    // Default values (can be overridden via command line)
-    std::string input_pfm_file_name = "";
-    float a_factor = 0.2f;                      // Normalization factor a
-    float gamma = 1.0f;                       // Gamma correction value
-    std::string output_png_file_name = "";
+  // Default values (can be overridden via command line)
+  std::string input_pfm_file_name = "";
+  float a_factor = 0.2f; // Normalization factor a
+  float gamma = 1.0f;    // Gamma correction value
+  std::string output_ldr_file_name = "";
 
-    // Method to parse command-line arguments
-    void parse_command_line(int argc, char* argv[]) {
-        // We expect 4 arguments: program name + 4 parameters = argc should be 5
-        if (argc != 5) {
-            throw std::runtime_error("Usage: ./main INPUT_PFM_FILE a_FACTOR GAMMA OUTPUT_PNG_FILE");
-        }
-
-        // Store the input file name (second argument)
-        input_pfm_file_name = argv[1];
-
-        // Convert factor from string to float
-        try {
-            a_factor = std::stof(argv[2]); // std::stof = string to float
-        } catch (...) {
-            // If conversion fails, throw a meaningful error
-            throw std::runtime_error(
-                std::string("Invalid factor ('") + argv[2] + "'), it must be a floating-point number."
-            );
-        }
-
-        // Convert gamma from string to float
-        try {
-            gamma = std::stof(argv[3]);
-        } catch (...) {
-            // Same logic as above: catch *any* error and give a readable message
-            throw std::runtime_error(
-                std::string("Invalid gamma ('") + argv[3] + "'), it must be a floating-point number."
-            );
-        }
-
-        // Store the output file name
-        output_png_file_name = argv[4];
+  // Method to parse command-line arguments
+  void parse_command_line(int argc, char *argv[]) {
+    // We expect 4 arguments: program name + 4 parameters = argc should be 5
+    if (argc != 5) {
+      throw std::runtime_error(
+          "Usage: ./raytracer INPUT_PFM_FILE a_FACTOR GAMMA OUTPUT_PNG_FILE");
     }
+
+    // Store the input file name (second argument)
+    input_pfm_file_name = argv[1];
+
+    //NOTE what if something inproper still manages to be converted to float?
+    // Convert a_factor from string to float
+    try {
+      a_factor = std::stof(argv[2]); // std::stof = string to float
+    } catch (...) {
+      // If conversion fails, throw a meaningful error
+      throw std::runtime_error(std::string("Invalid factor ('") + argv[2] +
+                               "'), it must be a floating-point number.");
+    }
+
+    //NOTE what if something inproper still manages to be converted to float?
+    // Convert gamma from string to float
+    try {
+      gamma = std::stof(argv[3]);
+    } catch (...) {
+      // Same logic as above: catch *any* error and give a readable message
+      throw std::runtime_error(std::string("Invalid gamma ('") + argv[3] +
+                               "'), it must be a floating-point number.");
+    }
+
+    // Store the output file name
+    output_ldr_file_name = argv[4];
+  }
 };
