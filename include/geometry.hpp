@@ -14,6 +14,16 @@
 #include "stb_image_write.h" //external library for LDR images
 
 // ------------------------------------------------------------------------------------------------------------
+// ---------- GLOBAL FUNCTIONS, CONSTANTS, FORWARD
+// DECLARATIONS------------------
+// ------------------------------------------------------------------------------------------------------------
+class Point;
+class Normal;
+class Vec;
+class Transformation;
+class HomMatrix;
+
+// ------------------------------------------------------------------------------------------------------------
 // VECTOR CLASS
 // ------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +61,7 @@ public:
   }
 
   /// return negative vector
-  Vec negative() const { return Vec(-x, -y, -z); }
+  Vec operator-() const { return Vec(-x, -y, -z); }
 
   /// return squared norm of vector
   float squared_norm() const { return x * x + y * y + z * z; }
@@ -69,10 +79,10 @@ public:
   }
 
   /// convert vector to a normal
-  Normal to_normal() const { return Normal(x, y, z); }
+  Normal to_normal() const;
 
   /// convert vector to a point
-  Point to_point() const { return Point(x, y, z); }
+  Point to_point() const;
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -114,8 +124,7 @@ public:
   }
 
   /// convert point to a vector
-  Vec to_vector() const { return Vec(x, y, z); }
-
+  Vec to_vector() const;
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -157,7 +166,7 @@ public:
   }
 
   /// return negative normal
-  Normal negative() const { return Normal(-x, -y, -z); }
+  Normal operator-() const { return Normal(-x, -y, -z); }
 
   /// return squared norm of normal
   float squared_norm() const { return x * x + y * y + z * z; }
@@ -165,7 +174,7 @@ public:
   /// return norm of normal
   float norm() const { return std::sqrt(squared_norm()); }
 
-  /// normalize the normal 
+  /// normalize the normal
   Normal normalize() const {
     float n = norm();
     if (n == 0) {
@@ -175,8 +184,25 @@ public:
   }
 
   /// convert normal to a vector
-  Vec to_vector() const { return Vec(x, y, z); }
+  Vec to_vector() const;
 };
+
+//-------------------------------------------------------------------------------------------------------------
+//------------------ IMPLEMENTATION OF CONVERSION BETWEEN GEOMETRIC
+//OBJECTS---------------------
+//-------------------------------------------------------------------------------------------------------------
+
+/// convert a vector to a point
+Point Vec::to_point() const { return Point(x, y, z); }
+
+// convert a vector to a normal
+Normal Vec::to_normal() const { return Normal(x, y, z); }
+
+/// convert normal to a vector
+Vec Normal::to_vector() const { return Vec(x, y, z); }
+
+/// convert a point to a vector
+Vec Point::to_vector() const { return Vec(x, y, z); }
 
 //---------------------------------------------------------------
 //--------MIXED OPERATIONS BETWEEN GEOMETRIC OBJECTS----------------------
@@ -270,67 +296,72 @@ Vec operator^(const Normal &a, const Normal &b) {
   return _cross_product<Normal, Normal, Vec>(a, b);
 }
 
-///Generic right scalar multiplication operation `In * scalar → Out`
+/// Generic right scalar multiplication operation `In * scalar → Out`
 template <typename In1, typename In2, typename Out>
-Out _scalar_multiplication(const In1 &a, const In2 &b) {
+Out right_scalar_multiplication(const In1 &a, const In2 &b) {
   return Out{a.x * b, a.y * b, a.z * b};
 }
 
-///Generic left scalar multiplication operation `scalar * In→ Out`
+/// left scalar multiplication operation `scalar * In→ Out`
 template <typename In1, typename In2, typename Out>
-Out _scalar_multiplication(const In1 &a, const In2 &b) {
+Out left_scalar_multiplication(const In1 &a, const In2 &b) {
   return Out{a * b.x, a * b.y, a * b.z};
 }
 
-/// right scalar multiplication of a vector and a float, returning a vector
+/// right scalar multiplication `Vec * scalar → Vec`
 Vec operator*(const Vec &a, float b) {
-  return _scalar_multiplication<Vec, float, Vec>(a, b);
+  return right_scalar_multiplication<Vec, float, Vec>(a, b);
 }
 
-/// left scalar multiplication of a float and a vector, returning a vector
+/// left scalar multiplication `scalar * Vec → Vec`
 Vec operator*(float a, const Vec &b) {
-  return _scalar_multiplication<float, Vec, Vec>(a, b);
+  return left_scalar_multiplication<float, Vec, Vec>(a, b);
+}
+
+/// right scalar multiplication `Point * scalar → Point`
+Point operator*(const Point &a, float b) {
+  return right_scalar_multiplication<Point, float, Point>(a, b);
+}
+
+/// left scalar multiplication `scalar * Point → Point`
+Point operator*(float a, const Point &b) {
+  return left_scalar_multiplication<float, Point, Point>(a, b);
 }
 
 /// right scalar multiplication of a normal and a float, returning a normal
 Normal operator*(const Normal &a, float b) {
-  return _scalar_multiplication<Normal, float, Normal>(a, b);
+  return right_scalar_multiplication<Normal, float, Normal>(a, b);
 }
 
 /// left scalar multiplication of a float and a normal, returning a normal
 Normal operator*(float a, const Normal &b) {
-  return _scalar_multiplication<float, Normal, Normal>(a, b);
+  return left_scalar_multiplication<float, Normal, Normal>(a, b);
 }
 
-//TODO complete Transformation class
+// TODO complete Transformation class
 //-------------------------------------------------------------------------------------------------------------
-//------------------------------- TRANSFORMATION CLASS ------------------------------------------------
+//------------------------------- TRANSFORMATION CLASS
+//------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------
 class Transformation {
 public:
   //-------Properties--------
-  
 
   //-----------Constructors-----------
-  
 
   //------------Methods-----------
-
 };
 
-
-//TODO complete HomMatrix class
+// TODO complete HomMatrix class
 //-------------------------------------------------------------------------------------------------------------
-//------------------------------- HOM_MATRIX CLASS ------------------------------------------------
+//------------------------------- HOM_MATRIX CLASS
+//------------------------------------------------
 //-------------------------------------------------------------------------------------------------------------
 class HomMatrix {
-  public:
-    //-------Properties--------
-    
-  
-    //-----------Constructors-----------
-    
-  
-    //------------Methods-----------
-  
-  };
+public:
+  //-------Properties--------
+
+  //-----------Constructors-----------
+
+  //------------Methods-----------
+};

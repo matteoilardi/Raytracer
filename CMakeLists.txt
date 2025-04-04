@@ -55,18 +55,18 @@ add_test(NAME colorTest
 # -------------------------------
 
 
-# # New test for the geometry.hpp file
-# add_executable(geometryTest
-#     test/geometry_test.cpp
-# )
+# New test for the geometry.hpp file
+add_executable(geometryTest
+    test/geometry_test.cpp
+)
 
-# # Make the test target aware of the headers
-# target_include_directories(geometryTest PUBLIC
-#     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#     $<INSTALL_INTERFACE:include>
-# )
+# Make the test target aware of the headers
+target_include_directories(geometryTest PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 
-# # Register this new test too
-# add_test(NAME geometryTest
-#     COMMAND geometryTest
-# )
+# Register this new test too
+add_test(NAME geometryTest
+    COMMAND geometryTest
+)
