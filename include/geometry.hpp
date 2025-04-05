@@ -188,7 +188,7 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------------------
-//------------------ IMPLEMENTATION OF CONVERSION BETWEEN GEOMETRIC
+//---------- IMPLEMENTATION OF CONVERSION BETWEEN GEOM
 //OBJECTS---------------------
 //-------------------------------------------------------------------------------------------------------------
 
@@ -338,6 +338,88 @@ Normal operator*(float a, const Normal &b) {
   return left_scalar_multiplication<float, Normal, Normal>(a, b);
 }
 
+
+//QUESTION wouldn't it make sense to define also a rotation class? Just as we have a Vec class?
+//something as this below
+
+/// @brief linear part of a transformation
+struct linear_matrix {
+  std::array<std::array<float, 3>, 3> matrix;
+};
+
+
+// TODO complete HomMatrix class
+//-------------------------------------------------------------------------------------------------------------
+//------------------------------- HOM_MATRIX CLASS----------------------
+//-------------------------------------------------------------------------------------------------------------
+class HomMatrix {
+public:
+  //-------Properties--------
+  std::array<std::array<float, 4>, 4> matrix;
+
+  //-----------Constructors-----------
+
+  /// @brief default constructor initializes to identity matrix
+  HomMatrix() {
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j < 4; ++j)
+        matrix[i][j] = (i == j) ? 1.0f : 0.0f;
+  }
+
+  /// @brief constructor taking as input a 4X4 matrix as std::array
+  /// @param values 4X4 matrix as std::array<std::array<float, 4>, 4>
+  HomMatrix(const std::array<std::array<float, 4>, 4> &values)
+      : matrix(values) {}
+
+  /// @brief constructor taking as input a 4X4 matrix as C-style array
+  /// @param values 4x4 matrix as C-style array values[4][4]
+  HomMatrix(const float values[4][4]) {
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < 4; ++j) {
+        matrix[i][j] = values[i][j];
+      }
+    }
+  }
+
+  /// @brief constructor taking as input a 3X3 matrix and a translation vector,
+  /// both as std::array
+  /// @param rotation 3X3 matrix as std::array<std::array<float, 3>, 3>
+  /// @param translation 3 vecotr as std::array<float, 3>
+  HomMatrix(const std::array<std::array<float, 3>, 3> &rotation,
+            const std::array<float, 3> &translation) {
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        matrix[i][j] = rotation[i][j];
+      }
+    }
+    // Set the last column of the 3x3 matrix to the translation vector
+    matrix[0][3] = translation[0];
+    matrix[1][3] = translation[1];
+    matrix[2][3] = translation[2];
+    matrix[3][3] = 1.0f;
+  }
+
+  /// @brief constructor taking as input a 3X3 matrix and a translation vector,
+  /// both as C-style arrays
+  /// @param rotation 3X3 matrix as C-style array values[3][3]
+  /// @param translation 3 vecotr as C-style array values[3]
+  HomMatrix(const float rotation[3][3], const float translation[3]) {
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        matrix[i][j] = rotation[i][j];
+      }
+    }
+    // Set the last column of the 3x3 matrix to the translation vector
+    matrix[0][3] = translation[0];
+    matrix[1][3] = translation[1];
+    matrix[2][3] = translation[2];
+    matrix[3][3] = 1.0f;
+  }
+
+  //------------Methods-----------
+
+};
+
 // TODO complete Transformation class
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- TRANSFORMATION CLASS
@@ -347,19 +429,8 @@ class Transformation {
 public:
   //-------Properties--------
 
-  //-----------Constructors-----------
-
-  //------------Methods-----------
-};
-
-// TODO complete HomMatrix class
-//-------------------------------------------------------------------------------------------------------------
-//------------------------------- HOM_MATRIX CLASS
-//------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------
-class HomMatrix {
-public:
-  //-------Properties--------
+  HomMatrix hom_matrix; // homogeneous transformation matrix
+  HomMatrix inverse_hom_matrix; // inverse homogeneous transformation matrix
 
   //-----------Constructors-----------
 
