@@ -4,8 +4,8 @@
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// TODO check tests (they work and we pass them, but I just brutally copied
-// those in test_all.py sample from Tomasi's pytracer) and and implement further
+// TODO check tests (they work and we pass them, but I just brutally copied those in
+// samples/test_all.py sample from Tomasi) and and implement further
 // test for other operations
 
 // ------------------------------------------------------------------------------------------------------------
@@ -68,6 +68,8 @@ int main() {
   test_points();
   test_point_operations();
 
-  std::cout << "All geometry tests passed!" << std::endl;
+  std::cout << "All geometry tests on Vec, Point and Normal passed!" << std::endl;
   return 0;
 }
+
+//TODO implement tests for transformations (see samples/test_all.py from Tomasi)
