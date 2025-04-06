@@ -187,9 +187,136 @@ public:
   Vec to_vector() const;
 };
 
+
+// TODO complete HomMatrix class
 //-------------------------------------------------------------------------------------------------------------
-//---------- IMPLEMENTATION OF CONVERSION BETWEEN GEOM
-//OBJECTS---------------------
+//------------------------------- HOM_MATRIX CLASS----------------------
+//-------------------------------------------------------------------------------------------------------------
+class HomMatrix {
+public:
+  //-------Properties--------
+  std::array<std::array<float, 4>, 4> matrix;
+
+  //-----------Constructors-----------
+
+  /// @brief default constructor initializes to identity matrix
+  HomMatrix() {
+    for (int i = 0; i < 4; ++i)
+      for (int j = 0; j < 4; ++j)
+        matrix[i][j] = (i == j) ? 1.0f : 0.0f;
+  }
+
+  /// @brief constructor taking as input a 4X4 matrix as std::array
+  /// @param values 4X4 matrix as std::array<std::array<float, 4>, 4>
+  HomMatrix(const std::array<std::array<float, 4>, 4> &values)
+      : matrix(values) {}
+
+  /// @brief constructor taking as input a 4X4 matrix as C-style array
+  /// @param values 4x4 matrix as C-style array values[4][4]
+  HomMatrix(const float values[4][4]) {
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < 4; ++j) {
+        matrix[i][j] = values[i][j];
+      }
+    }
+  }
+
+  /// @brief constructor taking as input a 3x3 matrix and a translation vector,
+  /// both as std::array
+  /// @param linear_part (optional) 3x3 matrix as std::array<std::array<float,
+  /// 3>, 3>
+  /// @param translation (optional) 3D vector as std::array<float, 3>
+  HomMatrix(const std::array<std::array<float, 3>, 3> *linear_part = nullptr,
+            const std::array<float, 3> *translation = nullptr) {
+    // Fill the top-left 3x3 part
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        matrix[i][j] =
+            linear_part ? (*linear_part)[i][j] : (i == j ? 1.0f : 0.0f);
+      }
+    }
+
+    // Fill the translation column
+    matrix[0][3] = translation ? (*translation)[0] : 0.0f;
+    matrix[1][3] = translation ? (*translation)[1] : 0.0f;
+    matrix[2][3] = translation ? (*translation)[2] : 0.0f;
+
+    // Fill the bottom row
+    matrix[3][0] = 0.0f;
+    matrix[3][1] = 0.0f;
+    matrix[3][2] = 0.0f;
+    matrix[3][3] = 1.0f;
+  }
+
+  /// @brief constructor taking as input a 3x3 matrix and a translation vector,
+  /// both as C-style arrays
+  /// @param linear_part (optional) 3x3 matrix as C-style array values[3][3]
+  /// @param translation (optional) 3 vector as C-style array values[3]
+  HomMatrix(const float linear_part[3][3] = nullptr,
+            const float translation[3] = nullptr) {
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        matrix[i][j] =
+            (linear_part ? linear_part[i][j] : (i == j ? 1.0f : 0.0f));
+      }
+    }
+    // fill the translation column
+    matrix[0][3] = translation ? translation[0] : 0.0f;
+    matrix[1][3] = translation ? translation[1] : 0.0f;
+    matrix[2][3] = translation ? translation[2] : 0.0f;
+    // fill the bottom row 
+    matrix[3][0] = 0.0f;
+    matrix[3][1] = 0.0f;
+    matrix[3][2] = 0.0f;
+    matrix[3][3] = 1.0f;
+  }
+
+  //------------Methods-----------
+};
+
+// TODO complete Transformation class
+//-------------------------------------------------------------------------------------------------------------
+//------------------------------- TRANSFORMATION CLASS
+//------------------------------------------------
+//-------------------------------------------------------------------------------------------------------------
+class Transformation {
+public:
+  //-------Properties--------
+
+  HomMatrix hom_matrix;         // homogeneous transformation matrix
+  HomMatrix inverse_hom_matrix; // inverse homogeneous transformation matrix
+
+  //-----------Constructors-----------
+
+
+
+  //------------Methods-----------
+
+  /// @brief check if hom_matrix and inverse_hom_matrix are inverses of each
+  /// other
+  bool is_consistent() const {
+    // Check if the product of hom_matrix and inverse_hom_matrix is the identity
+    // matrix
+    for (int i = 0; i < 4; ++i) {
+      for (int j = 0; j < 4; ++j) {
+        float sum = 0;
+        for (int k = 0; k < 4; ++k) {
+          sum += hom_matrix.matrix[i][k] * inverse_hom_matrix.matrix[k][j];
+        }
+        if (i == j && !are_close(sum, 1.0f, DEFAULT_ERROR_TOLERANCE)) {
+          return false;
+        } else if (i != j && !are_close(sum, 0.0f, DEFAULT_ERROR_TOLERANCE)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+};
+
+
+//-------------------------------------------------------------------------------------------------------------
+//--- IMPLEMENTATION OF CONVERSION BETWEEN GEOM OBJECTS-------
 //-------------------------------------------------------------------------------------------------------------
 
 /// convert a vector to a point
@@ -337,102 +464,3 @@ Normal operator*(const Normal &a, float b) {
 Normal operator*(float a, const Normal &b) {
   return left_scalar_multiplication<float, Normal, Normal>(a, b);
 }
-
-
-//QUESTION wouldn't it make sense to define also a rotation class? Just as we have a Vec class?
-//something as this below
-
-/// @brief linear part of a transformation
-struct linear_matrix {
-  std::array<std::array<float, 3>, 3> matrix;
-};
-
-
-// TODO complete HomMatrix class
-//-------------------------------------------------------------------------------------------------------------
-//------------------------------- HOM_MATRIX CLASS----------------------
-//-------------------------------------------------------------------------------------------------------------
-class HomMatrix {
-public:
-  //-------Properties--------
-  std::array<std::array<float, 4>, 4> matrix;
-
-  //-----------Constructors-----------
-
-  /// @brief default constructor initializes to identity matrix
-  HomMatrix() {
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j < 4; ++j)
-        matrix[i][j] = (i == j) ? 1.0f : 0.0f;
-  }
-
-  /// @brief constructor taking as input a 4X4 matrix as std::array
-  /// @param values 4X4 matrix as std::array<std::array<float, 4>, 4>
-  HomMatrix(const std::array<std::array<float, 4>, 4> &values)
-      : matrix(values) {}
-
-  /// @brief constructor taking as input a 4X4 matrix as C-style array
-  /// @param values 4x4 matrix as C-style array values[4][4]
-  HomMatrix(const float values[4][4]) {
-    for (int i = 0; i < 4; ++i) {
-      for (int j = 0; j < 4; ++j) {
-        matrix[i][j] = values[i][j];
-      }
-    }
-  }
-
-  /// @brief constructor taking as input a 3X3 matrix and a translation vector,
-  /// both as std::array
-  /// @param rotation 3X3 matrix as std::array<std::array<float, 3>, 3>
-  /// @param translation 3 vecotr as std::array<float, 3>
-  HomMatrix(const std::array<std::array<float, 3>, 3> &rotation,
-            const std::array<float, 3> &translation) {
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        matrix[i][j] = rotation[i][j];
-      }
-    }
-    // Set the last column of the 3x3 matrix to the translation vector
-    matrix[0][3] = translation[0];
-    matrix[1][3] = translation[1];
-    matrix[2][3] = translation[2];
-    matrix[3][3] = 1.0f;
-  }
-
-  /// @brief constructor taking as input a 3X3 matrix and a translation vector,
-  /// both as C-style arrays
-  /// @param rotation 3X3 matrix as C-style array values[3][3]
-  /// @param translation 3 vecotr as C-style array values[3]
-  HomMatrix(const float rotation[3][3], const float translation[3]) {
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        matrix[i][j] = rotation[i][j];
-      }
-    }
-    // Set the last column of the 3x3 matrix to the translation vector
-    matrix[0][3] = translation[0];
-    matrix[1][3] = translation[1];
-    matrix[2][3] = translation[2];
-    matrix[3][3] = 1.0f;
-  }
-
-  //------------Methods-----------
-
-};
-
-// TODO complete Transformation class
-//-------------------------------------------------------------------------------------------------------------
-//------------------------------- TRANSFORMATION CLASS
-//------------------------------------------------
-//-------------------------------------------------------------------------------------------------------------
-class Transformation {
-public:
-  //-------Properties--------
-
-  HomMatrix hom_matrix; // homogeneous transformation matrix
-  HomMatrix inverse_hom_matrix; // inverse homogeneous transformation matrix
-
-  //-----------Constructors-----------
-
-  //------------Methods-----------
-};
