@@ -9,7 +9,7 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-//NOTE checkout functioalities to revert pixel oreder
+//NOTE checkout functionalities to revert pixel oreder
 //NOTE we might want to change the external library (if so, let's decide soon)
 #include "stb_image_write.h" //external library for LDR images 
 #include <algorithm>

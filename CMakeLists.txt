@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 enable_testing()
 
 # -------------------------------
-# Main executable: raytracer (//QUESTION can we call the exectuable 'Bruco_Mela' instead?)
+# Main executable: raytracer 
 # -------------------------------
 
 # Add the main application source

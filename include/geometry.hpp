@@ -187,8 +187,7 @@ public:
   Vec to_vector() const;
 };
 
-
-// TODO complete HomMatrix class
+// TODO complete HomMatrix class (it should be complete, but check)
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- HOM_MATRIX CLASS----------------------
 //-------------------------------------------------------------------------------------------------------------
@@ -199,82 +198,56 @@ public:
 
   //-----------Constructors-----------
 
-  /// @brief default constructor initializes to identity matrix
-  HomMatrix() {
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j < 4; ++j)
-        matrix[i][j] = (i == j) ? 1.0f : 0.0f;
-  }
-
-  /// @brief constructor taking as input a 4X4 matrix as std::array
-  /// @param values 4X4 matrix as std::array<std::array<float, 4>, 4>
-  HomMatrix(const std::array<std::array<float, 4>, 4> &values)
-      : matrix(values) {}
-
-  /// @brief constructor taking as input a 4X4 matrix as C-style array
-  /// @param values 4x4 matrix as C-style array values[4][4]
-  HomMatrix(const float values[4][4]) {
-    for (int i = 0; i < 4; ++i) {
-      for (int j = 0; j < 4; ++j) {
-        matrix[i][j] = values[i][j];
-      }
-    }
-  }
-
-  /// @brief constructor taking as input a 3x3 matrix and a translation vector,
-  /// both as std::array
+  /// @brief default constructor using std::array for linear part
   /// @param linear_part (optional) 3x3 matrix as std::array<std::array<float,
   /// 3>, 3>
-  /// @param translation (optional) 3D vector as std::array<float, 3>
+  /// @param translation_vec (optional) trslation vector as Vec
   HomMatrix(const std::array<std::array<float, 3>, 3> *linear_part = nullptr,
-            const std::array<float, 3> *translation = nullptr) {
-    // Fill the top-left 3x3 part
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
+            const Vec *translation_vec = nullptr) {
+    // Fill linear part (if nothing is passed initialize to identity)
+    for (int i = 0; i < 3; ++i)
+      for (int j = 0; j < 3; ++j)
         matrix[i][j] =
             linear_part ? (*linear_part)[i][j] : (i == j ? 1.0f : 0.0f);
-      }
-    }
 
-    // Fill the translation column
-    matrix[0][3] = translation ? (*translation)[0] : 0.0f;
-    matrix[1][3] = translation ? (*translation)[1] : 0.0f;
-    matrix[2][3] = translation ? (*translation)[2] : 0.0f;
+    // Fill translation from Vec (if nothing is passed initialize to 0)
+    matrix[0][3] = translation_vec ? translation_vec->x : 0.0f;
+    matrix[1][3] = translation_vec ? translation_vec->y : 0.0f;
+    matrix[2][3] = translation_vec ? translation_vec->z : 0.0f;
 
-    // Fill the bottom row
-    matrix[3][0] = 0.0f;
-    matrix[3][1] = 0.0f;
-    matrix[3][2] = 0.0f;
+    // Fill bottom row (homogeneous coordinates)
+    matrix[3][0] = matrix[3][1] = matrix[3][2] = 0.0f;
     matrix[3][3] = 1.0f;
   }
 
-  /// @brief constructor taking as input a 3x3 matrix and a translation vector,
-  /// both as C-style arrays
-  /// @param linear_part (optional) 3x3 matrix as C-style array values[3][3]
-  /// @param translation (optional) 3 vector as C-style array values[3]
-  HomMatrix(const float linear_part[3][3] = nullptr,
-            const float translation[3] = nullptr) {
-    for (int i = 0; i < 3; ++i) {
-      for (int j = 0; j < 3; ++j) {
-        matrix[i][j] =
-            (linear_part ? linear_part[i][j] : (i == j ? 1.0f : 0.0f));
-      }
-    }
-    // fill the translation column
-    matrix[0][3] = translation ? translation[0] : 0.0f;
-    matrix[1][3] = translation ? translation[1] : 0.0f;
-    matrix[2][3] = translation ? translation[2] : 0.0f;
-    // fill the bottom row 
-    matrix[3][0] = 0.0f;
-    matrix[3][1] = 0.0f;
-    matrix[3][2] = 0.0f;
-    matrix[3][3] = 1.0f;
-  }
+  // NOTE initially I wrote also the constructor below, but I do not think is
+  // really useful
+
+  // /// default constructor using C-style arrays for linear part
+  // /// @param linear_part (optional) 3x3 matrix as C-style array values[3][3]
+  // /// @param translation_vec (optional) translation vector as Vec
+  // HomMatrix(const float linear_part[3][3] = nullptr,
+  //           const Vec *translation_vec = nullptr) {
+  //   // Fill linear part (if nothing is passed initialize to identity)
+  //   for (int i = 0; i < 3; ++i)
+  //     for (int j = 0; j < 3; ++j)
+  //       matrix[i][j] =
+  //           (linear_part ? linear_part[i][j] : (i == j ? 1.0f : 0.0f));
+
+  //   // Fill translation from Vec (if nothing is passed initialize to 0)
+  //   matrix[0][3] = translation_vec ? translation_vec->x : 0.0f;
+  //   matrix[1][3] = translation_vec ? translation_vec->y : 0.0f;
+  //   matrix[2][3] = translation_vec ? translation_vec->z : 0.0f;
+
+  //   // Fill bottom row (homogeneous coordinates)
+  //   matrix[3][0] = matrix[3][1] = matrix[3][2] = 0.0f;
+  //   matrix[3][3] = 1.0f;
+  // }
 
   //------------Methods-----------
 };
 
-// TODO complete Transformation class
+// TODO complete Transformation class (it should be complete, but check)
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- TRANSFORMATION CLASS
 //------------------------------------------------
@@ -286,9 +259,42 @@ public:
   HomMatrix hom_matrix;         // homogeneous transformation matrix
   HomMatrix inverse_hom_matrix; // inverse homogeneous transformation matrix
 
-  //-----------Constructors-----------
+  //-----------Constructors----------- 
 
+  //NOTE the following constructor always build the inverse matrix too
 
+  ///@brief default constructor (initializes to identity)
+  Transformation() : hom_matrix(), inverse_hom_matrix() {}
+
+  /// @brief constructor for translations 
+  /// @param translation_vec translation vector as Vec
+  Transformation(const Vec &translation_vec)
+      : hom_matrix(nullptr, &translation_vec),
+        inverse_hom_matrix(nullptr, &(-translation_vec)) {}
+  
+  /// @brief constructor for rotations
+  /// @param rotation_matrix rotation matrix as std::array<std::array<float, 3>, 3>
+  Transformation(const std::array<std::array<float, 3>, 3> &rotation_matrix) {
+    hom_matrix = HomMatrix(&rotation_matrix);
+    inverse_hom_matrix = HomMatrix(&rotation_matrix);
+    // Invert the rotation matrix
+    for (int i = 0; i < 3; ++i)
+      for (int j = 0; j < 3; ++j)
+        inverse_hom_matrix.matrix[i][j] =
+            rotation_matrix[j][i]; // Transpose for rotation matrix
+  }
+
+  ///@brief constructor for scalings and reflections (diagonal only)
+  /// @param diagonal diagonal of the linear part as std::array<float, 3>
+  Transformation(const std::array<float, 3> &diagonal) {
+    hom_matrix = HomMatrix();
+    inverse_hom_matrix = HomMatrix();
+    for (int i = 0; i < 3; ++i) {
+      hom_matrix.matrix[i][i] = diagonal[i];
+      inverse_hom_matrix.matrix[i][i] = 1.0f / diagonal[i];
+    }
+  }
+  
 
   //------------Methods-----------
 
@@ -312,8 +318,9 @@ public:
     }
     return true;
   }
-};
 
+  
+};
 
 //-------------------------------------------------------------------------------------------------------------
 //--- IMPLEMENTATION OF CONVERSION BETWEEN GEOM OBJECTS-------
@@ -331,8 +338,9 @@ Vec Normal::to_vector() const { return Vec(x, y, z); }
 /// convert a point to a vector
 Vec Point::to_vector() const { return Vec(x, y, z); }
 
+
 //---------------------------------------------------------------
-//--------MIXED OPERATIONS BETWEEN GEOMETRIC OBJECTS----------------------
+//--------OPERATIONS with VEC, NORMAL and POINT ----------------------
 //---------------------------------------------------------------
 
 /// Generic sum operation `In1 + In2 → Out`
@@ -463,4 +471,36 @@ Normal operator*(const Normal &a, float b) {
 /// left scalar multiplication of a float and a normal, returning a normal
 Normal operator*(float a, const Normal &b) {
   return left_scalar_multiplication<float, Normal, Normal>(a, b);
+}
+
+
+//TODO complete this part
+//----------------------------------------------------------------------
+//-------------OPERATIONS with TRANSFORMATIONS and POINT,VEC,NORMAL ---------------------
+//----------------------------------------------------------------------
+
+/// @brief product between two transformations
+Transformation operator*(const Transformation &a,
+                                  const Transformation &b) {
+  // TODO implement this function
+  return Transformation();
+}
+
+/// @brief product between a transformation and a point
+Point operator*(const Transformation &a, const Point &b) {
+  // TODO implement this function
+  //NOTE point transforms with linear part + translation
+  return Point();
+}
+/// @brief product between a transformation and a vector
+Vec operator*(const Transformation &a, const Vec &b) {
+  // TODO implement this function
+  //NOTE vector transforms with linear part only
+  return Vec();
+}
+/// @brief product between a transformation and a normal    
+Normal operator*(const Transformation &a, const Normal &b) {
+  // TODO implement this function
+  //NOTE normal transforms with inverse transpose of the linear part
+  return Normal();
 }
