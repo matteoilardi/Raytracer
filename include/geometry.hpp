@@ -237,7 +237,7 @@ public:
 
   //-----------Constructors-----------
 
-  //the following constructors always build the inverse matrix too
+  // the following constructors always build the inverse matrix too
 
   ///@brief default constructor (initializes to identity)
   Transformation() : hom_matrix(), inverse_hom_matrix() {}
@@ -298,10 +298,9 @@ public:
         }
       }
     }
-    //check if product of translation vectors is the identity
+    // check if product of translation vectors is the identity
     Vec vec = (hom_matrix * inverse_hom_matrix.translation_vec) + hom_matrix.translation_vec;
-    if (!are_close(vec.x, 0.0f, DEFAULT_ERROR_TOLERANCE) ||
-        !are_close(vec.y, 0.0f, DEFAULT_ERROR_TOLERANCE) ||
+    if (!are_close(vec.x, 0.0f, DEFAULT_ERROR_TOLERANCE) || !are_close(vec.y, 0.0f, DEFAULT_ERROR_TOLERANCE) ||
         !are_close(vec.z, 0.0f, DEFAULT_ERROR_TOLERANCE)) {
       return false;
     }
@@ -422,7 +421,7 @@ Normal operator*(float a, const Normal &b) { return left_scalar_multiplication<f
 
 /// @brief product between a HomMatrix and a vector
 Vec operator*(const HomMatrix &a, const Vec &b) {
-  //vector transforms with linear part only, translation is not applied
+  // vector transforms with linear part only, translation is not applied
   Vec result;
   result.x = a.linear_part[0][0] * b.x + a.linear_part[0][1] * b.y + a.linear_part[0][2] * b.z;
   result.y = a.linear_part[1][0] * b.x + a.linear_part[1][1] * b.y + a.linear_part[1][2] * b.z;
