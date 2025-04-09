@@ -9,7 +9,6 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-// NOTE we might want to change the external library (if so, let's decide soon)
 #include "colors.hpp"
 #include "stb_image_write.h" //external library for LDR images
 
@@ -183,7 +182,6 @@ public:
   Vec to_vector() const;
 };
 
-// TODO complete HomMatrix class (it should be complete, but check)
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- HOM_MATRIX CLASS----------------------
 //-------------------------------------------------------------------------------------------------------------
@@ -223,7 +221,6 @@ public:
   //------------Methods-----------
 };
 
-// TODO complete Transformation class (should be complete, but check)
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- TRANSFORMATION CLASS
 //------------------------------------------------
@@ -414,37 +411,37 @@ Normal operator*(const Normal &a, float b) { return right_scalar_multiplication<
 /// left scalar multiplication of a float and a normal, returning a normal
 Normal operator*(float a, const Normal &b) { return left_scalar_multiplication<float, Normal, Normal>(a, b); }
 
-// TODO check if definitions are optimal & insert other operations needed (if any)
 //----------------------------------------------------------------------
 //-------------OPERATIONS with TRANSFORMATIONS and POINT,VEC,NORMAL--------------------
 //----------------------------------------------------------------------
 
 /// @brief product between a HomMatrix and a vector
 Vec operator*(const HomMatrix &a, const Vec &b) {
-  // vector transforms with linear part only, translation is not applied
+  // NOTE check if implementation is consistent with other operations transformation/hom_matrix * smth
+  //  vector transforms with linear part only, translation is not applied
   Vec result;
   result.x = a.linear_part[0][0] * b.x + a.linear_part[0][1] * b.y + a.linear_part[0][2] * b.z;
   result.y = a.linear_part[1][0] * b.x + a.linear_part[1][1] * b.y + a.linear_part[1][2] * b.z;
   result.z = a.linear_part[2][0] * b.x + a.linear_part[2][1] * b.y + a.linear_part[2][2] * b.z;
-  return Vec();
+  return result;
 }
 
 /// @brief product between a transformation and a vector
 Vec operator*(const Transformation &a, const Vec &b) {
+  // OPT compiler should optimize this wrapping, but maybe check with benchmark in the future
   // vector transforms with linear part only, translation is not applied
   return a.hom_matrix * b;
 }
 
 /// @brief product between a transformation and a point
 Point operator*(const Transformation &a, const Point &b) {
-  // TODO check if implementation is optimal
+  // OPT compiler should optimize this wrapping, but maybe check with benchmark in the future
   // point transforms with linear part + translation
   return (a * b.to_vector() + a.hom_matrix.translation_vec).to_point();
 }
 
 /// @brief product between a transformation and a normal
 Normal operator*(const Transformation &a, const Normal &b) {
-  // TODO check if implementation is optimal
   // normal transforms with inverse transpose of the linear part
   Normal result;
   result.x = a.inverse_hom_matrix.linear_part[0][0] * b.x + a.inverse_hom_matrix.linear_part[1][0] * b.y +
@@ -454,13 +451,14 @@ Normal operator*(const Transformation &a, const Normal &b) {
   result.z = a.inverse_hom_matrix.linear_part[0][2] * b.x + a.inverse_hom_matrix.linear_part[1][2] * b.y +
              a.inverse_hom_matrix.linear_part[2][2] * b.z;
   // normalize the normal after transformation
+  // NOTE might slow down code in iterative processes computing normals several times, you might want to normalize just
+  // once at the end
   result.normalize();
   return result;
 }
 
 /// @brief product between two transformations
 Transformation operator*(const Transformation &a, const Transformation &b) {
-  // TODO check if implementation is optimal
   std::array<std::array<float, 3>, 3> linear_part;
   std::array<std::array<float, 3>, 3> inverse_linear_part;
   // define translation vector (A.lin*B.trans+A.trans)
