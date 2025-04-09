@@ -1,6 +1,14 @@
+//-----------------------------------------------------------
+//--------------------------- LIBRARIES ---------------------------
+// -----------------------------------------------------------
 #include "colors.hpp"
 
 using namespace std;
+
+//-------------------------------------------------------------------------------------------------------------
+//----------------- TESTS FOR COLORS -----------------    
+//-------------------------------------------------------------------------------------------------------------
+
 
 bool is_little_endian() {
   uint16_t word{0x1234};
@@ -179,8 +187,8 @@ void test_pfm_write() {
 }
 
 void test_pfm_read() {
-  HdrImage image_from_le("../test/reference_le.pfm");
-  HdrImage image_from_be("../test/reference_be.pfm");
+  HdrImage image_from_le("../samples/reference_le.pfm");
+  HdrImage image_from_be("../samples/reference_be.pfm");
 
   assert(are_close(image_from_le.get_pixel(0, 0), Color(10, 20, 30)));
   assert(are_close(image_from_le.get_pixel(0, 1), Color(100, 200, 300)));
@@ -254,7 +262,7 @@ void test_clamp_image() {
   }
 }
 
-
+//main function for testing
 
 int main() {
 
@@ -264,7 +272,7 @@ int main() {
   // which is the space character. However, stream reading ignore spaces and this caused the output to be misaligned.
   // Indeed we started having issues from in the first line (starting from bottom, i.e. second line) where 10.0 first appears.
   float a;
-  std::ifstream is("../test/reference_le.pfm");
+  std::ifstream is("../samples/reference_le.pfm");
   std::string ciao;
   ciao = _read_line(is);
   ciao = _read_line(is);

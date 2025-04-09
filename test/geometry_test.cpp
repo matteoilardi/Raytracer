@@ -4,11 +4,8 @@
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// TODO check tests (they work and we pass them, but I just brutally copied those in
-// samples/test_all.py sample from Tomasi) 
-
 // ------------------------------------------------------------------------------------------------------------
-// INCLUDED LIBRARIES
+// -------------LIBRARIES---------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
 #include "colors.hpp"
@@ -17,6 +14,14 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+
+
+//------------------------------------------------------------------------------------------------------------
+//----------------- TESTS FOR VEC, POINT AND NORMAL -----------------
+//-------------------------------------------------------------------------------------------------------------
+
+// TODO check tests (they work and we pass them, but I just brutally copied/modified those in
+// samples/test_all.py sample from Tomasi)
 
 void test_vectors() {
   Vec a(1.0f, 2.0f, 3.0f);
@@ -62,6 +67,7 @@ void test_point_operations() {
   assert((p1 - v).is_close(Point(-3.0f, -4.0f, -5.0f)));
 }
 
+// wrapper function to call all test on Vec, Point and Normal
 void test_all_geometry() {
   test_vectors();
   test_vector_operations();
@@ -70,32 +76,13 @@ void test_all_geometry() {
   std::cout << "All geometry tests on Vec, Point and Normal passed!" << std::endl;
 }
 
-// TODO check tests (they work and we pass them, but I just brutally copied those in
-// samples/test_all.py sample from Tomasi) 
 
 // ------------------------------------------------------------------------------------------------------------
-// TESTS FOR TRANSFORMATIONS BASED ON PYTRACER
+// -------------------------TESTS FOR TRANSFORMATIONS-----------------
 // ------------------------------------------------------------------------------------------------------------
 
-// TODO move the following two methods in the relevant classes
-bool matrix_is_close(const std::array<std::array<float, 3>, 3> &A, const std::array<std::array<float, 3>, 3> &B,
-                     float tol = DEFAULT_ERROR_TOLERANCE) {
-  for (int i = 0; i < 3; ++i) {
-    for (int j = 0; j < 3; ++j) {
-      if (!are_close(A[i][j], B[i][j], tol)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-bool transformation_is_close(const Transformation &a, const Transformation &b, float tol = DEFAULT_ERROR_TOLERANCE) {
-  return matrix_is_close(a.hom_matrix.linear_part, b.hom_matrix.linear_part, tol) &&
-         matrix_is_close(a.inverse_hom_matrix.linear_part, b.inverse_hom_matrix.linear_part, tol) &&
-         a.hom_matrix.translation_vec.is_close(b.hom_matrix.translation_vec, tol) &&
-         a.inverse_hom_matrix.translation_vec.is_close(b.inverse_hom_matrix.translation_vec, tol);
-}
+// TODO check tests (they work and we pass them, but I just brutally copied/modified those in
+// samples/test_all.py sample from Tomasi)
 
 void test_is_consistent() {
   std::array<std::array<float, 3>, 3> lin = {{{1, 2, 3}, {5, 6, 7}, {9, 9, 8}}};
@@ -109,7 +96,7 @@ void test_is_consistent() {
   // Modify copy and check inconsistency
   Transformation T_bad = T;
   T_bad.hom_matrix.linear_part[2][2] += 1;
-  assert(!transformation_is_close(T, T_bad));
+  assert(!T.is_close(T_bad));
 }
 
 void test_multiplication() {
@@ -152,12 +139,17 @@ void test_vec_point_multiplication() {
   expected_n.print();
 }
 
+// wrapper function to call all tests on transformation
 void test_all_transformations() {
   test_is_consistent();
   test_multiplication();
   test_vec_point_multiplication();
   std::cout << "All transformation tests passed!\n";
 }
+
+//-------------------------------------------------------------------------------------------------------------
+//----------------- MAIN FUNCTION FOR TESTING -----------------
+//-------------------------------------------------------------------------------------------------------------
 
 int main() {
   test_all_geometry();

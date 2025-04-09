@@ -220,11 +220,27 @@ public:
   }
 
   //------------Methods-----------
+
+  ///@brief check if two matrices are close
+  bool is_close(const HomMatrix &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+    // check if the two linear parts are close
+    for (int i = 0; i < 3; ++i) {
+      for (int j = 0; j < 3; ++j) {
+        if (!are_close(linear_part[i][j], other.linear_part[i][j], error_tolerance)) {
+          return false;
+        }
+      }
+    }
+    // check if the two translation vectors are close
+    if (!translation_vec.is_close(other.translation_vec, error_tolerance)) {
+      return false;
+    }
+    return true;
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
-//------------------------------- TRANSFORMATION CLASS
-//------------------------------------------------
+//------------------------------- TRANSFORMATION CLASS----------------------
 //-------------------------------------------------------------------------------------------------------------
 class Transformation {
 public:
@@ -301,10 +317,15 @@ public:
     if (!are_close(vec.x, 0.0f, DEFAULT_ERROR_TOLERANCE) || !are_close(vec.y, 0.0f, DEFAULT_ERROR_TOLERANCE) ||
         !are_close(vec.z, 0.0f, DEFAULT_ERROR_TOLERANCE)) {
       return false;
-    }
-    else {
+    } else {
       return true;
     }
+  }
+
+  ///@brief check if transformation is close to another transformation
+  bool is_close(const Transformation &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+    return hom_matrix.is_close(other.hom_matrix, error_tolerance) &&
+           inverse_hom_matrix.is_close(other.inverse_hom_matrix, error_tolerance);
   }
 };
 
