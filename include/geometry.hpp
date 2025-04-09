@@ -23,6 +23,7 @@ class HomMatrix;
 
 Vec operator+(const Vec &a, const Vec &b);
 Vec operator*(const HomMatrix &a, const Transformation &b);
+Vec operator*(const HomMatrix &a, const Vec &b);
 
 // ------------------------------------------------------------------------------------------------------------
 // VECTOR CLASS
@@ -296,10 +297,13 @@ public:
       }
     }
     // check if product of translation vectors is the identity
-    Vec vec = (hom_matrix * inverse_hom_matrix.translation_vec) + hom_matrix.translation_vec;
+    Vec vec = (hom_matrix * (inverse_hom_matrix.translation_vec)) + hom_matrix.translation_vec;
     if (!are_close(vec.x, 0.0f, DEFAULT_ERROR_TOLERANCE) || !are_close(vec.y, 0.0f, DEFAULT_ERROR_TOLERANCE) ||
         !are_close(vec.z, 0.0f, DEFAULT_ERROR_TOLERANCE)) {
       return false;
+    }
+    else {
+      return true;
     }
   }
 };
