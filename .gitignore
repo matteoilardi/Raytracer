@@ -22,5 +22,5 @@ my_vcs.sh
 # 
 prova* 
 
-# clang format files
-.clang-format
+# clang format files (we upload a common format, so I comment this out)
+#clang-format
