@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
     parameters.parse_command_line(argc, argv);
   } catch (const std::runtime_error &err) {
     std::cerr << "Error: " << err.what() << '\n';
-    return 1;
+    return EXIT_FAILURE;
   }
 
   HdrImage img(0,0);
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 
   } catch (const std::exception &err) {
     std::cerr << "Error reading image: " << err.what() << '\n';
-    return 1;
+    return EXIT_FAILURE;
   }
 
   // Step 3: Process the image (normalize + clamp)
@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
               << "\" has been written to disk.\n";
   } catch (const std::exception &err) {
     std::cerr << "Error writing image: " << err.what() << '\n';
-    return 1;
+    return EXIT_FAILURE;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
