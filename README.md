@@ -1,36 +1,41 @@
 # Raytracer
 
-This is a simple raytracer written in C++. It is work in progress for Prof. Maurizio Tomasi's course *Numerical techniques for photorealistic image generation* (AY2024-2025) at the Physics Dept. of Unimi.
+This is a simple raytracer written in C++. It is a work in progress for Prof. Maurizio Tomasi's course *Numerical Techniques for Photorealistic Image Generation* (AY2024–2025) at the Department of Physics, University of Milan.
 
 ## Installation
 
-**coming soon**
-
-To check that the (ongoing) code works as expected, you can run the suite of tests using the following commands:
-
-    colorTest
-    geometryTest
-
+**Coming soon**
 
 ## Usage
 
-The program is run through **work in progress**
+As of now, the program supports converting a PFM (Portable FloatMap) image into a PNG image. To do this, run the program from the command line with the following arguments:
 
-Beware that it will take a very long time to produce the image!
+```bash
+./raytracer <input.pfm> <alpha> <gamma> <output.png>
+```
 
-To get command-line help, run **work in progress**
+- `<input.pfm>`: The name of the input PFM file.
+- `<alpha>`: A multiplier for scaling the pixel values.
+- `<gamma>`: The gamma correction value for your monitor (e.g., 2.2).
+- `<output.png>`: The name of the output image file (PNG format).
 
+> ⚠️ Rendering features are still under development. Image generation is currently limited to PFM-to-PNG conversion.
 
-## Scene files
+To run the available test suite and verify the core components, use:
 
-**work in progress**
+```bash
+./colorTest
+./geometryTest
+```
 
+## Scene Files
+
+**Work in progress**
 
 ## History
 
-**coming soon**
-
+**Coming soon**
 
 ## License
 
-The code is released under a MIT license. See the file [LICENSE.md](./LICENSE.md)
+This project is licensed under the MIT License. See [LICENSE.md](./LICENSE.md) for details.

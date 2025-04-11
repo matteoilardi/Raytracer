@@ -11,19 +11,19 @@ int main(int argc, char *argv[]) {
   try {
     parameters.parse_command_line(argc, argv);
   } catch (const std::runtime_error &err) {
-    std::cerr << "Error: " << err.what() << '\n';
+    std::cerr << "Error parsing command line. " << err.what() << '\n';
     return EXIT_FAILURE;
   }
 
-  HdrImage img(0,0);
   // Step 2: Read HDR image from PFM file
+  HdrImage img(0,0);
   try {
     img = HdrImage(parameters.input_pfm_file_name);
     std::cout << "File \"" << parameters.input_pfm_file_name
               << "\" has been read from disk.\n";
 
   } catch (const std::exception &err) {
-    std::cerr << "Error reading image: " << err.what() << '\n';
+    std::cerr << "Error reading image. " << err.what() << '\n';
     return EXIT_FAILURE;
   }
 
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     std::cout << "File \"" << parameters.output_ldr_file_name
               << "\" has been written to disk.\n";
   } catch (const std::exception &err) {
-    std::cerr << "Error writing image: " << err.what() << '\n';
+    std::cerr << "Error writing image. " << err.what() << '\n';
     return EXIT_FAILURE;
   }
 

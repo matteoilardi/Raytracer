@@ -16,6 +16,8 @@ add_executable(raytracer
 	src/raytracer.cpp
 )
 
+target_compile_options(raytracer PRIVATE -Wno-deprecated-declarations)
+
 add_executable(colorTest
 	test/colors.cpp
 )

@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -47,7 +48,7 @@ public:
   std::string error_message;
 
   // Constructor (just takes as input the desired error message)
-  InvalidPfmFileFormat(std::string em) : error_message(em) {}
+  InvalidPfmFileFormat(std::string em) : error_message("Invalid PFM file format: " + em) {}
 
   // Methods
 
@@ -375,7 +376,11 @@ public:
   HdrImage(const std::string &file_name) {
     std::ifstream stream(file_name);
     if (!stream.is_open()) {
-      throw std::ios_base::failure("Failed to open file: " + file_name);
+      std::string error_msg = "Failed to open file \"" + file_name + "\"";
+      if (errno) {  // errno is a system-specific number that identifies an error occured
+        error_msg += ": " + std::string(strerror(errno)); // convert errno to the string describing the message
+      }
+      throw std::runtime_error(error_msg);
     }
 
     read_pfm_file(stream);
@@ -474,6 +479,8 @@ public:
     }
   }
 
+  // TODO write_ldr_image() should infer the file format from filename, and should not require it as an additional argument
+
   /// @brief Take a normalized and clamped HDR image, apply gamma correction &
   /// produce LDR image in desired format
   /// @param filename name of LDR image to be produced
@@ -496,12 +503,10 @@ public:
           std::round(gamma_corrected * 255.0f)); // Scale and convert
     };
 
-    // NOTE Not sure about the order of the reading here, it shouldn't matter
-    // here however, but see note below when creating LDR image
-    //  Loop over every pixel in the image (row by row, top to bottom)
+    // NOTE png and jpeg images are filled in from left to right, from top to bottom.
+    // You might need to change buffer order if you want to support other LDR formats.
     for (int y = 0; y < height; ++y) {
       for (int x = 0; x < width; ++x) {
-        // Get the Color at pixel (x, y) from the HDR image
         const Color &c = get_pixel(x, y);
 
         // Convert and store the R, G, B values in the buffer
@@ -510,10 +515,7 @@ public:
         buffer.push_back(transform_to_LDR(c.b));
       }
     }
-    // NOTE depending on the image format, the order of the pixels in the buffer
-    // might vary
-    //  png and jpeg accept top to bottom, left to right
-    //  bmp and tga accept bottom to top, left to right
+
     if (format == "png") {
       // Save as PNG — stride = width * 3 bytes per row
       stbi_write_png(filename.c_str(), width, height, 3, buffer.data(),
@@ -521,14 +523,14 @@ public:
     } else if (format == "jpg" || format == "jpeg") {
       // Save as JPEG with quality 95 (out of 100)
       stbi_write_jpg(filename.c_str(), width, height, 3, buffer.data(), 95);
-    } else if (format == "bmp") {
-      // Save as BMP
-      stbi_write_bmp(filename.c_str(), width, height, 3, buffer.data());
-    } else if (format == "tga") {
-      // Save as TGA
-      stbi_write_tga(filename.c_str(), width, height, 3, buffer.data());
+//    } else if (format == "bmp") {
+//      // Save as BMP
+//      stbi_write_bmp(filename.c_str(), width, height, 3, buffer.data());
+//    } else if (format == "tga") {
+//      // Save as TGA
+//      stbi_write_tga(filename.c_str(), width, height, 3, buffer.data());
     } else {
-      // Unsupported format: throw an error
+      // Unsupported format: throw an exception
       throw std::invalid_argument("Unsupported format: " + format);
     }
   }
@@ -541,11 +543,10 @@ public:
 /// @brief Class to hold input parameters for image conversion
 class Parameters {
 public:
-  // Default values (can be overridden via command line)
-  std::string input_pfm_file_name = "";
-  float a_factor = 0.2f; // Normalization factor a
-  float gamma = 1.0f;    // Gamma correction value
-  std::string output_ldr_file_name = "";
+  std::string input_pfm_file_name;
+  float a_factor;
+  float gamma;
+  std::string output_ldr_file_name;
 
   // Method to parse command-line arguments
   void parse_command_line(int argc, char *argv[]) {
@@ -568,7 +569,6 @@ public:
                                "'), it must be a floating-point number.");
     }
 
-    //NOTE what if something inproper still manages to be converted to float?
     // Convert gamma from string to float
     try {
       gamma = std::stof(argv[3]);
