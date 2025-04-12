@@ -10,7 +10,6 @@
 #pragma once
 
 #include "colors.hpp"
-#include "stb_image_write.h" //external library for LDR images
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -68,6 +67,8 @@ public:
 
   /// return norm of vector
   float norm() const { return std::sqrt(squared_norm()); }
+
+  // NOTE Normalize() should perhaps be a non const void
 
   /// normalize the vector
   Vec normalize() const {
@@ -262,10 +263,11 @@ public:
   /// @param translation_vec translation vector as Vec
   Transformation(const std::array<std::array<float, 3>, 3> &linear_part,
                  const std::array<std::array<float, 3>, 3> &inverse_linear_part, const Vec &translation_vec,
-                 const Vec &inverse_translation_vec) {
-    HomMatrix hom_matrix(linear_part, translation_vec);
-    HomMatrix inverse_hom_matrix(inverse_linear_part, inverse_translation_vec);
-  }
+                 const Vec &inverse_translation_vec) : hom_matrix(linear_part, translation_vec), inverse_hom_matrix(inverse_linear_part, inverse_translation_vec) {}
+
+
+
+  // NOTE should we define a Translation class derived from Transformation? For readability's sake only: in fact I think that a call at the following constructor might be confusiong
 
   /// @brief constructor for translations
   /// @param translation_vec translation vector as Vec
@@ -358,7 +360,7 @@ template <typename In1, typename In2, typename Out> Out _sum(const In1 &a, const
 Vec operator+(const Vec &a, const Vec &b) { return _sum<Vec, Vec, Vec>(a, b); }
 
 /// sum of a point and a vector, returning a point
-Point operator+(const Point &a, Vec &b) { return _sum<Point, Vec, Point>(a, b); }
+Point operator+(const Point &a, const Vec &b) { return _sum<Point, Vec, Point>(a, b); }
 
 /// Generic difference operation `In1 - In2 → Out`
 template <typename In1, typename In2, typename Out> Out _difference(const In1 &a, const In2 &b) {
@@ -505,3 +507,49 @@ Transformation operator*(const Transformation &a, const Transformation &b) {
   return Transformation(linear_part, inverse_linear_part, translation_vec,
                         inverse_translation_vec); // call constructor (which aslo defines translation vector of inverse)
 }
+
+
+
+//------------------------------------------------------------------------
+//-------- SPECIFIC TRANSFORMATIONS, IMPLEMENTED AS DERIVED CLASSES ------
+//-----------------------------------------------------------------------
+
+
+class rotation_x : public Transformation {
+public:
+  // Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
+  rotation_x(const float &theta)
+    : Transformation({{
+        {1.f, 0.f, 0.f},
+        {0.f, std::cos(theta), -std::sin(theta)},
+        {0.f, std::sin(theta), std::cos(theta)}
+      }}) {}
+};
+
+class rotation_y : public Transformation {
+public:
+  // Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
+  rotation_y(const float &theta)
+    : Transformation({{
+        {std::cos(theta), 0.f, std::sin(theta)},
+        {0.f, 1.f, 0.f},
+        {-std::sin(theta), 0.f, std::cos(theta)}
+      }}) {}
+};
+
+class rotation_z : public Transformation {
+public:
+  // Constructor: builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
+  rotation_z(const float &theta)
+    : Transformation({{
+        {std::cos(theta), -std::sin(theta), 0.f},
+        {std::sin(theta), std::cos(theta), 0.f},
+        {0.f, 0.f, 1.f}
+      }}) {}
+};
+
+class translation : public Transformation {
+public:
+  // Constructor: translation (calls Transformation constructor that accepts Vec)
+  translation(Vec vec) : Transformation(vec) {}
+};
