@@ -553,3 +553,8 @@ public:
   // Constructor: translation (calls Transformation constructor that accepts Vec)
   translation(Vec vec) : Transformation(vec) {}
 };
+
+// NOTE why does constexpr not work?
+const Vec VEC_X = Vec(1.0, 0.0, 0.0);
+const Vec VEC_Y = Vec(0.0, 1.0, 0.0);
+const Vec VEC_Z = Vec(0.0, 0.0, 1.0);
