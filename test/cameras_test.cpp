@@ -77,8 +77,10 @@ void test_perspective_camera() {
 
 
 void test_image_tracer() {
-  HdrImage img(4, 2);
-  ImageTracer tracer(img, std::make_unique<PerspectiveCamera>(1., 2.));
+  std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
+  std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1., 2.);
+  ImageTracer tracer(std::move(img), std::move(cam));
+  //ImageTracer tracer(std::make_unique<HdrImage>(4, 2), std::make_unique<PerspectiveCamera>(1., 2.)); // Same as the three lines above
 
   Ray ray1 = tracer.fire_ray(0., 0., 2.5, 1.5);
   Ray ray2 = tracer.fire_ray(2., 1.);
@@ -86,9 +88,9 @@ void test_image_tracer() {
 
   tracer.fire_all_rays([](Ray ray) -> Color {return Color(1., 2., 3.); });
 
-  for(int col = 0; col < img.width; ++col) {
-    for(int row = 0; row < img.height; ++row) {
-      assert(are_close(tracer.image.get_pixel(col, row), Color(1., 2., 3.)));
+  for(int col = 0; col < tracer.image->width; ++col) {
+    for(int row = 0; row < tracer.image->height; ++row) {
+      assert(are_close(tracer.image->get_pixel(col, row), Color(1., 2., 3.)));
     }
   }
 }

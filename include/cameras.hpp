@@ -131,7 +131,7 @@ public:
 class ImageTracer {
 public:
   //-------Properties--------
-  HdrImage image;
+  std::unique_ptr<HdrImage> image;
   std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object Camera is the ImageTracer
 
     
@@ -140,19 +140,17 @@ public:
   /// Default constructor
     
   /// Constructor with parameters
-  ImageTracer(HdrImage image, std::unique_ptr<Camera> camera) : image(std::move(image)), camera(std::move(camera)) {}
-  // IMPORTANT: to create an instance of ImageTracer with an orthogonal camera do: ImageTracer tracer(myImage, std::make_unique<OrthogonalCamera>());
-  // make_unique<T>() creates and returns a std::unique_ptr that owns a dynamically allocated object of type T
+  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera) : image(std::move(image)), camera(std::move(camera)) {}
   // TODO check if is ok for ImageTracer to stay on the heap, which is a consequence of the above implementation
-  // TODO consider to check whether the unique_ptr provided is not dangling
+  // TODO consider checking whether the unique_ptr provided is not dangling
     
   //--------------------Methods----------------------
 
   ///@brief returns a ray originating from the camera
   Ray fire_ray(int col, int row, float u_pixel = 0.5, float v_pixel = 0.5) {
     // convert pixel indeices into a position on the screen; default values of u_pixel and v_pixel make the ray hit the center of the pixel
-    float u = (col + u_pixel) / (image.width - 1);
-    float v = (row + v_pixel) / (image.height - 1);
+    float u = (col + u_pixel) / (image->width - 1);
+    float v = (row + v_pixel) / (image->height - 1);
 
     return camera->fire_ray(u, v);
   }
@@ -162,11 +160,11 @@ public:
   using RaySolver = Color(Ray); // General function that takes a Ray as input and returns a Color
 
   void fire_all_rays(RaySolver* func) {
-    for(int col = 0; col < image.width; ++col) {
-      for(int row = 0; row < image.height; ++row) {
+    for(int col = 0; col < image->width; ++col) {
+      for(int row = 0; row < image->height; ++row) {
         Ray ray = fire_ray(col, row);
         Color color = func(ray);
-        image.set_pixel(col, row, color);
+        image->set_pixel(col, row, color);
       }
     }
   }
