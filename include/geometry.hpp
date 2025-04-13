@@ -68,15 +68,15 @@ public:
   /// return norm of vector
   float norm() const { return std::sqrt(squared_norm()); }
 
-  // NOTE Normalize() should perhaps be a non const void
-
   /// normalize the vector
-  Vec normalize() const {
+  void normalize() {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero vector");
     }
-    return Vec(x / n, y / n, z / n);
+    x = x / n;
+    y = y / n;
+    z = z / n;
   }
 
   /// convert vector to a normal
@@ -172,12 +172,14 @@ public:
   float norm() const { return std::sqrt(squared_norm()); }
 
   /// normalize the normal
-  Normal normalize() const {
+  void normalize() {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero normal");
     }
-    return Normal(x / n, y / n, z / n);
+    x= x / n;
+    y= y / n;
+    z= z / n;
   }
 
   /// convert normal to a vector
@@ -267,7 +269,8 @@ public:
 
 
 
-  // NOTE should we define a Translation class derived from Transformation? For readability's sake only: in fact I think that a call at the following constructor might be confusiong
+  // NOTE should we define a Translation class derived from Transformation? For readability's sake only: in fact I think that a call at the following constructor might be confusioning
+  //ANSWER yes, definitely. I checked your implementation below, well done, thanks. Cancel these TAGs when you read.
 
   /// @brief constructor for translations
   /// @param translation_vec translation vector as Vec
@@ -478,7 +481,7 @@ Normal operator*(const Transformation &a, const Normal &b) {
   result.z = a.inverse_hom_matrix.linear_part[0][2] * b.x + a.inverse_hom_matrix.linear_part[1][2] * b.y +
              a.inverse_hom_matrix.linear_part[2][2] * b.z;
   // normalize the normal after transformation
-  // NOTE might slow down code in iterative processes computing normals several times, you might want to normalize just
+  // NOTE (for the future) might slow down code in iterative processes computing normals several times, you might want to normalize just
   // once at the end
   result.normalize();
   return result;
@@ -517,7 +520,8 @@ Transformation operator*(const Transformation &a, const Transformation &b) {
 
 class rotation_x : public Transformation {
 public:
-  // Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
+  ///Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
+  ///@param theta angle of rotation (in radians)
   rotation_x(const float &theta)
     : Transformation({{
         {1.f, 0.f, 0.f},
@@ -526,6 +530,8 @@ public:
       }}) {}
 };
 
+///Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
+///@param theta angle of rotation (in radians)
 class rotation_y : public Transformation {
 public:
   // Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
@@ -537,6 +543,8 @@ public:
       }}) {}
 };
 
+///Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
+///@param theta angle of rotation (in radians)
 class rotation_z : public Transformation {
 public:
   // Constructor: builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
@@ -548,13 +556,16 @@ public:
       }}) {}
 };
 
+
 class translation : public Transformation {
 public:
-  // Constructor: translation (calls Transformation constructor that accepts Vec)
+  ///Constructor: translation (calls Transformation constructor that accepts a translation vector)
+  ///@param vec translation vector
   translation(Vec vec) : Transformation(vec) {}
 };
 
-// NOTE why does constexpr not work?
+// NOTE why does constexpr not work? 
+//DISCUSSION I do not get your problem, it seems to work for me.
 const Vec VEC_X = Vec(1.0, 0.0, 0.0);
 const Vec VEC_Y = Vec(0.0, 1.0, 0.0);
 const Vec VEC_Z = Vec(0.0, 0.0, 1.0);

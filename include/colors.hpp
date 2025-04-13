@@ -516,9 +516,8 @@ public:
         buffer.push_back(transform_to_LDR(c.b));
       }
     }
-    // NOTE depending on the image format, the order of the pixels in the buffer
-    // might vary
-    //  png and jpeg accept top to bottom, left to right
+    // NOTE depending on the image format, the order of the pixels in the buffer might vary,
+    // png and jpeg accept top to bottom, left to right
     //  bmp and tga accept bottom to top, left to right
     if (format == "png") {
       // Save as PNG — stride = width * 3 bytes per row

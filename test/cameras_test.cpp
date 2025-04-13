@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
-// TESTS FOR CAMERAS AND RAYTRACING OPERATIONS 
+// TESTS FOR CAMERAS AND RAYTRACING OPERATIONS
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
@@ -12,7 +12,10 @@
 #include "cameras.hpp"
 
 // TODO decide whether we should divide the test in functions and name the these functions in the same exact way as Tomasi
-void test_ray() {
+// ANSWER I would say definitely yes (at least to help him reading our code), I have renamed some below, but some still missing
+
+void test_ray()
+{
   Ray ray1 = Ray(Point(1.0, 2.0, 3.0), Vec(5.0, 4.0, -1.0));
   Ray ray2 = Ray(Point(1.0, 2.0, 3.0), Vec(5.0, 4.0, -1.0));
   Ray ray3 = Ray(Point(5.0, 1.0, 4.0), Vec(3.0, 9.0, 4.0));
@@ -27,7 +30,8 @@ void test_ray() {
   assert(ray4.at(2.0).is_close(Point(9.0, 6.0, 6.0)));
 }
 
-void test_ray_transformation() {
+void test_ray_transformation()
+{
   Ray ray = Ray(Point(1.0, 2.0, 3.0), Vec(6.0, 5.0, 4.0));
   Transformation T = translation(Vec(10.0, 11.0, 12.0)) * rotation_x(0.5 * M_PI); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
@@ -36,67 +40,102 @@ void test_ray_transformation() {
   assert(transformed.direction.is_close(Vec(6.0, -4.0, 5.0)));
 }
 
-void test_orthogonal_camera() {
-  OrthogonalCamera cam1(2.0); // aspect ratio 2, identity transformation by default
+// test firing rays from orthogonal camera
+void test_orthogonal_camera()
+{
+  OrthogonalCamera cam1(2.0); // aspect ratio 2, transformation set to identity by default constructor
   Ray ray1 = cam1.fire_ray(0., 0.);
   Ray ray2 = cam1.fire_ray(1., 0.);
   Ray ray3 = cam1.fire_ray(0., 1.);
   Ray ray4 = cam1.fire_ray(1., 1.);
 
-  assert(are_close((ray1.direction^ray2.direction).squared_norm(), 0.));
-  assert(are_close((ray1.direction^ray3.direction).squared_norm(), 0.));
-  assert(are_close((ray1.direction^ray4.direction).squared_norm(), 0.));
+  // verify rays from orthogonal camera are all parallel by checking that cross products of directions vanish
+  assert(are_close((ray1.direction ^ ray2.direction).squared_norm(), 0.));
+  assert(are_close((ray1.direction ^ ray3.direction).squared_norm(), 0.));
+  assert(are_close((ray1.direction ^ ray4.direction).squared_norm(), 0.));
 
+  // verify that rays hitting the corners of the screen have the right coordinates
+  //(orthogonal camera is at distance -1 from the screen and ray directions have x-component 1 by default)
   assert(ray1.at(1.).is_close(Point(0., 2., -1.)));
   assert(ray2.at(1.).is_close(Point(0., -2., -1.)));
   assert(ray3.at(1.).is_close(Point(0., 2., 1.)));
   assert(ray4.at(1.).is_close(Point(0., -2., 1.)));
+}
 
-  OrthogonalCamera cam2{1., translation(-VEC_Y*2) * rotation_z(0.5*M_PI)};
+// test transformation to orient orthogonal camera according to the observer
+void test_orthogonal_camera_transformation()
+{
+  OrthogonalCamera cam2{1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
   Ray ray5 = cam2.fire_ray(0.5, 0.5);
 
+  // check ray fired after transformation is at the expected coordinates
+  //  (orthogonal camera is at distance -1 from the screen by default)
   assert(ray5.at(1.0).is_close(Point(0., -2., 0.)));
 }
 
-void test_perspective_camera() {
+void test_perspective_camera()
+{
   PerspectiveCamera cam1(1.0, 2.0); // distance 1, aspect ratio 2, identity transformation by default
   Ray ray1 = cam1.fire_ray(0., 0.);
   Ray ray2 = cam1.fire_ray(1., 0.);
   Ray ray3 = cam1.fire_ray(0., 1.);
   Ray ray4 = cam1.fire_ray(1., 1.);
 
+  // verify rays from perspective camera all start from the same point (cf. case of orthogonal camera)
   assert(ray1.origin.is_close(ray2.origin));
   assert(ray1.origin.is_close(ray3.origin));
   assert(ray1.origin.is_close(ray4.origin));
 
+  // verify rays hitting the corners of the screen have the right coordinates
+  //(perspective camera is at distance -d from screen, but ray directions have x-component equal to d)
   assert(ray1.at(1.).is_close(Point(0., 2., -1.)));
   assert(ray2.at(1.).is_close(Point(0., -2., -1.)));
   assert(ray3.at(1.).is_close(Point(0., 2., 1.)));
   assert(ray4.at(1.).is_close(Point(0., -2., 1.)));
 }
 
+// TODO implement test for perspective camera transformation below
+//  just quickly copied the case for orthogonal camera, did not check the coordinates!
 
-void test_image_tracer() {
+// test transformation to orient perspective camera according to the observer
+void test_perspective_camera_transformation()
+{
+  PerspectiveCamera cam2{1., 1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
+  Ray ray5 = cam2.fire_ray(0.5, 0.5);
+
+  // check ray fired after transformation is at the expected coordinates
+  //  (perspective camera is at distance -d from the screen, but ray directions have x-component equal to d)
+  assert(ray5.at(1.0).is_close(Point(0., -2., 0.)));
+}
+
+void test_image_tracer()
+{
   std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
   std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1., 2.);
   ImageTracer tracer(std::move(img), std::move(cam));
-  //ImageTracer tracer(std::make_unique<HdrImage>(4, 2), std::make_unique<PerspectiveCamera>(1., 2.)); // Same as the three lines above
+  // ImageTracer tracer(std::make_unique<HdrImage>(4, 2), std::make_unique<PerspectiveCamera>(1., 2.)); // Same as the three lines above
 
+  // choose on purpose to fire the ray at the pixel (0,0), not at the center (0.5,0.5)
+  // but rather well outside the pixel boundaries so as to hit the center of the pixel (2,1)
   Ray ray1 = tracer.fire_ray(0., 0., 2.5, 1.5);
+  // fire the ray at the center of the pixel (2,1)
   Ray ray2 = tracer.fire_ray(2., 1.);
   assert(ray1.is_close(ray2));
 
-  tracer.fire_all_rays([](Ray ray) -> Color {return Color(1., 2., 3.); });
+  tracer.fire_all_rays([](Ray ray) -> Color
+                       { return Color(1., 2., 3.); }); //QUESTION I need help understanding this part
 
-  for(int col = 0; col < tracer.image->width; ++col) {
-    for(int row = 0; row < tracer.image->height; ++row) {
+  for (int col = 0; col < tracer.image->width; ++col)
+  {
+    for (int row = 0; row < tracer.image->height; ++row)
+    {
       assert(are_close(tracer.image->get_pixel(col, row), Color(1., 2., 3.)));
     }
   }
 }
 
-
-int main() {
+int main()
+{
 
   test_ray();
 
@@ -104,10 +143,14 @@ int main() {
 
   test_orthogonal_camera();
 
+  test_orthogonal_camera_transformation();
+
   test_perspective_camera();
+
+  // TODO uncomment line below when test is implemented
+  // test_perspective_camera_transformation();
 
   test_image_tracer();
 
   return EXIT_SUCCESS;
 }
-
