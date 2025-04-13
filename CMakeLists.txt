@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.12)
 # Define the project
 project(raytracer
     VERSION 1.0
-    DESCRIPTION "Just prints Hello world so far"
+    DESCRIPTION "Work in progress"
     LANGUAGES CXX
 )
 
@@ -69,4 +69,25 @@ target_include_directories(geometryTest PUBLIC
 # Register this new test too
 add_test(NAME geometryTest
     COMMAND geometryTest
+)
+
+# -------------------------------
+# Test: cameras_test
+# -------------------------------
+
+
+# New test for the geometry.hpp file
+add_executable(camerasTest
+        test/cameras_test.cpp
+)
+
+# Make the test target aware of the headers
+target_include_directories(camerasTest PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+
+# Register this new test too
+add_test(NAME camerasTest
+        COMMAND camerasTest
 )
