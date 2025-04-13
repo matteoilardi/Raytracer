@@ -503,7 +503,7 @@ public:
           std::round(gamma_corrected * 255.0f)); // Scale and convert
     };
 
-    // NOTE png and jpeg images are filled in from left to right, from top to bottom.
+    // NOTE png and jpeg/jpg images are filled in from left to right, from top to bottom.
     // You might need to change buffer order if you want to support other LDR formats.
     for (int y = 0; y < height; ++y) {
       for (int x = 0; x < width; ++x) {
