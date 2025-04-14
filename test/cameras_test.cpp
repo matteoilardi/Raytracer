@@ -12,7 +12,8 @@
 #include "cameras.hpp"
 
 // TODO decide whether we should divide the test in functions and name the these functions in the same exact way as Tomasi
-// ANSWER I would say definitely yes (at least to help him reading our code), I have renamed some below, but some still missing
+// ANSWER I would say YES IF/WHEN the names are meaningful (at least to help him reading our code)
+// and NO IF/WHEN they are not and we instead use more meaningful names (e.g. we keep test_ray and test_ray_transformation instead of his names test_is_close, test_at test_transform etc)
 
 void test_ray()
 {
@@ -94,18 +95,18 @@ void test_perspective_camera()
   assert(ray4.at(1.).is_close(Point(0., -2., 1.)));
 }
 
-// TODO implement test for perspective camera transformation below
-//  just quickly copied the case for orthogonal camera, did not check the coordinates!
-
 // test transformation to orient perspective camera according to the observer
 void test_perspective_camera_transformation()
 {
   PerspectiveCamera cam2{1., 1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
   Ray ray5 = cam2.fire_ray(0.5, 0.5);
+  PerspectiveCamera cam3{1., 1., translation(-VEC_Z * 3) * rotation_y(0.5 * M_PI)};
+  Ray ray6 = cam3.fire_ray(0.5, 0.5);
 
   // check ray fired after transformation is at the expected coordinates
   //  (perspective camera is at distance -d from the screen, but ray directions have x-component equal to d)
   assert(ray5.at(1.0).is_close(Point(0., -2., 0.)));
+  assert(ray6.at(1.0).is_close(Point(0.,0., -3.)));
 }
 
 void test_image_tracer()
@@ -123,7 +124,7 @@ void test_image_tracer()
   assert(ray1.is_close(ray2));
 
   tracer.fire_all_rays([](Ray ray) -> Color
-                       { return Color(1., 2., 3.); }); //QUESTION I need help understanding this part
+                       { return Color(1., 2., 3.); }); // QUESTION I need help understanding this part
 
   for (int col = 0; col < tracer.image->width; ++col)
   {
@@ -147,10 +148,11 @@ int main()
 
   test_perspective_camera();
 
-  // TODO uncomment line below when test is implemented
-  // test_perspective_camera_transformation();
+  test_perspective_camera_transformation();
 
   test_image_tracer();
+
+  std::cout << "All cameras tests passed!" << std::endl;
 
   return EXIT_SUCCESS;
 }
