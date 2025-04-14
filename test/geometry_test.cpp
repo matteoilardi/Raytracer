@@ -207,7 +207,7 @@ void test_scalings() {
 // wrapper function to call all tests on transformation
 void test_all_transformations() {
   test_is_consistent();
-  //test_multiplication();
+  test_multiplication();
   test_vec_point_multiplication();
   test_inverse();
   test_rotations();
