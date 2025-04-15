@@ -146,6 +146,9 @@ class ImageTracer
 {
 public:
   //-------Properties--------
+
+  // DISCUSSION the only thing to remember is that we need to have image and camera on the heap
+  //  the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
   std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object Camera is the ImageTracer
 
@@ -153,11 +156,14 @@ public:
 
   /// Default constructor
 
-  // QUESTION I might need an explanation for this constructor
   /// Constructor with parameters
   ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera) : image(std::move(image)), camera(std::move(camera)) {}
   // TODO check if is ok for ImageTracer to stay on the heap, which is a consequence of the above implementation
+  // ANSWER imagetracer will stay in the stack, it is camera and imagetracer that will need to live in the heap
+  // given that they are big objects I guess this is ok (?) (chatgpt says it is ok lol)
+
   // TODO consider checking whether the unique_ptr provided is not dangling
+  // ANSWER I do not think this is the case, why would that be?
 
   //--------------------Methods----------------------
 
@@ -184,7 +190,6 @@ public:
 
   using RaySolver = Color(Ray); // General function that takes a Ray as input and returns a Color
 
-  // QUESTION is there a reason why you using image->method/property instead of image.method/property?
   void fire_all_rays(RaySolver *func)
   {
     for (int col = 0; col < image->width; ++col)

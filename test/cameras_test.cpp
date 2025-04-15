@@ -106,7 +106,7 @@ void test_perspective_camera_transformation()
   // check ray fired after transformation is at the expected coordinates
   //  (perspective camera is at distance -d from the screen, but ray directions have x-component equal to d)
   assert(ray5.at(1.0).is_close(Point(0., -2., 0.)));
-  assert(ray6.at(1.0).is_close(Point(0.,0., -3.)));
+  assert(ray6.at(1.0).is_close(Point(0., 0., -3.)));
 }
 
 void test_image_tracer()
@@ -116,15 +116,18 @@ void test_image_tracer()
   ImageTracer tracer(std::move(img), std::move(cam));
   // ImageTracer tracer(std::make_unique<HdrImage>(4, 2), std::make_unique<PerspectiveCamera>(1., 2.)); // Same as the three lines above
 
-  // choose on purpose to fire the ray at the pixel (0,0), not at the center (0.5,0.5)
+  // choose on purpose to fire the first ray at the pixel (0,0), not at the center (0.5,0.5)
   // but rather well outside the pixel boundaries so as to hit the center of the pixel (2,1)
   Ray ray1 = tracer.fire_ray(0., 0., 2.5, 1.5);
-  // fire the ray at the center of the pixel (2,1)
+
+  // fire the second ray at the center of the pixel (2,1)
   Ray ray2 = tracer.fire_ray(2., 1.);
   assert(ray1.is_close(ray2));
 
+  // QUESTION just so I get the meaning of this test, since we have not yet implemented a function that given a ray associates a color (namely the color of the point of the image being hit)
+  //  we simply associate automatically the color{1,2,3} to any given ray and just test fire_all_rays with this lambda function as parameter
   tracer.fire_all_rays([](Ray ray) -> Color
-                       { return Color(1., 2., 3.); }); // QUESTION I need help understanding this part
+                       { return Color(1., 2., 3.); });
 
   for (int col = 0; col < tracer.image->width; ++col)
   {
