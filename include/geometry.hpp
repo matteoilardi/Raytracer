@@ -269,9 +269,6 @@ public:
 
 
 
-  // NOTE should we define a Translation class derived from Transformation? For readability's sake only: in fact I think that a call at the following constructor might be confusioning
-  //ANSWER yes, definitely. I checked your implementation below, well done, thanks. Cancel these TAGs when you read.
-
   /// @brief constructor for translations
   /// @param translation_vec translation vector as Vec
   Transformation(const Vec &translation_vec) : hom_matrix(translation_vec), inverse_hom_matrix((-translation_vec)) {}
@@ -564,8 +561,11 @@ public:
   translation(Vec vec) : Transformation(vec) {}
 };
 
-// NOTE why does constexpr not work? 
-//DISCUSSION I do not get your problem, it seems to work for me.
+
+//-------------------------------------------------------------------------------------------------------------
+//------------------------------- FURTHER GLOBAL CONSTANTS ----------------------
+//-------------------------------------------------------------------------------------------------------------
+
 const Vec VEC_X = Vec(1.0, 0.0, 0.0);
 const Vec VEC_Y = Vec(0.0, 1.0, 0.0);
 const Vec VEC_Z = Vec(0.0, 0.0, 1.0);

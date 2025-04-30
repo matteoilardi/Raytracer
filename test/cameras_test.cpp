@@ -11,9 +11,6 @@
 #include "geometry.hpp"
 #include "cameras.hpp"
 
-// TODO decide whether we should divide the test in functions and name the these functions in the same exact way as Tomasi
-// ANSWER I would say YES IF/WHEN the names are meaningful (at least to help him reading our code)
-// and NO IF/WHEN they are not and we instead use more meaningful names (e.g. we keep test_ray and test_ray_transformation instead of his names test_is_close, test_at test_transform etc)
 
 void test_ray()
 {
@@ -124,8 +121,6 @@ void test_image_tracer()
   Ray ray2 = tracer.fire_ray(2., 1.);
   assert(ray1.is_close(ray2));
 
-  // QUESTION just so I get the meaning of this test, since we have not yet implemented a function that given a ray associates a color (namely the color of the point of the image being hit)
-  //  we simply associate automatically the color{1,2,3} to any given ray and just test fire_all_rays with this lambda function as parameter
   tracer.fire_all_rays([](Ray ray) -> Color
                        { return Color(1., 2., 3.); });
 

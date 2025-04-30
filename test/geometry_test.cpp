@@ -19,8 +19,6 @@
 //----------------- TESTS FOR VEC, POINT AND NORMAL -----------------
 //-------------------------------------------------------------------------------------------------------------
 
-// TODO check tests (they work and we pass them, but I just brutally copied/modified those in
-// samples/test_all.py sample from Tomasi)
 
 void test_vectors() {
   Vec a(1.0f, 2.0f, 3.0f);
@@ -80,8 +78,6 @@ void test_all_geometry() {
 // -------------------------TESTS FOR TRANSFORMATIONS-----------------
 // ------------------------------------------------------------------------------------------------------------
 
-// TODO check tests (they work and we pass them, but I just brutally copied/modified those in
-// samples/test_all.py sample from Tomasi)
 
 void test_is_consistent() {
 //  std::array<std::array<float, 3>, 3> lin = {{{1., 2., 3.}, {5., 6., 7.}, {9., 9., 8.}}};

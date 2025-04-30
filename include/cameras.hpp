@@ -101,8 +101,6 @@ public:
   /// Constructor with parameters
   OrthogonalCamera(float asp_ratio = 1., Transformation transformation = Transformation()) : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
-  // TODO check if implementation is optimal and if it matters
-  // ANSWER I think it is indeed optimal, I just have issues understanding the coordinate system in slides 15-21.
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override
@@ -126,8 +124,6 @@ public:
   PerspectiveCamera(float distance = 1., float asp_ratio = 1., Transformation transformation = Transformation()) : Camera(asp_ratio, transformation), distance(distance) {}
 
   //--------------------Methods----------------------
-  // TODO check if implementation is optimal (and if it matters)
-  // ANSWER I think it is indeed optimal, I just have issues understanding the coordinate system in slides 15-21.
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override
@@ -147,8 +143,7 @@ class ImageTracer
 public:
   //-------Properties--------
 
-  // DISCUSSION the only thing to remember is that we need to have image and camera on the heap
-  //  the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot pass them via (say) &image,&camera
+  // the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
   std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object Camera is the ImageTracer
 
@@ -158,12 +153,8 @@ public:
 
   /// Constructor with parameters
   ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera) : image(std::move(image)), camera(std::move(camera)) {}
-  // TODO check if is ok for ImageTracer to stay on the heap, which is a consequence of the above implementation
-  // ANSWER imagetracer will stay in the stack, it is camera and imagetracer that will need to live in the heap
-  // given that they are big objects I guess this is ok (?) (chatgpt says it is ok lol)
-
-  // TODO consider checking whether the unique_ptr provided is not dangling
-  // ANSWER I do not think this is the case, why would that be?
+  // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to heap memory is as fast as access to stack
+  // NOTE pay attention to dangling pointers inside the main
 
   //--------------------Methods----------------------
 
@@ -182,12 +173,7 @@ public:
     return camera->fire_ray(u, v);
   }
 
-  // NOTE When we have implemented the solution to the rendering equation, we'll be able to tell if this hybrid kind of polymorphism (OO for cameras, PO for solvers) actually makes sense
-  // DISCUSSION I need an explanation for this point
-
-  // NOTE Where should the definition of RaySolver be?
-  // ANSWER I would place it at the beginning of cameras.hpp, in the ---forward declarations,etc--- section
-
+  // note we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own, rather than creating a parent class with a virtual method to be implemented by derived classes)
   using RaySolver = Color(Ray); // General function that takes a Ray as input and returns a Color
 
   void fire_all_rays(RaySolver *func)
