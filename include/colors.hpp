@@ -9,8 +9,6 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-//NOTE checkout functionalities to revert pixel oreder
-//NOTE we might want to change the external library (if so, let's decide soon)
 #include "stb_image_write.h" //external library for LDR images 
 #include <algorithm>
 #include <array>
@@ -240,8 +238,7 @@ std::string _read_line(std::istream &stream) {
   return result;
 }
 
-/// @brief read the image dimensions (columns, rows) from a line (of a pfm file
-/// ideally) (TEST NEEDED) you might want to handle float entries a bit better
+/// @brief read the image dimensions (columns, rows) from a line of a pfm file
 /// @param line
 /// @return
 std::pair<int, int> _parse_img_size(const std::string &line) {
