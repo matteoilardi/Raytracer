@@ -177,9 +177,9 @@ public:
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero normal");
     }
-    x= x / n;
-    y= y / n;
-    z= z / n;
+    x = x / n;
+    y = y / n;
+    z = z / n;
   }
 
   /// convert normal to a vector
@@ -198,7 +198,7 @@ public:
   //-----------Constructors-----------
 
   ///@brief copy constructor
-  HomMatrix(const HomMatrix& other) : linear_part(other.linear_part), translation_vec(other.translation_vec) {}
+  HomMatrix(const HomMatrix &other) : linear_part(other.linear_part), translation_vec(other.translation_vec) {}
 
   ///@brief default constructor (initializes to identity)
   HomMatrix() {
@@ -263,7 +263,8 @@ public:
   Transformation() : hom_matrix(), inverse_hom_matrix() {}
 
   ///@brief constructor with assigned homogeneous matrix and its inverse
-  Transformation(HomMatrix hom_matrix, HomMatrix inverse_hom_matrix) : hom_matrix(hom_matrix), inverse_hom_matrix(inverse_hom_matrix) {}
+  Transformation(HomMatrix hom_matrix, HomMatrix inverse_hom_matrix)
+      : hom_matrix(hom_matrix), inverse_hom_matrix(inverse_hom_matrix) {}
 
   /// @brief constructor with assigned linear_part, inverse_linear_part and translation
   /// @param linear_part linear part as std::array<std::array<float, 3>, 3>
@@ -271,12 +272,8 @@ public:
   /// @param translation_vec translation vector as Vec
   Transformation(const std::array<std::array<float, 3>, 3> &linear_part,
                  const std::array<std::array<float, 3>, 3> &inverse_linear_part, const Vec &translation_vec,
-                 const Vec &inverse_translation_vec) : hom_matrix(linear_part, translation_vec), inverse_hom_matrix(inverse_linear_part, inverse_translation_vec) {}
-
-
-                 const Vec &inverse_translation_vec) : hom_matrix(linear_part, translation_vec), inverse_hom_matrix(inverse_linear_part, inverse_translation_vec) {}
-
-
+                 const Vec &inverse_translation_vec)
+      : hom_matrix(linear_part, translation_vec), inverse_hom_matrix(inverse_linear_part, inverse_translation_vec) {}
 
   /// @brief constructor for translations
   /// @param translation_vec translation vector as Vec
@@ -340,9 +337,7 @@ public:
   }
 
   ///@brief return the inverse transofrmation
-  Transformation inverse() {
-  return Transformation(inverse_hom_matrix, hom_matrix);
-  }
+  Transformation inverse() { return Transformation(inverse_hom_matrix, hom_matrix); }
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -492,9 +487,9 @@ Normal operator*(const Transformation &a, const Normal &b) {
   result.z = a.inverse_hom_matrix.linear_part[0][2] * b.x + a.inverse_hom_matrix.linear_part[1][2] * b.y +
              a.inverse_hom_matrix.linear_part[2][2] * b.z;
   // normalize the normal after transformation
-  // NOTE (for the future) might slow down code in iterative processes computing normals several times, you might want to normalize just
-  // once at the end
-  result.normalize();
+  // NOTE normalizing the result after the transformation might slow down code in iterative processes computing normals several times,
+  // you might want to normalize just once at the end
+  //result.normalize();
   return result;
 }
 
@@ -522,22 +517,17 @@ Transformation operator*(const Transformation &a, const Transformation &b) {
                         inverse_translation_vec); // call constructor (which aslo defines translation vector of inverse)
 }
 
-
 //------------------------------------------------------------------------
 //-------- SPECIFIC TRANSFORMATIONS, IMPLEMENTED AS DERIVED CLASSES ------
 //-----------------------------------------------------------------------
-
 
 class rotation_x : public Transformation {
 public:
   // Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
   ///@param rotation angle (rads)
   rotation_x(const float &theta)
-    : Transformation({{
-        {1.f, 0.f, 0.f},
-        {0.f, std::cos(theta), -std::sin(theta)},
-        {0.f, std::sin(theta), std::cos(theta)}
-      }}) {}
+      : Transformation(
+            {{{1.f, 0.f, 0.f}, {0.f, std::cos(theta), -std::sin(theta)}, {0.f, std::sin(theta), std::cos(theta)}}}) {}
 };
 
 class rotation_y : public Transformation {
@@ -545,11 +535,8 @@ public:
   // Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
   ///@param rotation angle (rads)
   rotation_y(const float &theta)
-    : Transformation({{
-        {std::cos(theta), 0.f, std::sin(theta)},
-        {0.f, 1.f, 0.f},
-        {-std::sin(theta), 0.f, std::cos(theta)}
-      }}) {}
+      : Transformation(
+            {{{std::cos(theta), 0.f, std::sin(theta)}, {0.f, 1.f, 0.f}, {-std::sin(theta), 0.f, std::cos(theta)}}}) {}
 };
 
 class rotation_z : public Transformation {
@@ -557,11 +544,8 @@ public:
   // Constructor builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
   ///@param rotation angle (rads)
   rotation_z(const float &theta)
-    : Transformation({{
-        {std::cos(theta), -std::sin(theta), 0.f},
-        {std::sin(theta), std::cos(theta), 0.f},
-        {0.f, 0.f, 1.f}
-      }}) {}
+      : Transformation(
+            {{{std::cos(theta), -std::sin(theta), 0.f}, {std::sin(theta), std::cos(theta), 0.f}, {0.f, 0.f, 1.f}}}) {}
 };
 
 class translation : public Transformation {
@@ -577,65 +561,6 @@ public:
   ///@param array of length 3 representing diagonal of linear part
   scaling(std::array<float, 3> diagonal) : Transformation(diagonal) {}
 };
-
-// NOTE why does constexpr not work?
-const Vec VEC_X = Vec(1.0, 0.0, 0.0);
-const Vec VEC_Y = Vec(0.0, 1.0, 0.0);
-const Vec VEC_Z = Vec(0.0, 0.0, 1.0);
-
-
-
-//------------------------------------------------------------------------
-//-------- SPECIFIC TRANSFORMATIONS, IMPLEMENTED AS DERIVED CLASSES ------
-//-----------------------------------------------------------------------
-
-
-class rotation_x : public Transformation {
-public:
-  ///Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
-  ///@param theta angle of rotation (in radians)
-  rotation_x(const float &theta)
-    : Transformation({{
-        {1.f, 0.f, 0.f},
-        {0.f, std::cos(theta), -std::sin(theta)},
-        {0.f, std::sin(theta), std::cos(theta)}
-      }}) {}
-};
-
-///Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
-///@param theta angle of rotation (in radians)
-class rotation_y : public Transformation {
-public:
-  // Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
-  rotation_y(const float &theta)
-    : Transformation({{
-        {std::cos(theta), 0.f, std::sin(theta)},
-        {0.f, 1.f, 0.f},
-        {-std::sin(theta), 0.f, std::cos(theta)}
-      }}) {}
-};
-
-///Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
-///@param theta angle of rotation (in radians)
-class rotation_z : public Transformation {
-public:
-  // Constructor: builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
-  rotation_z(const float &theta)
-    : Transformation({{
-        {std::cos(theta), -std::sin(theta), 0.f},
-        {std::sin(theta), std::cos(theta), 0.f},
-        {0.f, 0.f, 1.f}
-      }}) {}
-};
-
-
-class translation : public Transformation {
-public:
-  ///Constructor: translation (calls Transformation constructor that accepts a translation vector)
-  ///@param vec translation vector
-  translation(Vec vec) : Transformation(vec) {}
-};
-
 
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- FURTHER GLOBAL CONSTANTS ----------------------
