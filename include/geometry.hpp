@@ -487,9 +487,9 @@ Normal operator*(const Transformation &a, const Normal &b) {
   result.z = a.inverse_hom_matrix.linear_part[0][2] * b.x + a.inverse_hom_matrix.linear_part[1][2] * b.y +
              a.inverse_hom_matrix.linear_part[2][2] * b.z;
   // normalize the normal after transformation
-  // NOTE normalizing the result after the transformation might slow down code in iterative processes computing normals several times,
-  // you might want to normalize just once at the end
-  //result.normalize();
+  // NOTE normalizing the result after the transformation might slow down code in iterative processes computing normals
+  // several times, you might want to normalize just once at the end
+  // result.normalize();
   return result;
 }
 

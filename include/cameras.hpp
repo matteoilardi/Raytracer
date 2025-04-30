@@ -11,8 +11,8 @@
 
 #include "colors.hpp"
 #include "geometry.hpp"
-#include <memory>
 #include <limits> // library to have infinity as a float
+#include <memory>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -28,8 +28,7 @@ const float infinite = std::numeric_limits<float>::infinity(); // Define infinit
 // -----------RAY CLASS------------------
 // ------------------------------------------------------------------------------------------------------------
 
-class Ray
-{
+class Ray {
 public:
   //-------Properties--------
   Point origin;          // Origin of the ray
@@ -45,12 +44,12 @@ public:
 
   /// Constructor with parameters
   Ray(Point origin, Vec direction) : origin(origin), direction(direction) {};
-  Ray(Point origin, Vec direction, float tmin, float tmax, int depth) : origin(origin), direction(direction), tmin(tmin), tmax(tmax), depth(depth) {};
+  Ray(Point origin, Vec direction, float tmin, float tmax, int depth)
+      : origin(origin), direction(direction), tmin(tmin), tmax(tmax), depth(depth) {};
 
   //--------------------Methods----------------------
   ///@brief check if origin and direction are close to the other ray's
-  bool is_close(Ray other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const
-  {
+  bool is_close(Ray other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return origin.is_close(other.origin, error_tolerance) && direction.is_close(other.direction, error_tolerance);
   }
 
@@ -67,8 +66,7 @@ public:
 // -----------CAMERA CLASS------------------
 // ------------------------------------------------------------------------------------------------------------
 
-class Camera
-{
+class Camera {
 public:
   //-------Properties--------
   float asp_ratio;               // aspect ratio
@@ -92,27 +90,25 @@ public:
   virtual Ray fire_ray(float u, float v) const = 0; //
 };
 
-class OrthogonalCamera : public Camera
-{
+class OrthogonalCamera : public Camera {
 public:
   //-----------Constructors-----------
   /// Default constructor
 
   /// Constructor with parameters
-  OrthogonalCamera(float asp_ratio = 1., Transformation transformation = Transformation()) : Camera(asp_ratio, transformation) {}
+  OrthogonalCamera(float asp_ratio = 1., Transformation transformation = Transformation())
+      : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
-  virtual Ray fire_ray(float u, float v) const override
-  {
+  virtual Ray fire_ray(float u, float v) const override {
     Point origin = Point(-1., (1. - 2. * u) * asp_ratio, -1. + 2 * v); // compare Lab 6, slide 15 ad slide 20-21
     Vec direction = VEC_X;
     return Ray(origin, direction).transform(transformation);
   };
 };
 
-class PerspectiveCamera : public Camera
-{
+class PerspectiveCamera : public Camera {
 public:
   //-------Properties--------
   float distance;
@@ -121,13 +117,13 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  PerspectiveCamera(float distance = 1., float asp_ratio = 1., Transformation transformation = Transformation()) : Camera(asp_ratio, transformation), distance(distance) {}
+  PerspectiveCamera(float distance = 1., float asp_ratio = 1., Transformation transformation = Transformation())
+      : Camera(asp_ratio, transformation), distance(distance) {}
 
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
-  virtual Ray fire_ray(float u, float v) const override
-  {
+  virtual Ray fire_ray(float u, float v) const override {
     Point origin = Point(-distance, 0., 0.);
     Vec direction = Vec(distance, (1. - 2. * u) * asp_ratio, -1. + 2 * v); // compare Lab 6, slide 15 ad slide 20-21
     return Ray(origin, direction).transform(transformation);
@@ -138,50 +134,52 @@ public:
 // -----------IMAGE_TRACER CLASS------------------
 // ------------------------------------------------------------------------------------------------------------
 
-class ImageTracer
-{
+class ImageTracer {
 public:
   //-------Properties--------
 
-  // the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot pass them via (say) &image,&camera
+  // the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot
+  // pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
-  std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object Camera is the ImageTracer
+  std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object
+                                  // Camera is the ImageTracer
 
   //-----------Constructors-----------
 
   /// Default constructor
 
   /// Constructor with parameters
-  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera) : image(std::move(image)), camera(std::move(camera)) {}
-  // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to heap memory is as fast as access to stack
-  // NOTE pay attention to dangling pointers inside the main
+  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera)
+      : image(std::move(image)), camera(std::move(camera)) {}
+  // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to
+  // heap memory is as fast as access to stack NOTE pay attention to dangling pointers inside the main
 
   //--------------------Methods----------------------
 
   ///@brief returns a ray originating from the camera hitting the pixel (col, row) of the image
   /// @param col column of the pixel
   /// @param row row of the pixel
-  /// @param u_pixel (optional) x-coordinate of the pixel (default value is 0.5, meaning the ray hits the x-center of the pixel)
-  /// @param v_pixel (optional) y-coordinate of the pixel (default value is 0.5, meaning the ray hits y-center of the pixel)
-  Ray fire_ray(int col, int row, float u_pixel = 0.5, float v_pixel = 0.5)
-  {
+  /// @param u_pixel (optional) x-coordinate of the pixel (default value is 0.5, meaning the ray hits the x-center of
+  /// the pixel)
+  /// @param v_pixel (optional) y-coordinate of the pixel (default value is 0.5, meaning the ray hits y-center of the
+  /// pixel)
+  Ray fire_ray(int col, int row, float u_pixel = 0.5, float v_pixel = 0.5) {
     // convert pixel indices into a position on the screen
     // default values of u_pixel and v_pixel make the ray hit the center of the pixel
-    // NOTE this is the formula from Tomasi Lab 6b slide 31, he says there is a mistake in this formula, but to use it anyway...
+    // NOTE this is the formula from Tomasi Lab 6b slide 31, he says there is a mistake in this formula, but to use it
+    // anyway...
     float u = (col + u_pixel) / (image->width - 1);
     float v = (row + v_pixel) / (image->height - 1);
     return camera->fire_ray(u, v);
   }
 
-  // note we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own, rather than creating a parent class with a virtual method to be implemented by derived classes)
+  // note we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own,
+  // rather than creating a parent class with a virtual method to be implemented by derived classes)
   using RaySolver = Color(Ray); // General function that takes a Ray as input and returns a Color
 
-  void fire_all_rays(RaySolver *func)
-  {
-    for (int col = 0; col < image->width; ++col)
-    {
-      for (int row = 0; row < image->height; ++row)
-      {
+  void fire_all_rays(RaySolver *func) {
+    for (int col = 0; col < image->width; ++col) {
+      for (int row = 0; row < image->height; ++row) {
         Ray ray = fire_ray(col, row);
         Color color = func(ray);
         image->set_pixel(col, row, color);

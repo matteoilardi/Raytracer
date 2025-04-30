@@ -7,13 +7,11 @@
 // ------------------------------------------------------------------------------------------------------------
 // -------------LIBRARIES---------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
+#include "cameras.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
-#include "cameras.hpp"
 
-
-void test_ray()
-{
+void test_ray() {
   Ray ray1 = Ray(Point(1.0, 2.0, 3.0), Vec(5.0, 4.0, -1.0));
   Ray ray2 = Ray(Point(1.0, 2.0, 3.0), Vec(5.0, 4.0, -1.0));
   Ray ray3 = Ray(Point(5.0, 1.0, 4.0), Vec(3.0, 9.0, 4.0));
@@ -28,10 +26,10 @@ void test_ray()
   assert(ray4.at(2.0).is_close(Point(9.0, 6.0, 6.0)));
 }
 
-void test_ray_transformation()
-{
+void test_ray_transformation() {
   Ray ray = Ray(Point(1.0, 2.0, 3.0), Vec(6.0, 5.0, 4.0));
-  Transformation T = translation(Vec(10.0, 11.0, 12.0)) * rotation_x(0.5 * M_PI); // Beware that std::sin accepts the angle measured in rads
+  Transformation T = translation(Vec(10.0, 11.0, 12.0)) *
+                     rotation_x(0.5 * M_PI); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
 
   assert(transformed.origin.is_close(Point(11.0, 8.0, 14.0)));
@@ -39,8 +37,7 @@ void test_ray_transformation()
 }
 
 // test firing rays from orthogonal camera
-void test_orthogonal_camera()
-{
+void test_orthogonal_camera() {
   OrthogonalCamera cam1(2.0); // aspect ratio 2, transformation set to identity by default constructor
   Ray ray1 = cam1.fire_ray(0., 0.);
   Ray ray2 = cam1.fire_ray(1., 0.);
@@ -61,8 +58,7 @@ void test_orthogonal_camera()
 }
 
 // test transformation to orient orthogonal camera according to the observer
-void test_orthogonal_camera_transformation()
-{
+void test_orthogonal_camera_transformation() {
   OrthogonalCamera cam2{1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
   Ray ray5 = cam2.fire_ray(0.5, 0.5);
 
@@ -71,8 +67,7 @@ void test_orthogonal_camera_transformation()
   assert(ray5.at(1.0).is_close(Point(0., -2., 0.)));
 }
 
-void test_perspective_camera()
-{
+void test_perspective_camera() {
   PerspectiveCamera cam1(1.0, 2.0); // distance 1, aspect ratio 2, identity transformation by default
   Ray ray1 = cam1.fire_ray(0., 0.);
   Ray ray2 = cam1.fire_ray(1., 0.);
@@ -93,8 +88,7 @@ void test_perspective_camera()
 }
 
 // test transformation to orient perspective camera according to the observer
-void test_perspective_camera_transformation()
-{
+void test_perspective_camera_transformation() {
   PerspectiveCamera cam2{1., 1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
   Ray ray5 = cam2.fire_ray(0.5, 0.5);
   PerspectiveCamera cam3{1., 1., translation(-VEC_Z * 3) * rotation_y(0.5 * M_PI)};
@@ -106,12 +100,12 @@ void test_perspective_camera_transformation()
   assert(ray6.at(1.0).is_close(Point(0., 0., -3.)));
 }
 
-void test_image_tracer()
-{
+void test_image_tracer() {
   std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
   std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1., 2.);
   ImageTracer tracer(std::move(img), std::move(cam));
-  // ImageTracer tracer(std::make_unique<HdrImage>(4, 2), std::make_unique<PerspectiveCamera>(1., 2.)); // Same as the three lines above
+  // ImageTracer tracer(std::make_unique<HdrImage>(4, 2), std::make_unique<PerspectiveCamera>(1., 2.)); // Same as the
+  // three lines above
 
   // choose on purpose to fire the first ray at the pixel (0,0), not at the center (0.5,0.5)
   // but rather well outside the pixel boundaries so as to hit the center of the pixel (2,1)
@@ -121,20 +115,16 @@ void test_image_tracer()
   Ray ray2 = tracer.fire_ray(2., 1.);
   assert(ray1.is_close(ray2));
 
-  tracer.fire_all_rays([](Ray ray) -> Color
-                       { return Color(1., 2., 3.); });
+  tracer.fire_all_rays([](Ray ray) -> Color { return Color(1., 2., 3.); });
 
-  for (int col = 0; col < tracer.image->width; ++col)
-  {
-    for (int row = 0; row < tracer.image->height; ++row)
-    {
+  for (int col = 0; col < tracer.image->width; ++col) {
+    for (int row = 0; row < tracer.image->height; ++row) {
       assert(are_close(tracer.image->get_pixel(col, row), Color(1., 2., 3.)));
     }
   }
 }
 
-int main()
-{
+int main() {
 
   test_ray();
 

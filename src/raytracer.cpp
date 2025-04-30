@@ -16,11 +16,10 @@ int main(int argc, char *argv[]) {
   }
 
   // Step 2: Read HDR image from PFM file
-  HdrImage img(0,0);
+  HdrImage img(0, 0);
   try {
     img = HdrImage(parameters.input_pfm_file_name);
-    std::cout << "File \"" << parameters.input_pfm_file_name
-              << "\" has been read from disk.\n";
+    std::cout << "File \"" << parameters.input_pfm_file_name << "\" has been read from disk.\n";
 
   } catch (const std::exception &err) {
     std::cerr << "Error reading image. " << err.what() << '\n';
@@ -33,10 +32,8 @@ int main(int argc, char *argv[]) {
 
   //  Step 4: Write the output image (LDR, 8-bit PNG)
   try {
-    img.write_ldr_image(parameters.output_ldr_file_name, parameters.gamma,
-                        "png");
-    std::cout << "File \"" << parameters.output_ldr_file_name
-              << "\" has been written to disk.\n";
+    img.write_ldr_image(parameters.output_ldr_file_name, parameters.gamma, "png");
+    std::cout << "File \"" << parameters.output_ldr_file_name << "\" has been written to disk.\n";
   } catch (const std::exception &err) {
     std::cerr << "Error writing image. " << err.what() << '\n';
     return EXIT_FAILURE;
