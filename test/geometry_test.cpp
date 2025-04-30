@@ -141,7 +141,7 @@ void test_vec_point_multiplication() {
 
   Normal input_n(3., 2., 4.);
   Normal expected_n(-8.75, 7.75, -3.0);
-  assert(expected_n.is_close(T * input_n));
+  assert(expected_n.is_close(T * input_n)); //this test initially failed since original implementation of T*normal automatically normalized the result (now nomore)
 }
 
 void test_inverse() {
@@ -201,7 +201,7 @@ void test_scalings() {
 // wrapper function to call all tests on transformation
 void test_all_transformations() {
   test_is_consistent();
-  //test_multiplication();
+  test_multiplication();
   test_vec_point_multiplication();
   test_inverse();
   test_rotations();
