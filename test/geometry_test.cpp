@@ -14,7 +14,6 @@
 #include <cmath>
 #include <iostream>
 
-
 //------------------------------------------------------------------------------------------------------------
 //----------------- TESTS FOR VEC, POINT AND NORMAL -----------------
 //-------------------------------------------------------------------------------------------------------------
@@ -72,11 +71,9 @@ void test_all_geometry() {
   std::cout << "All geometry tests on Vec, Point and Normal passed!" << std::endl;
 }
 
-
 // ------------------------------------------------------------------------------------------------------------
 // -------------------------TESTS FOR TRANSFORMATIONS-----------------
 // ------------------------------------------------------------------------------------------------------------
-
 
 void test_is_consistent() {
   std::array<std::array<float, 3>, 3> lin = {{{1., 2., 3.}, {5., 6., 7.}, {9., 9., 8.}}};
@@ -115,7 +112,8 @@ void test_multiplication() {
   assert(Tprod.is_consistent());
 
   std::array<std::array<float, 3>, 3> C = {{{5., 18., 17.}, {17., 62., 57.}, {26., 97., 89.}}};
-  std::array<std::array<float, 3>, 3> C_inv = {{{-0.6875, 2.9375, -1.75}, {-1.9375, 0.1875, 0.25}, {2.3125, -1.0625, 0.25}}};
+  std::array<std::array<float, 3>, 3> C_inv = {
+      {{-0.6875, 2.9375, -1.75}, {-1.9375, 0.1875, 0.25}, {2.3125, -1.0625, 0.25}}};
   Vec Ct(29., 77., 100.);
   Vec Ct_inv(-31.25, 16.75, -10.25);
   Transformation Texpected(C, C_inv, Ct, Ct_inv);
@@ -141,7 +139,8 @@ void test_vec_point_multiplication() {
 
   Normal input_n(3., 2., 4.);
   Normal expected_n(-8.75, 7.75, -3.0);
-  assert(expected_n.is_close(T * input_n)); //this test initially failed since original implementation of T*normal automatically normalized the result (now nomore)
+  assert(expected_n.is_close(T * input_n)); // this test initially failed since original implementation of T*normal
+                                            // automatically normalized the result (now nomore)
 }
 
 void test_inverse() {
@@ -157,17 +156,15 @@ void test_inverse() {
   assert((T * T_inv).is_close(Transformation()));
 }
 
-
 void test_rotations() {
   assert(rotation_x(0.1).is_consistent());
   assert(rotation_y(0.1).is_consistent());
   assert(rotation_z(0.1).is_consistent());
 
-  assert((rotation_x(0.5*M_PI) * VEC_Y).is_close(VEC_Z));
-  assert((rotation_y(0.5*M_PI) * VEC_Z).is_close(VEC_X));
-  assert((rotation_z(0.5*M_PI) * VEC_X).is_close(VEC_Y));
+  assert((rotation_x(0.5 * M_PI) * VEC_Y).is_close(VEC_Z));
+  assert((rotation_y(0.5 * M_PI) * VEC_Z).is_close(VEC_X));
+  assert((rotation_z(0.5 * M_PI) * VEC_X).is_close(VEC_Y));
 }
-
 
 void test_translations() {
   Transformation tr1 = translation(Vec(1., 2., 3.));
@@ -176,14 +173,12 @@ void test_translations() {
   assert(tr1.is_consistent());
   assert(tr2.is_consistent());
 
-
   Transformation prod = tr1 * tr2;
   assert(prod.is_consistent());
 
   Transformation expected = translation(Vec(5., 8., 11.));
   assert(prod.is_close(expected));
 }
-
 
 void test_scalings() {
   Transformation sc1 = scaling({2., 5., 10.});
@@ -196,7 +191,6 @@ void test_scalings() {
 
   assert(expected.is_close(sc1 * sc2));
 }
-
 
 // wrapper function to call all tests on transformation
 void test_all_transformations() {

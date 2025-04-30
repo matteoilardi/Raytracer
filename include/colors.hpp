@@ -9,16 +9,16 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include "stb_image_write.h" //external library for LDR images 
+#include "stb_image_write.h" //external library for LDR images
 #include <algorithm>
 #include <array>
 #include <bit>
 #include <cassert>
+#include <cerrno>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <cerrno>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -31,12 +31,10 @@
 // CONSTANTS, ENDIANNESS, EXCEPTIONS, GLOBAL FUNCTIONS
 // ------------------------------------------------------------------------------------------------------------
 
-constexpr float DEFAULT_ERROR_TOLERANCE =
-    1e-5; // Default tolerance to decide if two float numbers are close
+constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5; // Default tolerance to decide if two float numbers are close
 
-constexpr float DEFAULT_DELTA_LOG =
-    1e-10; // Default quantity added to the argument to prevent caluculating the
-           // logarithm of zero
+constexpr float DEFAULT_DELTA_LOG = 1e-10; // Default quantity added to the argument to prevent caluculating the
+                                           // logarithm of zero
 
 /// @brief endianness is order you read floats with (recall 32_bit_float =4
 /// bytes) (left to right or right to left)
@@ -64,8 +62,7 @@ public:
   }
 };
 
-bool are_close(float x, float y,
-               float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
+bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
   return std::fabs(x - y) < error_tolerance;
 }
 
@@ -88,9 +85,7 @@ public:
 
   // Constructors
 
-  Color()
-      : r(0.0f), g(0.0f), b(0.0f) {
-  } // Default constructor (sets color to black)
+  Color() : r(0.0f), g(0.0f), b(0.0f) {} // Default constructor (sets color to black)
 
   Color(float red, float green,
         float blue) // Constructor with externally assigned values
@@ -100,33 +95,23 @@ public:
 
   // Check if color is close to another color within some tolerance.
   // If no tolerance is provided, DEFAULT_ERROR_TOLERANCE is used.
-  bool is_close_to(const Color &other,
-                   float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
-    return (are_close(r, other.r, error_tolerance) &&
-            are_close(g, other.g, error_tolerance) &&
+  bool is_close_to(const Color &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+    return (are_close(r, other.r, error_tolerance) && are_close(g, other.g, error_tolerance) &&
             are_close(b, other.b, error_tolerance));
   }
 
   // Check if two colors are close calling is_close_to on the first one
   // (symmetric syntax)
-  friend bool are_close(const Color &color1, const Color &color2) {
-    return color1.is_close_to(color2);
-  }
+  friend bool are_close(const Color &color1, const Color &color2) { return color1.is_close_to(color2); }
 
   // Sum of two colors
-  Color operator+(const Color &other) const {
-    return Color(r + other.r, g + other.g, b + other.b);
-  }
+  Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
 
   // Product of two colors
-  Color operator*(const Color &other) const {
-    return Color(r * other.r, g * other.g, b * other.b);
-  }
+  Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
 
   // Product: color * scalar
-  Color operator*(float scalar) const {
-    return Color(r * scalar, g * scalar, b * scalar);
-  }
+  Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
 
   // Friend function to allow commutative product: scalar * color
   friend Color operator*(float scalar, const Color &my_color) {
@@ -134,18 +119,14 @@ public:
   }
 
   // Helper method to display the color.
-  void display() const {
-    std::cout << "r: " << r << " g: " << g << " b: " << b;
-  }
+  void display() const { std::cout << "r: " << r << " g: " << g << " b: " << b; }
 
   /// @brief luminosity of the color (computed using Shirley & Morley
   /// formula)
   /// @return
   float luminosity() const {
-    return 0.5 *
-           (std::min({r, g, b}) +
-            std::max({r, g, b})); // Shirley & Morley's formula (empirically
-                                  // best formula for luminosity)
+    return 0.5 * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula (empirically
+                                                              // best formula for luminosity)
   }
 
   /// @brief luminosity of the color (computed as arithmetic average of rgb,
@@ -174,8 +155,7 @@ void _write_float(std::ostream &stream, float value, Endianness endianness) {
   // Extract the four bytes in "double_word" using bit-level operators
   uint8_t bytes[] = {
       static_cast<uint8_t>(double_word & 0xFF), // Least significant byte
-      static_cast<uint8_t>((double_word >> 8) & 0xFF),
-      static_cast<uint8_t>((double_word >> 16) & 0xFF),
+      static_cast<uint8_t>((double_word >> 8) & 0xFF), static_cast<uint8_t>((double_word >> 16) & 0xFF),
       static_cast<uint8_t>((double_word >> 24) & 0xFF), // Most significant byte
   };
 
@@ -210,10 +190,8 @@ float _read_float(std::istream &stream, Endianness endianness) {
       stream >> std::noskipws >> bytes[i];
     break;
   }
-  uint32_t double_word{(static_cast<uint32_t>(bytes[0]) << 0) |
-                       (static_cast<uint32_t>(bytes[1]) << 8) |
-                       (static_cast<uint32_t>(bytes[2]) << 16) |
-                       (static_cast<uint32_t>(bytes[3]) << 24)};
+  uint32_t double_word{(static_cast<uint32_t>(bytes[0]) << 0) | (static_cast<uint32_t>(bytes[1]) << 8) |
+                       (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24)};
   float value{*((float *)&double_word)}; // This line has the same effect as
   // the line below, but violates C++ strict aliasing rules
   // std::memcpy(&value, &double_word, sizeof(float)); // This line has the same
@@ -366,8 +344,7 @@ public:
   // vector with width*height copies of Color(); otherwise, creates an empty
   // vector.
   HdrImage(int32_t w, int32_t h)
-      : width(w), height(h),
-        pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
+      : width(w), height(h), pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
 
   // First constructor pfm file --> Hdr image
   // Read a PFM file from a stream invoking `read_pfm_file` method
@@ -380,7 +357,7 @@ public:
     std::ifstream stream(file_name);
     if (!stream.is_open()) {
       std::string error_msg = "Failed to open file \"" + file_name + "\"";
-      if (errno) {  // errno is a system-specific number that identifies an error occured
+      if (errno) { // errno is a system-specific number that identifies an error occured
         error_msg += ": " + std::string(strerror(errno)); // convert errno to the string describing the message
       }
       throw std::runtime_error(error_msg);
@@ -420,9 +397,7 @@ public:
 
   // _valid_indexes returns true if row and col are nonnegative and within
   // bounds.
-  bool _valid_indexes(int32_t col, int32_t row) const {
-    return (col >= 0 && row >= 0 && col < width && row < height);
-  }
+  bool _valid_indexes(int32_t col, int32_t row) const { return (col >= 0 && row >= 0 && col < width && row < height); }
 
   // _pixel_offset returns the index of the pixels vector corresponding to the
   // given matrix row and column, using row-major ordering. Uses assert to
@@ -441,8 +416,7 @@ public:
 
   // set_pixel sets the pixel at the given row and column to the provided color.
   void set_pixel(int32_t col, int32_t row, const Color &c) {
-    int32_t offset = _pixel_offset(
-        col, row); // Assign _pixel_offset to a variable (useful for debugging)
+    int32_t offset = _pixel_offset(col, row); // Assign _pixel_offset to a variable (useful for debugging)
     pixels[offset] = c;
   }
 
@@ -458,10 +432,9 @@ public:
     return std::pow(10., cumsum / pixels.size());
   }
 
-  //NOTE you might want to add a check to ensure that the image is not normalized already before
-  // normalizing again
-  void normalize_image(float alpha,
-                       std::optional<float> avg_lum_opt = std::nullopt) {
+  // NOTE you might want to add a check to ensure that the image is not normalized already before
+  //  normalizing again
+  void normalize_image(float alpha, std::optional<float> avg_lum_opt = std::nullopt) {
     float avg_lum = avg_lum_opt.value_or(average_luminosity());
 
     for (auto &pixel : pixels) {
@@ -471,8 +444,8 @@ public:
     }
   }
 
-  //NOTE you might want to add a check to ensure that the image is not already clamped before
-  // clamping again
+  // NOTE you might want to add a check to ensure that the image is not already clamped before
+  //  clamping again
   /// @brief clamp the image rgb values between 0 and 1
   void clamp_image() {
     for (auto &pixel : pixels) {
@@ -482,15 +455,15 @@ public:
     }
   }
 
-  // TODO write_ldr_image() should infer the file format from filename, and should not require it as an additional argument
+  // TODO write_ldr_image() should infer the file format from filename, and should not require it as an additional
+  // argument
 
   /// @brief Take a normalized and clamped HDR image, apply gamma correction &
   /// produce LDR image in desired format
   /// @param filename name of LDR image to be produced
   /// @param gamma correction factor (default 1.0)
   /// @param format LDR image format (default png)
-  void write_ldr_image(const std::string &filename, float gamma = 1.0f,
-                       const std::string &format = "png") const {
+  void write_ldr_image(const std::string &filename, float gamma = 1.0f, const std::string &format = "png") const {
     // Create a buffer to hold all pixels as 8-bit unsigned integers (R, G, B)
     // Each pixel needs 3 bytes, so we reserve enough memory up front
     std::vector<uint8_t> buffer;
@@ -500,10 +473,8 @@ public:
     // - Apply gamma correction
     // - Convert float [0,1] to uint8_t [0,255]
     auto transform_to_LDR = [gamma](float x) {
-      float gamma_corrected =
-          std::pow(x, 1.0f / gamma); // Apply gamma correction
-      return static_cast<uint8_t>(
-          std::round(gamma_corrected * 255.0f)); // Scale and convert
+      float gamma_corrected = std::pow(x, 1.0f / gamma);                 // Apply gamma correction
+      return static_cast<uint8_t>(std::round(gamma_corrected * 255.0f)); // Scale and convert
     };
 
     // NOTE png and jpeg/jpg images are filled in from left to right, from top to bottom.
@@ -521,17 +492,16 @@ public:
 
     if (format == "png") {
       // Save as PNG — stride = width * 3 bytes per row
-      stbi_write_png(filename.c_str(), width, height, 3, buffer.data(),
-                     width * 3);
+      stbi_write_png(filename.c_str(), width, height, 3, buffer.data(), width * 3);
     } else if (format == "jpg" || format == "jpeg") {
       // Save as JPEG with quality 95 (out of 100)
       stbi_write_jpg(filename.c_str(), width, height, 3, buffer.data(), 95);
-//    } else if (format == "bmp") {
-//      // Save as BMP
-//      stbi_write_bmp(filename.c_str(), width, height, 3, buffer.data());
-//    } else if (format == "tga") {
-//      // Save as TGA
-//      stbi_write_tga(filename.c_str(), width, height, 3, buffer.data());
+      //    } else if (format == "bmp") {
+      //      // Save as BMP
+      //      stbi_write_bmp(filename.c_str(), width, height, 3, buffer.data());
+      //    } else if (format == "tga") {
+      //      // Save as TGA
+      //      stbi_write_tga(filename.c_str(), width, height, 3, buffer.data());
     } else {
       // Unsupported format: throw an exception
       throw std::invalid_argument("Unsupported format: " + format);
@@ -555,21 +525,19 @@ public:
   void parse_command_line(int argc, char *argv[]) {
     // We expect 4 arguments: program name + 4 parameters = argc should be 5
     if (argc != 5) {
-      throw std::runtime_error(
-          "Usage: ./raytracer INPUT_PFM_FILE a_FACTOR GAMMA OUTPUT_PNG_FILE");
+      throw std::runtime_error("Usage: ./raytracer INPUT_PFM_FILE a_FACTOR GAMMA OUTPUT_PNG_FILE");
     }
 
     // Store the input file name (second argument)
     input_pfm_file_name = argv[1];
 
-    //NOTE what if something inproper still manages to be converted to float?
-    // Convert a_factor from string to float
+    // NOTE what if something inproper still manages to be converted to float?
+    //  Convert a_factor from string to float
     try {
       a_factor = std::stof(argv[2]); // std::stof = string to float
     } catch (...) {
       // If conversion fails, throw a meaningful error
-      throw std::runtime_error(std::string("Invalid factor ('") + argv[2] +
-                               "'), it must be a floating-point number.");
+      throw std::runtime_error(std::string("Invalid factor ('") + argv[2] + "'), it must be a floating-point number.");
     }
 
     // Convert gamma from string to float
@@ -577,8 +545,7 @@ public:
       gamma = std::stof(argv[3]);
     } catch (...) {
       // Same logic as above: catch *any* error and give a readable message
-      throw std::runtime_error(std::string("Invalid gamma ('") + argv[3] +
-                               "'), it must be a floating-point number.");
+      throw std::runtime_error(std::string("Invalid gamma ('") + argv[3] + "'), it must be a floating-point number.");
     }
 
     // Store the output file name
