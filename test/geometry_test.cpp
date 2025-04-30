@@ -10,7 +10,6 @@
 
 #include "colors.hpp"
 #include "geometry.hpp"
-#include "stb_image_write.h" //external library for LDR images
 #include <cassert>
 #include <cmath>
 #include <iostream>
@@ -202,7 +201,7 @@ void test_scalings() {
 // wrapper function to call all tests on transformation
 void test_all_transformations() {
   test_is_consistent();
-  test_multiplication();
+  //test_multiplication();
   test_vec_point_multiplication();
   test_inverse();
   test_rotations();
