@@ -125,7 +125,7 @@ void test_image_tracer() {
   }
 }
 
-// additional test for image tracer vs HdrImage orientation highlighting a bug in original code (issue #4)
+//NEW additional test for image tracer vs HdrImage orientation highlighting a bug in original code (issue #4)
 void test_image_tracer_coordinate_orientation() {
   std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
   std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1., 2.);
