@@ -50,6 +50,6 @@ endfunction()
 # Register your test files here
 # -------------------------------
 
-add_gtest(colorTest test/colors_test.cpp)
-add_gtest(geometryTest test/geometry_test.cpp)
-add_gtest(camerasTest test/cameras_test.cpp)
+add_gtest(colorTest test/colors_Gtest.cpp)
+add_gtest(geometryTest test/geometry_Gtest.cpp)
+add_gtest(camerasTest test/cameras_Gtest.cpp)
