@@ -35,7 +35,6 @@ target_include_directories(raytracer PUBLIC
 # Test: colors_test
 # -------------------------------
 
-# This was previously colors.cpp, now renamed to colors_test.cpp
 add_executable(colorTest
     test/colors_test.cpp
 )
@@ -54,7 +53,6 @@ add_test(NAME colorTest
 # -------------------------------
 # Test: geometry_test
 # -------------------------------
-
 
 # New test for the geometry.hpp file
 add_executable(geometryTest
