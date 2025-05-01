@@ -166,8 +166,10 @@ public:
   Ray fire_ray(int col, int row, float u_pixel = 0.5, float v_pixel = 0.5) {
     // convert pixel indices into a position on the screen
     // default values of u_pixel and v_pixel make the ray hit the center of the pixel
-    // NOTE this is the formula from Tomasi Lab 6b slide 31, he says there is a mistake in this formula, but to use it
-    // anyway...
+    
+    // BUG as anticipated in Tomasi Lab 6b slide 31 and then in Tomasi lab 8b slides 1-8 the following formula is wrong
+    //  the v coordinate increases upwards, while HdrImage rows are ordered top to bottom
+    // this will cause images to be flipped upside down
     float u = (col + u_pixel) / (image->width - 1);
     float v = (row + v_pixel) / (image->height - 1);
     return camera->fire_ray(u, v);
