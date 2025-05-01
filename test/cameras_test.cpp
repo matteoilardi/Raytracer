@@ -100,6 +100,7 @@ void test_perspective_camera_transformation() {
   assert(ray6.at(1.0).is_close(Point(0., 0., -3.)));
 }
 
+// test methods of ImageTracer class
 void test_image_tracer() {
   std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
   std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1., 2.);
@@ -124,6 +125,26 @@ void test_image_tracer() {
   }
 }
 
+// additional test for image tracer vs HdrImage orientation highlighting a bug in original code (issue #4)
+void test_image_tracer_coordinate_orientation() {
+  std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
+  std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1., 2.);
+  ImageTracer tracer(std::move(img), std::move(cam));
+
+  // fire a ray against top left corner of the screen
+  // you expect this ray to hit the screen at (x=0, y=2, z=1) but using the original code it would hit (x=0, y=2, z=-1)
+  // (see BUG tag in cameras.hpp)  since v coordinates increase upwards while HdrImage rows are ordered top to bottom
+  Ray top_left_ray = tracer.fire_ray(0., 0., 0., 0.);
+  assert(Point(0., 2., 1.).is_close(top_left_ray.at(1.)));
+
+  // fire a ray against bottom right corner of the screen
+  // you expect this ray to hit the screen at (x=0, y=-2, z=-1) but with original code it hits (x=0, y=-3.333, z=3)
+  // (see BUG tag in cameras.hpp) since we divided by height/height-1 rather than width/height
+  // & since coordinates increase upwards while HdrImage rows are ordered top to bottom
+  Ray bottom_right_ray = tracer.fire_ray(3., 1., 1., 1.);
+  assert(Point(0., -2, -1.).is_close(bottom_right_ray.at(1.)));
+}
+
 int main() {
 
   test_ray();
@@ -139,6 +160,8 @@ int main() {
   test_perspective_camera_transformation();
 
   test_image_tracer();
+
+  test_image_tracer_coordinate_orientation(); // additional test showing a bug in original code (issue #4)
 
   std::cout << "All cameras tests passed!" << std::endl;
 
