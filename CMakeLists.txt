@@ -54,7 +54,6 @@ add_test(NAME colorTest
 # Test: geometry_test
 # -------------------------------
 
-
 # New test for the geometry.hpp file
 add_executable(geometryTest
     test/geometry_test.cpp
