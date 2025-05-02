@@ -75,10 +75,7 @@ target_include_directories(geometryTest PUBLIC
 
 # Register this new test too
 add_test(NAME geometryTest
-<<<<<<< HEAD
         COMMAND geometryTest
-=======
-    COMMAND geometryTest
 )
 
 # -------------------------------
@@ -100,5 +97,4 @@ target_include_directories(camerasTest PUBLIC
 # Register this new test too
 add_test(NAME camerasTest
         COMMAND camerasTest
->>>>>>> 933148825883860405e8468effb1fa6665e689b5
 )
