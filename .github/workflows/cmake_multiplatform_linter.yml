@@ -53,4 +53,3 @@ jobs:
     - name: Print test log on failure
       if: failure()
       run: cat ${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log || true
-
