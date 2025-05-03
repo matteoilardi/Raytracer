@@ -1,11 +1,11 @@
-name: CMake on multiple platforms
+name: CMake multiplatform linter #choose the name you like
 
 on:
-  push:
-    branches: [ "main", "gtest" ]
+  push: #remove if you don't want to trigger the workflow on push
+    branches: [ "main", "gtest" ] #remove gtest after merging into main
   pull_request:
-    branches: [ "main", "gtest" ]
-  workflow_dispatch:
+    branches: [ "main", "gtest" ] #remove gtest after merging into main
+  workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
 
 jobs:
   build:
@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest] # I removed windows since the workflow was failing on windows, but will add it back later
         build_type: [Release]
         c_compiler: [gcc, clang]
         include:
