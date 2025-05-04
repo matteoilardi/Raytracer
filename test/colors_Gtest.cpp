@@ -19,11 +19,11 @@ bool is_little_endian() {
 }
 
 //-------------------------------------------------------------------------------------------------------------
-//----------------- TESTS FOR COLORS -----------------
+//----------------- TESTS FOR COLOR -----------------
 //-------------------------------------------------------------------------------------------------------------
 
 // test constructor, is_close_to
-TEST(ColorTest, test_basic_color) {
+TEST(ColorTest, test_is_close) {
   Color color1(1.0, 2.0, 3.0);
   EXPECT_TRUE(color1.is_close_to(Color(1.0, 2.0, 3.0)));
   EXPECT_FALSE(color1.is_close_to(Color(2.0, 1.0, 3.0)));
@@ -45,18 +45,25 @@ TEST(ColorTest, test_color_operations) {
   EXPECT_TRUE(are_close(color1 * f1, Color(6.0, 7.5, 9.0)));
 }
 
+// test luminosity
+TEST(ColorTest, test_luminosity) {
+  Color col1 = Color(1.0, 2.0, 3.0);
+  Color col2 = Color(9.0, 5.0, 7.0);
+
+  EXPECT_EQ(col1.luminosity(), 2.0);
+  EXPECT_EQ(col2.luminosity(), 7.0);
+}
+
+
+//-------------------------------------------------------------------------------------------------------------
+//----------------- TESTS FOR HDRIMAGE -----------------
+//-------------------------------------------------------------------------------------------------------------
+
 // test basic constructor, get_pixel, set_pixel, _valid_indexes, _pixel_offset
 TEST(HdrImageTest, test_basic_HdrImage) {
   HdrImage image1(20, 30);
-  Color color1(21.0, 18.0, 0.0);
 
   EXPECT_TRUE(image1.width == 20 && image1.height == 30);
-
-  image1.set_pixel(15, 11, color1);
-  Color color2 = image1.get_pixel(15, 11);
-
-  EXPECT_TRUE(color1.is_close_to(color2));
-  EXPECT_TRUE(color2.is_close_to(Color(21.0, 18.0, 0.0)));
 
   EXPECT_TRUE(image1._valid_indexes(3, 4));
   EXPECT_TRUE(image1._valid_indexes(19, 29));
@@ -67,67 +74,43 @@ TEST(HdrImageTest, test_basic_HdrImage) {
   EXPECT_FALSE(image1._valid_indexes(20, 0));
 
   EXPECT_TRUE(image1._pixel_offset(9, 5) == (9 + 5 * image1.width));
+
+  Color color1(21.0, 18.0, 0.0);
+  image1.set_pixel(15, 11, color1);
+  Color color2 = image1.get_pixel(15, 11);
+
+  EXPECT_TRUE(are_close(color1, color2));
 }
 
 // test helper function _read_line
 TEST(PfmTest, test_pfm_read_line) {
   std::stringstream ss("Hello\nworld");
 
-  EXPECT_TRUE(_read_line(ss) == "Hello");
-  EXPECT_TRUE(_read_line(ss) == "world");
-  EXPECT_TRUE(_read_line(ss) == "");
+  EXPECT_EQ(_read_line(ss), "Hello");
+  EXPECT_EQ(_read_line(ss), "world");
+  EXPECT_EQ(_read_line(ss), "");
 }
 
 // test helper function _parse_endianness
 TEST(PfmTest, test_pfm_parse_endianness) {
-  EXPECT_TRUE(_parse_endianness("1.0") == Endianness::big_endian);
-  EXPECT_TRUE(_parse_endianness("-1.0") == Endianness::little_endian);
+  EXPECT_EQ(_parse_endianness("1.0"), Endianness::big_endian);
+  EXPECT_EQ(_parse_endianness("-1.0"), Endianness::little_endian);
 
-  bool check_exception1 = false;
-  bool check_exception2 = false;
+  auto assign_endianness = [](const std::string& s) -> void {Endianness endianness = _parse_endianness(s);};
 
-  try {
-    Endianness endianness = _parse_endianness("0.0");
-  } catch (InvalidPfmFileFormat &e) {
-    check_exception1 = true;
-  }
-  try {
-    Endianness endianness = _parse_endianness("abc");
-  } catch (InvalidPfmFileFormat &e) {
-    check_exception2 = true;
-  }
-
-  EXPECT_TRUE(check_exception1);
-  EXPECT_TRUE(check_exception2);
+  EXPECT_THROW(assign_endianness("0.0"), InvalidPfmFileFormat);
+  EXPECT_THROW(assign_endianness("abc"), InvalidPfmFileFormat);
 }
 
 // test helper function _parse_img_size
 TEST(PfmTest, test_pfm_parse_img_size) {
-  EXPECT_TRUE(_parse_img_size("3 4") == std::pair(3, 4));
+  EXPECT_EQ(_parse_img_size("3 4"), std::pair(3, 4));
 
-  bool check_exception1 = false;
-  bool check_exception2 = false;
-  bool check_exception3 = false;
+  auto assign_img_size = [](const std::string& s) -> void {std::pair<int, int> wh = _parse_img_size(s);};
 
-  try {
-    std::pair<int, int> wh = _parse_img_size("3 -1");
-  } catch (InvalidPfmFileFormat &e) {
-    check_exception1 = true;
-  }
-  try {
-    std::pair<int, int> wh = _parse_img_size("3 -1 9");
-  } catch (InvalidPfmFileFormat &e) {
-    check_exception2 = true;
-  }
-  try {
-    std::pair<int, int> wh = _parse_img_size("3 ");
-  } catch (InvalidPfmFileFormat &e) {
-    check_exception3 = true;
-  }
-
-  EXPECT_TRUE(check_exception1);
-  EXPECT_TRUE(check_exception2);
-  EXPECT_TRUE(check_exception3);
+  EXPECT_THROW(assign_img_size("3 -1"), InvalidPfmFileFormat);
+  EXPECT_THROW(assign_img_size("3 -1 9"), InvalidPfmFileFormat);
+  EXPECT_THROW(assign_img_size("3 "), InvalidPfmFileFormat);
 }
 
 // test helper functions _write_float, _read_float
@@ -138,13 +121,13 @@ TEST(PfmTest, test_pfm_read_write_float) {
   float x = *((float *)&n);
 
   _write_float(ss, x, Endianness::little_endian);
-  EXPECT_TRUE(_read_float(ss, Endianness::little_endian) == x);
+  EXPECT_EQ(_read_float(ss, Endianness::little_endian), x);
 
   _write_float(ss, x, Endianness::big_endian);
-  EXPECT_TRUE(_read_float(ss, Endianness::big_endian) == x);
+  EXPECT_EQ(_read_float(ss, Endianness::big_endian), x);
 
   _write_float(ss, x, Endianness::little_endian);
-  EXPECT_FALSE(_read_float(ss, Endianness::big_endian) == x);
+  EXPECT_NE(_read_float(ss, Endianness::big_endian), x);
 }
 
 // test write_pfm method
@@ -185,12 +168,12 @@ TEST(PfmTest, test_pfm_write) {
   unsigned int reference_be_len = 83;
 
   // check size
-  EXPECT_TRUE(string_le.size() == reference_le_len);
-  EXPECT_TRUE(string_be.size() == reference_be_len);
+  EXPECT_EQ(string_le.size(), reference_le_len);
+  EXPECT_EQ(string_be.size(), reference_be_len);
 
   // check that the bytes are the same
-  EXPECT_TRUE(memcmp(string_le.data(), reference_le, reference_le_len) == 0);
-  EXPECT_TRUE(memcmp(string_be.data(), reference_be, reference_be_len) == 0);
+  EXPECT_EQ(memcmp(string_le.data(), reference_le, reference_le_len), 0);
+  EXPECT_EQ(memcmp(string_be.data(), reference_be, reference_be_len), 0);
 }
 
 // test read_pfm constructor
@@ -212,24 +195,19 @@ TEST(PfmTest, test_pfm_read) {
   EXPECT_TRUE(are_close(image_from_be.get_pixel(2, 0), Color(70, 80, 90)));
   EXPECT_TRUE(are_close(image_from_be.get_pixel(2, 1), Color(700, 800, 900)));
 
-  std::stringstream sstream;
-  bool check_exception1 = false;
-  sstream << "PF\n4 5\n1.0\nstop";
-  try {
-    HdrImage image_from_corrupted(sstream);
-  } catch (InvalidPfmFileFormat &e) {
-    check_exception1 = true;
-  }
-  EXPECT_TRUE(check_exception1);
+  // We had issues reading the floats from the PFM file.
+  // The reason was that the hexadecimal representation of the float number 10.0 contains the byte 0x20
+  // which is the space character. However, stream reading ignores spaces and this caused the output to be misaligned.
+  // Indeed we started having issues from in the first line (starting from bottom, i.e. second line) where 10.0 first
+  // appears.
 }
 
-// test luminosity
-TEST(ColorTest, test_luminosity) {
-  Color color1(1.0, 7.0, 7.0);
-  Color color2(5.0, 4.0, 10.0);
+// test read_pfm constructor on an invalid input stream
+TEST(PfmTest, test_pfm_read_wrong) {
+  std::stringstream sstream;
+  sstream << "PF\n4 5\n1.0\nstop";
 
-  EXPECT_TRUE(color1.luminosity() == 4.0);
-  EXPECT_TRUE(color2.luminosity() == 7.0);
+  EXPECT_THROW([&]() -> void {HdrImage image_from_corrupted(sstream);}(), InvalidPfmFileFormat);
 }
 
 // test average_luminosity
@@ -238,7 +216,7 @@ TEST(HdrImageTest, test_average_luminosity) {
   img.set_pixel(0, 0, Color(5.0, 10.0, 15.0));
   img.set_pixel(1, 0, Color(500.0, 1000.0, 1500.0));
 
-  EXPECT_TRUE(img.average_luminosity(0.0) == 100.0);
+  EXPECT_EQ(img.average_luminosity(0.0), 100.0);
 
   HdrImage img_with_black(1, 1);
   img_with_black.set_pixel(0, 0, Color());
@@ -272,29 +250,3 @@ TEST(HdrImageTest, test_clamp_image) {
     EXPECT_TRUE(pixel.b >= 0 && pixel.b <= 1);
   }
 }
-
-// bonus test for Pfm reading (DEBUG only — not a real unit test)
-TEST(PfmTest, bonus_debug_print_floats_from_pfm) {
-    // Bonus test: Read a PFM file and print the floats
-    // We are keeping this test as a reminder/demonstration, since we had issues when printing the floats in the PFM file.
-    // The reason was that the hexadecimal representation of the float number 10.0 contains the byte 0x20
-    // which is the space character. However, stream reading ignores spaces and this caused the output to be misaligned.
-    // Indeed we started having issues from in the first line (starting from bottom, i.e. second line) where 10.0 first
-    // appears.
-  
-    std::cout << "\n[DEBUG] Bonus test: reading and printing floats from reference_le.pfm, see explanatory commentes in code...\n" << std::endl<<std::flush;
-  
-    float a;
-    std::ifstream is("../samples/reference_le.pfm");
-    std::string ciao;
-    ciao = _read_line(is);
-    ciao = _read_line(is);
-    ciao = _read_line(is);
-  
-    while (is) {
-      a = _read_float(is, Endianness::little_endian);
-      std::cout << a << std::endl<<std::flush;
-    }
-    is.close();
-  }
-  
