@@ -77,18 +77,35 @@ public:
   virtual ~Shape() {}
 
   //--------------------Methods----------------------
+
   ///@brief virtual method that implements the intersection of a given ray with the shape considered
   ///@param ray incoming ray hitting the shape
-  virtual std::optional<HitRecord> ray_intersection(Ray ray)  const {
+  virtual std::optional<HitRecord> ray_intersection(Ray ray) const {
     throw std::logic_error("Shape.ray_intersection is an abstract method and cannot be called directly");
-}
+  }
+
+  ///@brief flip the normal to the surface so that it has negative scalar product with the hitting ray
+  ///@param normal normal to the surface
+  ///@param ray incoming ray hitting the shape
+  Normal flip_normal(Normal normal, Ray ray) const {
+    if (normal * ray.direction > 0) {
+      return -normal; // the normal and the ray must have opposite directions, if this is false (dot product>0), flip
+                      // the normal
+    } else {
+      return normal;
+    }
+  }
 };
+
+//-------------------------------------------------------------------------------------------------------------
+// -----------SPHERE CLASS ------------------
+// ------------------------------------------------------------------------------------------------------------
 
 class Sphere : public Shape {
 public:
   //-------Properties--------
-  //NOTE is it useful in any sense to store the origin and 3 semiaxes of the ellipsoid, according to the transformation?
-  // (recall by default we transform it into the unit sphere at the origin)
+  // NOTE nothing should be here, since by default the sphere is at the origin and has radius 1
+  // (even for an ellipsoid, just transform it to the unit sphere at the origin & store all info in the transformation)
 
   //-----------Constructors-----------
   /// Default constructor
@@ -101,7 +118,57 @@ public:
 
   ///@brief implementation of virtual method that returns the information of the intersection with a given ray
   ///@param ray incoming ray hitting the shape
-  virtual std::optional<HitRecord> ray_intersection(Ray ray) const override { 
-    //TODO implement this method and the auxiliary functions needed
-    return HitRecord(); };
+  virtual std::optional<HitRecord> ray_intersection(Ray ray) const override {
+
+    // TODO implement this method and the auxiliary functions needed
+
+    // STEPS
+    // 1. Transform the ray to the plane reference frame
+    Ray shape_frame_ray = ray.transform(transformation.inverse());
+
+    // 2. Compute the intersection points if any (2nd degree equation) slides 8b 29-31
+    // 3. Choose the closest with t>0
+    // 4. Compute the normal to the surface at the intersection point  //NOTE use the FLIP_NORMAL method in Shape
+    // 5. Compute the 2D coordinates on the surface (u,v) of the intersection point
+    // 4. Transform the intersection point parameters (HitRecord) back to the world reference frame
+
+    return HitRecord();
+  };
+};
+
+//-------------------------------------------------------------------------------------------------------------
+// -----------PLANE CLASS ------------------
+// ------------------------------------------------------------------------------------------------------------
+class Plane : public Shape {
+public:
+  //-------Properties--------
+  // NOTE nothins should be here, since by default the plane is at the origin and normal to the z axis
+
+  //-----------Constructors-----------
+  /// Default constructor
+  Plane() : Shape() {};
+
+  /// Constructor with parameters
+  Plane(Transformation transformation) : Shape(transformation) {};
+
+  //--------------------Methods----------------------
+
+  ///@brief implementation of virtual method that returns the information of the intersection with a given ray
+  ///@param ray incoming ray hitting the shape
+  virtual std::optional<HitRecord> ray_intersection(Ray ray) const override {
+
+    // TODO implement this method and the auxiliary functions needed
+
+    // STEPS
+    // 1. Transform the ray to the plane reference frame
+    Ray shape_frame_ray = ray.transform(transformation.inverse());
+
+    // 2. Check if the ray is parallel to the plane
+    // 3. If not, compute the intersection point
+    // 4. Compute the normal to the surface at the intersection point //NOTE use the FLIP_NORMAL method in Shape
+    // 5. Compute the 2D coordinates on the surface (u,v) of the intersection point
+    // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
+
+    return HitRecord();
+  };
 };

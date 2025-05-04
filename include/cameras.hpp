@@ -87,8 +87,9 @@ public:
   /// @brief virtual method that fires a ray through a point of the screen
   /// @param screen coordinate u
   /// @param screen coordinate v
-  virtual Ray fire_ray(float u, float v) const{
-  throw std::logic_error("Camera.fire_ray is an abstract method and cannot be called directly");}; 
+  virtual Ray fire_ray(float u, float v) const {
+    throw std::logic_error("Camera.fire_ray is an abstract method and cannot be called directly");
+  };
 };
 
 class OrthogonalCamera : public Camera {

@@ -373,7 +373,7 @@ public:
   }
 
   ///@brief return the inverse transofrmation
-  Transformation inverse() { return Transformation(inverse_hom_matrix, hom_matrix); }
+  Transformation inverse() const { return Transformation(inverse_hom_matrix, hom_matrix); }
 };
 
 //-------------------------------------------------------------------------------------------------------------
