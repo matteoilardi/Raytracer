@@ -17,6 +17,7 @@
 class Point;
 class Normal;
 class Vec;
+class Vec2d;
 class Transformation;
 class HomMatrix;
 
@@ -25,7 +26,42 @@ Vec operator*(const HomMatrix &a, const Transformation &b);
 Vec operator*(const HomMatrix &a, const Vec &b);
 
 // ------------------------------------------------------------------------------------------------------------
-// VECTOR CLASS
+// ------------------ VECTOR CLASS (3d)
+// ------------------------------------------------------------------------------------------------------------
+
+class Vec2d {
+public:
+  //-------Properties--------
+  float u, v;
+
+  //-----------Constructors-----------
+
+  /// Default constructor initializes to (0, 0)
+  Vec2d() : u(0), v(0) {}
+
+  /// Constructor with parameters
+  Vec2d(float u, float v) : u(u), v(v) {}
+
+  //--------------------Methods----------------------
+
+  /// convert 2D vector to string
+  std::string to_string() const {
+    std::ostringstream oss;
+    oss << "(" << u << ", " << v << ")";
+    return oss.str();
+  }
+
+  /// print vector to screen
+  void print() const { std::cout << to_string() << std::endl; }
+
+  /// check if two 2D vectors are close
+  bool is_close(const Vec2d &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+    return are_close(u, other.u, error_tolerance) && are_close(v, other.v, error_tolerance);
+  }
+};
+
+// ------------------------------------------------------------------------------------------------------------
+// ------------------ VECTOR CLASS (3d)
 // ------------------------------------------------------------------------------------------------------------
 
 class Vec {
