@@ -20,12 +20,20 @@ enable_testing()
 # -------------------------------
 
 add_executable(raytracer
-    src/raytracer.cpp
+        src/raytracer.cpp
 )
 
+# Add flags to avoid deprecated warnings
+set_source_files_properties(
+        src/raytracer.cpp
+        PROPERTIES
+        COMPILE_FLAGS "-Wno-deprecated-declarations"
+)
+
+# Include the headers in the "include" directory
 target_include_directories(raytracer PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
 )
 
 # -------------------------------

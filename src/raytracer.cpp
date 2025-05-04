@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
   img.normalize_image(parameters.a_factor);
   img.clamp_image();
 
-  //  Step 4: Write the output image (LDR, 8-bit PNG)
+  // Step 4: Write the output image (LDR, 8-bit PNG)
   try {
     img.write_ldr_image(parameters.output_ldr_file_name, parameters.gamma, "png");
     std::cout << "File \"" << parameters.output_ldr_file_name << "\" has been written to disk.\n";
