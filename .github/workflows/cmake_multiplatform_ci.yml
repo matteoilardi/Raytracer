@@ -75,3 +75,18 @@ jobs:
           echo "Running on $RUNNER_OS"
           cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log" || echo "Log file not found"
         fi
+
+  lint:
+    runs-on: ${{ matrix.os }}
+    needs: build  # Ensure the lint job runs after the build job
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run C++ linter
+        uses: cpp-linter/cpp-linter@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          style: file  # uses your .clang-format file
+          tidy-checks: "modernize-*,performance-*,bugprone-*"
+          exclude: "external/* include/stb_image_write.h"
