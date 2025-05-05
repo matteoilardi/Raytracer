@@ -12,19 +12,12 @@ project(raytracer
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set dynamic runtime (/MD or /MDd)
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL") # Added to try and cope with Windows build issues
-
-# Set the flag for all targets in the project (ditto)
+# Set dynamic runtime (/MD)
+# Added to try and cope with Windows build issues
 if (MSVC)
-    # MSVC-specific flags for Windows
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MD")
-elseif(APPLE)
-    # macOS-specific flags
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-elseif(UNIX)
-    # Linux-specific flags (or generic UNIX systems)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")  # or any newer standard if needed
+    # Force all targets to use /MD (or /MT if you prefer)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")  # /MD
+    # or: set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # /MT
 endif()
 
 # Enable CMake's testing framework
