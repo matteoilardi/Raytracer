@@ -61,13 +61,13 @@ jobs:
       run: ctest --build-config ${{ matrix.build_type }}
 
     - name: Print test log on failure
-    if: failure()
-    shell: bash  # Force bash so `if [[ ... ]]` works
-    run: |
-      if [[ "$RUNNER_OS" == "Windows" ]]; then
-        echo "Running on Windows"
-        cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
-      else
-        echo "Running on $RUNNER_OS"
-        cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log" || echo "Log file not found"
-      fi
+      if: failure()
+      shell: bash  # Force bash so `if [[ ... ]]` works
+      run: |
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "Running on Windows"
+          cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
+        else
+          echo "Running on $RUNNER_OS"
+          cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log" || echo "Log file not found"
+        fi
