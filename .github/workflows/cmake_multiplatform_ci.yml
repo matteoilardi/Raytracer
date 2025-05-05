@@ -43,7 +43,11 @@ jobs:
       id: strings
       shell: bash
       run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          echo "build-output-dir=${{ github.workspace }}\\build" >> "$GITHUB_OUTPUT"
+        else
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Configure CMake
       run: >
