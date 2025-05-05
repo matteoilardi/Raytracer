@@ -39,7 +39,7 @@ TEST(RayTest, test_at) {
 TEST(RayTest, test_ray_transformation) {
   Ray ray = Ray(Point(1.0, 2.0, 3.0), Vec(6.0, 5.0, 4.0));
   Transformation T = translation(Vec(10.0, 11.0, 12.0)) *
-                     rotation_x(0.5 * M_PI); // Beware that std::sin accepts the angle measured in rads
+                     rotation_x(0.5 * std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
 
   EXPECT_TRUE(transformed.origin.is_close(Point(11.0, 8.0, 14.0)));
@@ -73,7 +73,7 @@ TEST(CameraTest, test_orthogonal_camera) {
 
 // test transformation to orient orthogonal camera according to the observer
 TEST(CameraTest, test_orthogonal_camera_transformation) {
-  OrthogonalCamera cam2{1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
+  OrthogonalCamera cam2{1., translation(-VEC_Y * 2) * rotation_z(0.5 * std::numbers::pi)};
   Ray ray5 = cam2.fire_ray(0.5, 0.5);
 
   // check ray fired after transformation is at the expected coordinates
@@ -104,9 +104,9 @@ TEST(CameraTest, test_perspective_camera) {
 
 // test transformation to orient perspective camera according to the observer
 TEST(CameraTest, test_perspective_camera_transformation) {
-  PerspectiveCamera cam2{1., 1., translation(-VEC_Y * 2) * rotation_z(0.5 * M_PI)};
+  PerspectiveCamera cam2{1., 1., translation(-VEC_Y * 2) * rotation_z(0.5 * std::numbers::pi)};
   Ray ray5 = cam2.fire_ray(0.5, 0.5);
-  PerspectiveCamera cam3{1., 1., translation(-VEC_Z * 3) * rotation_y(0.5 * M_PI)};
+  PerspectiveCamera cam3{1., 1., translation(-VEC_Z * 3) * rotation_y(0.5 * std::numbers::pi)};
   Ray ray6 = cam3.fire_ray(0.5, 0.5);
 
   // check ray fired after transformation is at the expected coordinates
