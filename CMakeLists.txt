@@ -12,12 +12,11 @@ project(raytracer
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set dynamic runtime (/MD)
+# Set dynamic runtime
 # Added to try and cope with Windows build issues
 if (MSVC)
     # Force all targets to use /MD (or /MT if you prefer)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")  # /MD
-    # or: set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # /MT
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # /MT
 endif()
 
 # Enable CMake's testing framework

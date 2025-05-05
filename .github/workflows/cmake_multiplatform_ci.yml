@@ -1,4 +1,4 @@
-name: CMake multiplatform ci #choose the name you like
+name: CMake multiplatform ci
 
 on:
   push: #remove if you don't want to trigger the workflow on push
