@@ -22,7 +22,8 @@ class Ray;
 class Camera;
 class ImageTracer;
 
-const float infinite = std::numeric_limits<float>::infinity(); // Define infinity as a float
+/// @brief define infinity as a float
+const float infinite = std::numeric_limits<float>::infinity();
 
 // ------------------------------------------------------------------------------------------------------------
 // -----------RAY CLASS------------------

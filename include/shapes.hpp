@@ -13,6 +13,7 @@
 #include "colors.hpp"
 #include "geometry.hpp"
 
+#include <memory>   //library for smart pointers
 #include <optional> //library for nullable types in c++
 
 // ------------------------------------------------------------------------------------------------------------
@@ -171,4 +172,49 @@ public:
 
     return HitRecord();
   };
+};
+
+//-------------------------------------------------------------------------------------------------------------
+// -----------WORLD CLASS ------------------
+// ------------------------------------------------------------------------------------------------------------
+/// @brief World class contains all the objects in the scene and trace rays against them
+class World {
+public:
+  // ------- Properties --------
+
+  ///@brief list of all the shapes present in the scene (stored as shared_ptr for polymorphism and memory safety)
+  std::vector<std::shared_ptr<Shape>> objects;
+
+  // ----------- Constructors -----------
+
+  /// default constructor
+  World() : objects() {};
+
+  // -------------------- Methods ----------------------
+
+  /// @brief adds a shape to the scene
+  /// @param object shape to add to the scene
+  void add_object(std::shared_ptr<Shape> object) { objects.push_back(object); }
+
+  /// @brief returns the closest intersection of a ray with the objects in the scene
+  /// @param ray to be traced through the world
+  /// @return std::optional<HitRecord> containing the closest intersection info (or std::nullopt if no hit)
+  std::optional<HitRecord> ray_intersection(const Ray &ray) const {
+    std::optional<HitRecord> closest_hit; // closest hit found (if any)
+    float closest_t = infinite;           // distance to the closest hit (initialize infinite)
+
+    // loop through all objects in the world
+    for (const auto &object : objects) {
+      std::optional<HitRecord> hit = object->ray_intersection(ray); // try intersecting with this object
+      // object->ray_intersection(ray) is shorthand for (*object).ray_intersection(ray)
+
+      // if there's a valid hit and it's closer than any previous one update closest hit and distance
+      if (hit.has_value() && hit->t > 0 && hit->t < closest_t) {
+        closest_t = hit->t; // update closest distance
+        closest_hit = hit;  // update closest hit info
+      }
+    }
+
+    return closest_hit; // return the closest hit (or nullopt if none found)
+  }
 };
