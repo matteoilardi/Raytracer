@@ -13,8 +13,10 @@
 #include "colors.hpp"
 #include "geometry.hpp"
 
-#include <memory>   //library for smart pointers
-#include <optional> //library for nullable types in c++
+#include <cmath>
+#include <memory> // library for smart pointers
+#include <numbers>
+#include <optional> // library for nullable types in C++
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -81,14 +83,12 @@ public:
 
   ///@brief virtual method that implements the intersection of a given ray with the shape considered
   ///@param ray incoming ray hitting the shape
-  virtual std::optional<HitRecord> ray_intersection(Ray ray) const {
-    throw std::logic_error("Shape.ray_intersection is an abstract method and cannot be called directly");
-  }
+  virtual std::optional<HitRecord> ray_intersection(Ray ray) const = 0;
 
   ///@brief flip the normal to the surface so that it has negative scalar product with the hitting ray
   ///@param normal normal to the surface
   ///@param ray incoming ray hitting the shape
-  Normal flip_normal(Normal normal, Ray ray) const {
+  Normal enforce_correct_normal_orientation(Normal normal, Ray ray) const {
     if (normal * ray.direction > 0) {
       return -normal; // the normal and the ray must have opposite directions, if this is false (dot product>0), flip
                       // the normal
@@ -119,21 +119,59 @@ public:
 
   ///@brief implementation of virtual method that returns the information of the intersection with a given ray
   ///@param ray incoming ray hitting the shape
-  virtual std::optional<HitRecord> ray_intersection(Ray ray) const override {
+  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+    // NOTE It might be better not to break down this method in helper functions. If we did, the incautious reader might
+    // overlook that all geometric objects in this method (except ray_world_frame) live in the unit sphere's reference
+    // frame and might not understand what's going on.
+    //  Important note: unless otherwise specified, every geometrical object in the body of this method is in the
+    //  reference frame of the *standard* sphere
 
-    // TODO implement this method and the auxiliary functions needed
+    // 1. Transform the ray to the *standard* sphere's reference frame
+    Ray ray = ray_world_frame.transform(transformation.inverse());
 
-    // STEPS
-    // 1. Transform the ray to the plane reference frame
-    Ray shape_frame_ray = ray.transform(transformation.inverse());
+    // 2. Compute the discriminant of the 2nd degree equation in slides 8b 29-31, return null if the ray is tangent (as
+    // if there were no intersections)
+    Vec O = ray.origin.to_vector();
+    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1);
+    if (reduced_discriminant == 0.f) {
+      return std::nullopt;
+    }
 
-    // 2. Compute the intersection points if any (2nd degree equation) slides 8b 29-31
-    // 3. Choose the closest with t>0
-    // 4. Compute the normal to the surface at the intersection point  //NOTE use the FLIP_NORMAL method in Shape
-    // 5. Compute the 2D coordinates on the surface (u,v) of the intersection point
-    // 4. Transform the intersection point parameters (HitRecord) back to the world reference frame
+    // 3. Choose the smallest solution t > 0, which corresponds to the first hitting point of the ray (remember
+    // t_first_hit is the same in both reference frames)
+    float t_first_hit;
+    float t1 = (-O * ray.direction - std::sqrt(reduced_discriminant)) / ray.direction.squared_norm();
+    if (t1 > ray.tmin && t1 < ray.tmax) {
+      t_first_hit = t1;
+    } else {
+      float t2 = (-O * ray.direction + std::sqrt(reduced_discriminant)) / ray.direction.squared_norm();
+      if (t2 > ray.tmin && t2 < ray.tmax) {
+        t_first_hit = t2;
+      } else {
+        return std::nullopt;
+      }
+    }
 
-    return HitRecord();
+    // 4. Find the corresponding hitting point in the *standard* sphere's reference frame
+    Point hit_point = ray.at(t_first_hit);
+
+    // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
+    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z);
+    normal = enforce_correct_normal_orientation(normal, ray);
+
+    // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
+    // reference frame by our convention)
+    float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi);
+    if (u < 0.f) {
+      u = u + 1.f;
+    } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
+    float v = std::acos(hit_point.z) / std::numbers::pi;
+    Vec2d surface_coordinates = Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
+
+    // 7. Transform the intersection point parameters back to the world's reference frame
+    std::optional<HitRecord> hit;
+    hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_first_hit);
+    return hit;
   };
 };
 
@@ -156,21 +194,35 @@ public:
 
   ///@brief implementation of virtual method that returns the information of the intersection with a given ray
   ///@param ray incoming ray hitting the shape
-  virtual std::optional<HitRecord> ray_intersection(Ray ray) const override {
+  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+    // Important note: unless otherwise specified, every geometrical object in the body of this method is in the
+    // reference frame of the *standard* plane
 
-    // TODO implement this method and the auxiliary functions needed
-
-    // STEPS
     // 1. Transform the ray to the plane reference frame
-    Ray shape_frame_ray = ray.transform(transformation.inverse());
+    Ray ray = ray_world_frame.transform(transformation.inverse());
 
-    // 2. Check if the ray is parallel to the plane
-    // 3. If not, compute the intersection point
-    // 4. Compute the normal to the surface at the intersection point //NOTE use the FLIP_NORMAL method in Shape
-    // 5. Compute the 2D coordinates on the surface (u,v) of the intersection point
+    // 2. Return null if the ray is parallel to the plane
+    if (are_close(ray.direction.z, 0.f)) {
+      return std::nullopt;
+    }
+
+    // 3. Compute the t at the intersection point and return null if t < 0, compute the intersection point
+    float t_hit = -ray.origin.to_vector().z / ray.direction.z;
+    if (t_hit < ray.tmin || t_hit > ray.tmax) {
+      return std::nullopt;
+    }
+    Point hit_point = ray.at(t_hit);
+
+    // 4. Compute the normal to the plane at the intersection point (i. e. choose the sign of the normal)
+    Normal normal = enforce_correct_normal_orientation(VEC_Z.to_normal(), ray);
+
+    // 5. Compute the 2D coordinates on the surface (u,v) of the intersection point (periodic parametrization)
+    Vec2d surface_coordinates = Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
+
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
-
-    return HitRecord();
+    std::optional<HitRecord> hit;
+    hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_hit);
+    return hit;
   };
 };
 
@@ -201,20 +253,19 @@ public:
   /// @return std::optional<HitRecord> containing the closest intersection info (or std::nullopt if no hit)
   std::optional<HitRecord> ray_intersection(const Ray &ray) const {
     std::optional<HitRecord> closest_hit; // closest hit found (if any)
-    float closest_t = infinite;           // distance to the closest hit (initialize infinite)
 
-    // loop through all objects in the world
+    // loop through all objects in World
     for (const auto &object : objects) {
       std::optional<HitRecord> hit = object->ray_intersection(ray); // try intersecting with this object
       // object->ray_intersection(ray) is shorthand for (*object).ray_intersection(ray)
 
-      // if there's a valid hit and it's closer than any previous one update closest hit and distance
-      if (hit.has_value() && hit->t > 0 && hit->t < closest_t) {
-        closest_t = hit->t; // update closest distance
-        closest_hit = hit;  // update closest hit info
+      // if there's a valid hit and it's closer than any previous one update closest_hit
+      // NOTE: there's no need to check that hit->t > 0 since we already do it inside the ray_intersection method of the
+      // Shapes (btw it would make no sense there to return a HitRecord of a hit which is not valid)
+      if (hit.has_value() && hit->t < (closest_hit.has_value() ? closest_hit->t : infinite)) {
+        closest_hit = hit;
       }
     }
-
     return closest_hit; // return the closest hit (or nullopt if none found)
   }
 };
