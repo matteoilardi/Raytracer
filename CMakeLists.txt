@@ -15,6 +15,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Enable CMake's testing framework
 enable_testing()
 
+# Set dynamic runtime (/MD or /MDd)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
 # -------------------------------
 # Main executable: raytracer
 # -------------------------------

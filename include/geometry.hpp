@@ -10,6 +10,7 @@
 #pragma once
 
 #include "colors.hpp"
+#include <numbers>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
