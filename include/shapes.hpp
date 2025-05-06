@@ -105,8 +105,9 @@ public:
 class Sphere : public Shape {
 public:
   //-------Properties--------
-  // NOTE nothing should be here, since by default the sphere is at the origin and has radius 1
-  // (even for an ellipsoid, just transform it to the unit sphere at the origin & store all info in the transformation)
+  // by default, the sphere is centered at the origin and has a radius of 1
+  // so we need no properties here, all the info is specified in the transformation (that can take to an ellipsoid
+  // centered anywhere)
 
   //-----------Constructors-----------
   /// Default constructor
@@ -120,9 +121,6 @@ public:
   ///@brief implementation of virtual method that returns the information of the intersection with a given ray
   ///@param ray incoming ray hitting the shape
   virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
-    // NOTE It might be better not to break down this method in helper functions. If we did, the incautious reader might
-    // overlook that all geometric objects in this method (except ray_world_frame) live in the unit sphere's reference
-    // frame and might not understand what's going on.
     //  Important note: unless otherwise specified, every geometrical object in the body of this method is in the
     //  reference frame of the *standard* sphere
 
@@ -156,12 +154,13 @@ public:
     Point hit_point = ray.at(t_first_hit);
 
     // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
-    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z);
+    Normal normal =
+        Normal(hit_point.x, hit_point.y, hit_point.z); // normal to the sphere is just the vector from the origin
     normal = enforce_correct_normal_orientation(normal, ray);
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
     // reference frame by our convention)
-    float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi);
+    float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi); // atan2 is the arctangent
     if (u < 0.f) {
       u = u + 1.f;
     } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
@@ -170,6 +169,7 @@ public:
 
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
+    // nullable type cannot be build calling the construcor directly, need to use emplace or similar syntax instead
     hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_first_hit);
     return hit;
   };
@@ -181,7 +181,8 @@ public:
 class Plane : public Shape {
 public:
   //-------Properties--------
-  // NOTE nothins should be here, since by default the plane is at the origin and normal to the z axis
+  // again by default the plane is at the origin and normal to the z axis,
+  // so we need no futher properties here, all the info is in the transformation
 
   //-----------Constructors-----------
   /// Default constructor
@@ -216,7 +217,8 @@ public:
     // 4. Compute the normal to the plane at the intersection point (i. e. choose the sign of the normal)
     Normal normal = enforce_correct_normal_orientation(VEC_Z.to_normal(), ray);
 
-    // 5. Compute the 2D coordinates on the surface (u,v) of the intersection point (periodic parametrization)
+    // 5. Compute surface 2D coordinates (u,v) of the intersection point (periodic parametrization Tomasi Lesson 8a
+    // slides 37-38)
     Vec2d surface_coordinates = Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
@@ -260,8 +262,7 @@ public:
       // object->ray_intersection(ray) is shorthand for (*object).ray_intersection(ray)
 
       // if there's a valid hit and it's closer than any previous one update closest_hit
-      // NOTE: there's no need to check that hit->t > 0 since we already do it inside the ray_intersection method of the
-      // Shapes (btw it would make no sense there to return a HitRecord of a hit which is not valid)
+      // (note there's no need to check hit->t > 0 since we already do it inside ray_intersection method of Shapes)
       if (hit.has_value() && hit->t < (closest_hit.has_value() ? closest_hit->t : infinite)) {
         closest_hit = hit;
       }
