@@ -11,7 +11,8 @@
 
 #include "colors.hpp"
 #include "geometry.hpp"
-#include <limits> // library to have infinity as a float
+#include <functional> // library for std::function
+#include <limits>     // library to have infinity as a float
 #include <memory>
 
 // ------------------------------------------------------------------------------------------------------------
@@ -178,9 +179,9 @@ public:
 
   // note we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own,
   // rather than creating a parent class with a virtual method to be implemented by derived classes)
-  using RaySolver = Color(Ray); // General function that takes a Ray as input and returns a Color
+  using RaySolver = std::function<Color(Ray)>; // General function that takes a Ray as input and returns a Color
 
-  void fire_all_rays(RaySolver *func) {
+  void fire_all_rays(RaySolver func) {
     for (int col = 0; col < image->width; ++col) {
       for (int row = 0; row < image->height; ++row) {
         Ray ray = fire_ray(col, row);

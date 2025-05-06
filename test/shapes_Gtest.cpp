@@ -23,8 +23,8 @@ TEST(SphereTest, test_outer_hit) {
 
   Ray ray1 = Ray(Point(0.f, 0.f, 2.f), -VEC_Z);
   std::optional<HitRecord> hit1 = unit_sphere.ray_intersection(ray1);
-  HitRecord expected1 = HitRecord(Point(0.f, 0.f, 1.f), VEC_Z.to_normal(), Vec2d(0.f,0.f), ray1, 1.f);
-  ASSERT_TRUE(hit1); 
+  HitRecord expected1 = HitRecord(Point(0.f, 0.f, 1.f), VEC_Z.to_normal(), Vec2d(0.f, 0.f), ray1, 1.f);
+  ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1.value().is_close(expected1));
 
   Ray ray2 = Ray(Point(3.f, 0.f, 0.f), -VEC_X);
@@ -76,7 +76,7 @@ TEST(SphereTest, test_normals) {
   std::optional<HitRecord> hit1 = sphere1.ray_intersection(ray1);
 
   ASSERT_TRUE(hit1);
-  // TODO consider changing the implementation of Normal.normalize(), perhaps it should return a Normal
+  // TODO consider changing the implementation of Normal::normalize(), perhaps it should return a Normal
   // ANSWER Isn't it already returning a Normal? it's a void method within the Normal class, so it should be
   Normal computed_normal = hit1->normal;
   Normal expected_normal = Normal(1.f, 4.f, 0.f);
@@ -235,7 +235,7 @@ TEST(WorldTest, test_ray_intersection) {
   world.add_object(sphere1);
   world.add_object(sphere2);
 
-  Ray ray1 = Ray(Point(0.f,0.f,0.f), VEC_X);
+  Ray ray1 = Ray(Point(0.f, 0.f, 0.f), VEC_X);
   std::optional<HitRecord> hit1 = world.ray_intersection(ray1);
   ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1->world_point.is_close(Point(1.f, 0.f, 0.f)));
