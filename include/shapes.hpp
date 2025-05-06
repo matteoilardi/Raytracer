@@ -268,4 +268,13 @@ public:
     }
     return closest_hit; // return the closest hit (or nullopt if none found)
   }
+
+  /// @brief method for ON/OFF tracing
+  /// @param ray originating from a camera
+  /// @return white if an object is hit, black otherwise
+  Color on_off_trace(const Ray& ray) {
+    // NOTE implementation is not efficient: the loop through the objects (in ray_intersection) should be broken at the first intersection
+    if(ray_intersection(ray)) { return Color(1.f, 1.f, 1.f); } // Turns out to be white if the only other color is black
+    else { return Color(); }
+  };
 };
