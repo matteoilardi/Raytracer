@@ -35,7 +35,9 @@ int main(int argc, char **argv) {
   HdrImage img(0, 0);
   if(*demo_subc) {
     // 1. (DEMO) Compute the demo image
-    img = make_demo_image();
+
+    // TODO implement method below
+    // img = make_demo_image();
 
   } else if(*pfm2png_subc) {
     // 1. (CONVERTER) Read input image from file
@@ -64,13 +66,6 @@ int main(int argc, char **argv) {
 
   return EXIT_SUCCESS;
 }
-
-
-HdrImage make_demo_image() {
-  return
-}
-
-
 
 
 //int main(int argc, char *argv[]) {
