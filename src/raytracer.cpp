@@ -84,8 +84,9 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
-// TODO consider using CLI11 callback support
-// TODO add support for other possible observer transformations
+// TODO add support for other possible observer transformations (perhaps the composition of a translation along the x-axis (first) and a rotation (two angles))
+// TODO consider using CLI11 callback support (e. g. to define the observer transformation while parsing)
+// TODO you might want to specify the size of the image from command line 
 
 std::unique_ptr<HdrImage> make_demo_image(bool orthogonal) {
   // Initialize ImageTracer
