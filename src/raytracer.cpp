@@ -8,7 +8,8 @@
 #include "CLI11.hpp"
 #include "stb_image_write.h"
 
-std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height, const Transformation& obs_transformation);
+std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
+                                          const Transformation &obs_transformation);
 
 int main(int argc, char **argv) {
   CLI::App app{"Raytracer"};    // Define the main App
@@ -36,35 +37,44 @@ int main(int argc, char **argv) {
       app.add_subcommand("demo", "Run demo rendering and save PFM and PNG files"); // Returns a pointer to an App object
 
   // Parse image width and height (# pixels)
-  int width, height;
-  demo_subc->add_option("--width", width, "Specify image width (default is 480)")->check(CLI::PositiveNumber)
+  int width = 1280;
+  int height = 960;
+  demo_subc->add_option("--width", width, "Specify image width")
+      ->check(CLI::PositiveNumber)
       ->default_val(1280);
-  demo_subc->add_option("--height", height, "Specify image height (default is 480)")->check(CLI::PositiveNumber)
-      ->default_val(960);;
+  demo_subc->add_option("--height", height, "Specify image height")
+      ->check(CLI::PositiveNumber)
+      ->default_val(960);
+  ;
 
   // Choose between perspective and orthogonal projection
   bool orthogonal = false;
-  auto orthogonal_flag = demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
+  auto orthogonal_flag =
+      demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
 
   // Parse output file name
   demo_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")
       ->default_val("demo");
 
-  // Parse observer transformation: composition of a translation along -VEC_X and rotation around the scene (endcoded in distance, angle phi and angle theta). Default position: Origin - VEC_X.
+  // Parse observer transformation: composition of a translation along -VEC_X and rotation around the scene (endcoded in
+  // distance, angle phi and angle theta). Default position: Origin - VEC_X.
   float distance = 1.f;
-  float theta = std::numbers::pi/2.f;
+  float theta = std::numbers::pi / 2.f;
   float phi = 0.f;
 
-  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance (default is 1)")
-      ->excludes(orthogonal_flag);
+  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")
+      ->excludes(orthogonal_flag)
+      ->default_val(1.f);
 
-  demo_subc->add_option_function<float>("--theta-deg",
-                                   [&theta](const float& theta_deg) { theta = theta_deg / 180.f * std::numbers::pi; },
-                                   "Specify observer's angle theta (default is 90)");
+  demo_subc->add_option_function<float>(
+      "--theta-deg", [&theta](const float &theta_deg) { theta = theta_deg / 180.f * std::numbers::pi; },
+      "Specify observer's angle theta")
+      ->default_val(90.f);
 
-  demo_subc->add_option_function<float>("--phi-deg",
-                                   [&phi](const float& phi_deg) { phi = phi_deg / 180.f * std::numbers::pi; },
-                                   "Specify observer's angle phi (default is 0)");
+  demo_subc->add_option_function<float>(
+      "--phi-deg", [&phi](const float &phi_deg) { phi = phi_deg / 180.f * std::numbers::pi; },
+      "Specify observer's angle phi")
+      ->default_val(0.f);;
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -73,16 +83,13 @@ int main(int argc, char **argv) {
   auto pfm2png_subc = app.add_subcommand("pfm2png", "Convert a PFM file into a PNG file");
   std::string input_pfm_file_name;
 
-  pfm2png_subc->add_option("-i,--input-file", input_pfm_file_name, "Insert name of the input PFM file")
-      ->required();
-  pfm2png_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")
-      ->required();
+  pfm2png_subc->add_option("-i,--input-file", input_pfm_file_name, "Insert name of the input PFM file")->required();
+  pfm2png_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->required();
 
   pfm2png_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
       ->check(CLI::PositiveNumber); // reject negative values
   pfm2png_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
       ->check(CLI::PositiveNumber); // reject negative values
-
 
   // -----------------------------------------------------------
   // Procedure
@@ -95,14 +102,15 @@ int main(int argc, char **argv) {
   std::unique_ptr<HdrImage> img;
   if (*demo_subc) {
     // 2. (DEMO) Compute the demo image and save PFM file
-    Transformation observer_transformation = rotation_z(phi) * rotation_y(std::numbers::pi/2.f-theta) * translation(-VEC_X*distance);
+    Transformation observer_transformation =
+        rotation_z(phi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-VEC_X * distance);
 
     std::cout << "Rendering demo image... " << std::flush;
     img = make_demo_image(orthogonal, width, height, observer_transformation);
     std::cout << "Done." << std::endl;
 
     // Save PFM image
-    img->write_pfm(output_file_name+".pfm");
+    img->write_pfm(output_file_name + ".pfm");
 
   } else if (*pfm2png_subc) {
     // 2. (CONVERTER) Read input image from file
@@ -122,8 +130,8 @@ int main(int argc, char **argv) {
 
   // 4. Save the output image
   try {
-    img->write_ldr_image(output_file_name+".png", gamma, "png");
-    std::cout << "File \"" << output_file_name+".png" << "\" has been written to disk.\n";
+    img->write_ldr_image(output_file_name + ".png", gamma, "png");
+    std::cout << "File \"" << output_file_name + ".png" << "\" has been written to disk.\n";
   } catch (const std::exception &err) {
     std::cerr << "Error writing image. " << err.what() << '\n';
     return EXIT_FAILURE;
@@ -132,11 +140,12 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
-std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height, const Transformation& obs_transformation) {
+std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
+                                          const Transformation &obs_transformation) {
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
 
-  float aspect_ratio = (float)width/height;
+  float aspect_ratio = (float)width / height;
 
   std::unique_ptr<Camera> cam;
   if (orthogonal) {
@@ -154,21 +163,12 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
   scaling sc({0.1f, 0.1f, 0.1f}); // common scaling for all spheres
 
   std::vector<Vec> sphere_positions = {
-    { 0.5f,  0.5f,  0.5f},
-    { 0.5f,  0.5f, -0.5f},
-    { 0.5f, -0.5f,  0.5f},
-    { 0.5f, -0.5f, -0.5f},
-    {-0.5f,  0.5f,  0.5f},
-    {-0.5f,  0.5f, -0.5f},
-    {-0.5f, -0.5f,  0.5f},
-    {-0.5f, -0.5f, -0.5f},
-    { 0.0f,  0.0f, -0.5f},
-    { 0.0f,  0.5f,  0.0f}
-  };
+      {0.5f, 0.5f, 0.5f},   {0.5f, 0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},   {0.5f, -0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
+      {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -0.5f},  {0.0f, 0.5f, 0.0f}};
 
-  for (const Vec& pos : sphere_positions) {
-      auto sphere = std::make_shared<Sphere>(translation(pos) * sc);
-        world.add_object(sphere);
+  for (const Vec &pos : sphere_positions) {
+    auto sphere = std::make_shared<Sphere>(translation(pos) * sc);
+    world.add_object(sphere);
   }
 
   // Perform on/off tracing

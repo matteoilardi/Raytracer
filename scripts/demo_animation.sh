@@ -9,7 +9,7 @@ for count in $(seq 0 359); do
     else
         theta=$(echo "45 + 0.25 * ($count - 180)" | bc)
     fi
-    ../build/raytracer demo -d 1 --phi-deg $phi --theta-deg $theta --output-file=frame$countNNN.png
+    ../build/raytracer demo -d 1 --phi-deg $phi --theta-deg $theta --output-file=frame$countNNN
     echo "phi = $phi"
     echo "theta = $theta"
 done
