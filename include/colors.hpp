@@ -371,7 +371,7 @@ public:
   // Some other methods should be private, but following the convention are
   // declared public with underscore (_) in front.
 
-  void write_pfm(std::ostream &stream, Endianness endianness) {
+  void write_pfm(std::ostream &stream, Endianness endianness = Endianness::little_endian) {
     std::string endianness_str;
     if (endianness == Endianness::little_endian) {
       endianness_str = "-1.0";
@@ -393,6 +393,12 @@ public:
         _write_float(stream, color.b, endianness);
       }
     }
+  }
+
+  void write_pfm(const std::string& filename) {
+    std::ofstream of(filename);
+    write_pfm(of);
+    of.close();
   }
 
   // _valid_indexes returns true if row and col are nonnegative and within
