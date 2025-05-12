@@ -14,10 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set dynamic runtime
 # Added to try and cope with Windows build issues
-if (MSVC)
+#if (MSVC)
     # Force all targets to use /MD (or /MT if you prefer)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # /MT
-endif()
+    #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # /MT
+#endif()
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 # Enable CMake's testing framework
 enable_testing()
