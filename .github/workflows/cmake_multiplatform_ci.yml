@@ -1,11 +1,11 @@
 name: CMake multiplatform ci
 
 on:
-  push: #remove if you don't want to trigger the workflow on push
-    branches: [ "main", "gtest" ] #remove gtest after merging into main
+  # push: #emove if you don't want to trigger the workflow on push
+  # branches: [ "main", "gtest" ] #remove gtest after merging into main
   pull_request:
     branches: [ "main", "gtest" ] #remove gtest after merging into main
-  workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
+  workflow_dispatch:  #(added from GitHub template) allow manual triggering of the workflow
 
 jobs:
   build:
@@ -77,7 +77,7 @@ jobs:
         fi
 
   lint:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     needs: build  # Ensure the lint job runs after the build job
 
     steps:
@@ -87,6 +87,8 @@ jobs:
         uses: cpp-linter/cpp-linter@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          style: file  # uses your .clang-format file
+          style: file  # use .clang-format file
           tidy-checks: "modernize-*,performance-*,bugprone-*"
-          exclude: "external/* include/stb_image_write.h"
+          exclude: |   # exclude external libraries
+            external/*
+            include/stb_image_write.h

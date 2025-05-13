@@ -31,10 +31,10 @@
 // CONSTANTS, ENDIANNESS, EXCEPTIONS, GLOBAL FUNCTIONS
 // ------------------------------------------------------------------------------------------------------------
 
-constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5; // Default tolerance to decide if two float numbers are close
+constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5f; // Default tolerance to decide if two float numbers are close
 
-constexpr float DEFAULT_DELTA_LOG = 1e-10; // Default quantity added to the argument to prevent caluculating the
-                                           // logarithm of zero
+constexpr float DEFAULT_DELTA_LOG = 1e-10f; // Default quantity added to the argument to prevent caluculating the
+                                            // logarithm of zero
 
 /// @brief endianness is order you read floats with (recall 32_bit_float =4
 /// bytes) (left to right or right to left)
@@ -70,7 +70,7 @@ bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE
 /// x/(1+x) (almost x for small x, but saturates to 1 for large x)
 /// @param x
 /// @return
-float _clamp(float x) { return x / (1.0 + x); }
+float _clamp(float x) { return x / (1.f + x); }
 
 // ------------------------------------------------------------------------------------------------------------
 // COLOR
@@ -85,7 +85,7 @@ public:
 
   // Constructors
 
-  Color() : r(0.0f), g(0.0f), b(0.0f) {} // Default constructor (sets color to black)
+  Color() : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
 
   Color(float red, float green,
         float blue) // Constructor with externally assigned values
@@ -125,14 +125,14 @@ public:
   /// formula)
   /// @return
   float luminosity() const {
-    return 0.5 * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula (empirically
-                                                              // best formula for luminosity)
+    return 0.5f * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula (empirically
+                                                               // best formula for luminosity)
   }
 
   /// @brief luminosity of the color (computed as arithmetic average of rgb,
   /// instead of Shirley & Morley formula)
   /// @return
-  float luminosity_arithemic_avg() const { return (r + g + b) / 3; }
+  float luminosity_arithemic_avg() const { return (r + g + b) / 3.f; }
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -248,18 +248,18 @@ std::pair<int, int> _parse_img_size(const std::string &line) {
 /// @return
 Endianness _parse_endianness(const std::string &line) {
   std::istringstream iss(line);
-  float value = 0.0;
+  float value = 0.f;
   if (!(iss >> value)) // Note: if value is fed e. g. "abc", the conversion
                        // fails and value remains unchanged!
   {
     throw InvalidPfmFileFormat("Missing endianness specification");
   }
 
-  if (value == 0.0) {
+  if (value == 0.f) {
     throw InvalidPfmFileFormat("Invalid endianness specification");
-  } else if (value < 0.0) {
+  } else if (value < 0.f) {
     return Endianness::little_endian;
-  } else if (value > 0.0) {
+  } else if (value > 0.f) {
     return Endianness::big_endian;
   }
 
@@ -424,12 +424,12 @@ public:
   /// @param delta (default value to prevent taking log(0))
   /// @return return the average luminosity of the image as float
   float average_luminosity(float delta = DEFAULT_DELTA_LOG) const {
-    float cumsum = 0.0;
+    float cumsum = 0.f;
     for (auto pixel : pixels) {
       cumsum += std::log10(delta + pixel.luminosity());
     }
 
-    return std::pow(10., cumsum / pixels.size());
+    return std::pow(10.f, cumsum / pixels.size());
   }
 
   // NOTE you might want to add a check to ensure that the image is not normalized already before
@@ -463,7 +463,7 @@ public:
   /// @param filename name of LDR image to be produced
   /// @param gamma correction factor (default 1.0)
   /// @param format LDR image format (default png)
-  void write_ldr_image(const std::string &filename, float gamma = 1.0f, const std::string &format = "png") const {
+  void write_ldr_image(const std::string &filename, float gamma = 1.f, const std::string &format = "png") const {
     // Create a buffer to hold all pixels as 8-bit unsigned integers (R, G, B)
     // Each pixel needs 3 bytes, so we reserve enough memory up front
     std::vector<uint8_t> buffer;
@@ -473,8 +473,8 @@ public:
     // - Apply gamma correction
     // - Convert float [0,1] to uint8_t [0,255]
     auto transform_to_LDR = [gamma](float x) {
-      float gamma_corrected = std::pow(x, 1.0f / gamma);                 // Apply gamma correction
-      return static_cast<uint8_t>(std::round(gamma_corrected * 255.0f)); // Scale and convert
+      float gamma_corrected = std::pow(x, 1.f / gamma);                 // Apply gamma correction
+      return static_cast<uint8_t>(std::round(gamma_corrected * 255.f)); // Scale and convert
     };
 
     // NOTE png and jpeg/jpg images are filled in from left to right, from top to bottom.

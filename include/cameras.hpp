@@ -33,7 +33,7 @@ public:
   //-------Properties--------
   Point origin;          // Origin of the ray
   Vec direction;         // Direction of the ray
-  float tmin = 1e-5;     // Minimum distance run along the ray
+  float tmin = 1e-5f;    // Minimum distance run along the ray
   float tmax = infinite; // Maximum distance run along the ray
   int depth = 0;         // Number of reflections before is considered exhausted
 
@@ -74,7 +74,7 @@ public:
 
   //-----------Constructors-----------
   /// Default constructor
-  Camera() : asp_ratio(1.), transformation(Transformation()) {};
+  Camera() : asp_ratio(1.f), transformation(Transformation()) {};
 
   /// @brief Constructor with parameters
   /// @param aspect ratio
@@ -96,13 +96,13 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  OrthogonalCamera(float asp_ratio = 1., Transformation transformation = Transformation())
+  OrthogonalCamera(float asp_ratio = 1.f, Transformation transformation = Transformation())
       : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
-    Point origin = Point(-1., (1. - 2. * u) * asp_ratio, -1. + 2 * v); // compare Lab 6, slide 15 ad slide 20-21
+    Point origin = Point(-1.f, (1.f - 2.f * u) * asp_ratio, -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
     Vec direction = VEC_X;
     return Ray(origin, direction).transform(transformation);
   };
@@ -117,15 +117,16 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  PerspectiveCamera(float distance = 1., float asp_ratio = 1., Transformation transformation = Transformation())
+  PerspectiveCamera(float distance = 1.f, float asp_ratio = 1.f, Transformation transformation = Transformation())
       : Camera(asp_ratio, transformation), distance(distance) {}
 
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
-    Point origin = Point(-distance, 0., 0.);
-    Vec direction = Vec(distance, (1. - 2. * u) * asp_ratio, -1. + 2 * v); // compare Lab 6, slide 15 ad slide 20-21
+    Point origin = Point(-distance, 0.f, 0.f);
+    Vec direction =
+        Vec(distance, (1.f - 2.f * u) * asp_ratio, -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
     return Ray(origin, direction).transform(transformation);
   };
 };
@@ -163,7 +164,7 @@ public:
   /// the pixel)
   /// @param v_pixel (optional) y-coordinate of the pixel (default value is 0.5, meaning the ray hits y-center of the
   /// pixel)
-  Ray fire_ray(int col, int row, float u_pixel = 0.5, float v_pixel = 0.5) {
+  Ray fire_ray(int col, int row, float u_pixel = 0.5f, float v_pixel = 0.5f) {
     // convert pixel indices into a position on the screen
     // default values of u_pixel and v_pixel make the ray hit the center of the pixel
 
@@ -180,7 +181,7 @@ public:
 
     // the following 2 lines are now correct
     float u = (col + u_pixel) / (image->width);
-    float v = 1.0 - ((row + v_pixel) / (image->height));
+    float v = 1.f - ((row + v_pixel) / (image->height));
 
     return camera->fire_ray(u, v);
   }
