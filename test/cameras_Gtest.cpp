@@ -38,8 +38,9 @@ TEST(RayTest, test_at) {
 // test transform method
 TEST(RayTest, test_ray_transformation) {
   Ray ray = Ray(Point(1.f, 2.f, 3.f), Vec(6.f, 5.f, 4.f));
-  Transformation T = translation(Vec(10.f, 11.f, 12.f)) *
-                     rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
+  Transformation T =
+      translation(Vec(10.f, 11.f, 12.f)) *
+      rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
 
   EXPECT_TRUE(transformed.origin.is_close(Point(11.f, 8.f, 14.f)));
