@@ -84,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run C++ linter
-        uses: cpp-linter/cpp-linter@v2
+        uses: cpp-linter/cpp-linter@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           style: file  # use .clang-format file

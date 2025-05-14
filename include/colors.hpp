@@ -9,7 +9,10 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include "stb_image_write.h" //external library for LDR images
+#define _CRT_SECURE_NO_WARNINGS // disable warning due to strerr function in the external library (in MVSC)
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h" // external library for LDR images
+
 #include <algorithm>
 #include <array>
 #include <bit>

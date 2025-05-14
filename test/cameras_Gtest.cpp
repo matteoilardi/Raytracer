@@ -39,7 +39,7 @@ TEST(RayTest, test_at) {
 TEST(RayTest, test_ray_transformation) {
   Ray ray = Ray(Point(1.f, 2.f, 3.f), Vec(6.f, 5.f, 4.f));
   Transformation T = translation(Vec(10.f, 11.f, 12.f)) *
-                     rotation_x(0.5f * std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
+                     rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
 
   EXPECT_TRUE(transformed.origin.is_close(Point(11.f, 8.f, 14.f)));
@@ -73,7 +73,7 @@ TEST(CameraTest, test_orthogonal_camera) {
 
 // test transformation to orient orthogonal camera according to the observer
 TEST(CameraTest, test_orthogonal_camera_transformation) {
-  OrthogonalCamera cam2{1.f, translation(-VEC_Y * 2.f) * rotation_z(0.5f * std::numbers::pi)};
+  OrthogonalCamera cam2{1.f, translation(-VEC_Y * 2.f) * rotation_z(0.5f * (float)std::numbers::pi)};
   Ray ray5 = cam2.fire_ray(0.5f, 0.5f);
 
   // check ray fired after transformation is at the expected coordinates
@@ -104,9 +104,9 @@ TEST(CameraTest, test_perspective_camera) {
 
 // test transformation to orient perspective camera according to the observer
 TEST(CameraTest, test_perspective_camera_transformation) {
-  PerspectiveCamera cam2{1.f, 1.f, translation(-VEC_Y * 2.f) * rotation_z(0.5f * std::numbers::pi)};
+  PerspectiveCamera cam2{1.f, 1.f, translation(-VEC_Y * 2.f) * rotation_z(0.5f * (float)std::numbers::pi)};
   Ray ray5 = cam2.fire_ray(0.5f, 0.5f);
-  PerspectiveCamera cam3{1.f, 1.f, translation(-VEC_Z * 3.f) * rotation_y(0.5f * std::numbers::pi)};
+  PerspectiveCamera cam3{1.f, 1.f, translation(-VEC_Z * 3.f) * rotation_y(0.5f * (float)std::numbers::pi)};
   Ray ray6 = cam3.fire_ray(0.5f, 0.5f);
 
   // check ray fired after transformation is at the expected coordinates
@@ -135,10 +135,10 @@ protected:
 TEST_F(ImageTracerTest, test_uv_submapping) {
   // choose on purpose to fire the first ray at the pixel (0,0), not at the center coordinates (0.5,0.5)
   // but rather well outside the pixel boundaries so as to hit the center of the pixel (2,1)
-  Ray ray1 = tracer->fire_ray(0.f, 0.f, 2.5f, 1.5f);
+  Ray ray1 = tracer->fire_ray(0, 0, 2.5f, 1.5f);
 
   // fire the second ray at the center of the pixel (2,1)
-  Ray ray2 = tracer->fire_ray(2.f, 1.f);
+  Ray ray2 = tracer->fire_ray(2, 1);
   EXPECT_TRUE(ray1.is_close(ray2));
 }
 
@@ -158,13 +158,13 @@ TEST_F(ImageTracerTest, test_image_orientation) {
   // fire a ray against top left corner of the screen
   // you expect this ray to hit the screen at (x=0, y=2, z=1) but using the original code it would hit (x=0, y=2, z=-1)
   // (see issue #4) since v coordinates increase upwards while HdrImage rows are ordered top to bottom
-  Ray top_left_ray = tracer->fire_ray(0.f, 0.f, 0.f, 0.f);
+  Ray top_left_ray = tracer->fire_ray(0, 0, 0.f, 0.f);
   EXPECT_TRUE(Point(0.f, 2.f, 1.f).is_close(top_left_ray.at(1.f)));
 
   // fire a ray against bottom right corner of the screen
   // you expect this ray to hit the screen at (x=0, y=-2, z=-1) but with original code it hits (x=0, y=-3.333, z=3)
   // (see issue #4) since we divided by width-1/height-1 rather than width/height
   // & since coordinates increase upwards while HdrImage rows are ordered top to bottom
-  Ray bottom_right_ray = tracer->fire_ray(3.f, 1.f, 1.f, 1.f);
+  Ray bottom_right_ray = tracer->fire_ray(3, 1, 1.f, 1.f);
   EXPECT_TRUE(Point(0.f, -2.f, -1.f).is_close(bottom_right_ray.at(1.f)));
 }

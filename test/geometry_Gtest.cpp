@@ -150,9 +150,9 @@ TEST(TransformationTest, test_rotations) {
   EXPECT_TRUE(rotation_y(0.1f).is_consistent());
   EXPECT_TRUE(rotation_z(0.1f).is_consistent());
 
-  EXPECT_TRUE((rotation_x(0.5f * std::numbers::pi) * VEC_Y).is_close(VEC_Z));
-  EXPECT_TRUE((rotation_y(0.5f * std::numbers::pi) * VEC_Z).is_close(VEC_X));
-  EXPECT_TRUE((rotation_z(0.5f * std::numbers::pi) * VEC_X).is_close(VEC_Y));
+  EXPECT_TRUE((rotation_x(0.5f * (float)std::numbers::pi) * VEC_Y).is_close(VEC_Z));
+  EXPECT_TRUE((rotation_y(0.5f * (float)std::numbers::pi) * VEC_Z).is_close(VEC_X));
+  EXPECT_TRUE((rotation_z(0.5f * (float)std::numbers::pi) * VEC_X).is_close(VEC_Y));
 }
 
 TEST(TransformationTest, test_translations) {

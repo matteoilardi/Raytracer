@@ -12,13 +12,7 @@ project(raytracer
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Set dynamic runtime
-# Added to try and cope with Windows build issues
-#if (MSVC)
-    # Force all targets to use /MD (or /MT if you prefer)
-    #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")  # /MT
-#endif()
-
+# Ensure GTest uses shared C runtime (/MD on windows) to avoid linking errors
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 # Enable CMake's testing framework
@@ -56,9 +50,22 @@ function(add_gtest TEST_NAME TEST_FILE)
 endfunction()
 
 # -------------------------------
-# Register your test files here
+# Register test files
 # -------------------------------
 
 add_gtest(colorTest test/colors_Gtest.cpp)
 add_gtest(geometryTest test/geometry_Gtest.cpp)
 add_gtest(camerasTest test/cameras_Gtest.cpp)
+
+# -------------------------------
+# Disable warnings due to deprecated functions in library include/stb_image_write.h
+# -------------------------------
+
+foreach(tgt raytracer colorTest geometryTest camerasTest)
+    if(MSVC)
+        target_compile_options(${tgt} PRIVATE /wd4996)
+    else()
+        target_compile_options(${tgt} PRIVATE -Wno-deprecated-declarations)
+    endif()
+endforeach()
+
