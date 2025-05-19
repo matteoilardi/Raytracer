@@ -9,8 +9,8 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include <iostream>
 #include <cstdint> // library for fixed size integer types
+#include <iostream>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -25,17 +25,14 @@ class PCG;
 /// @brief Permuted congruential generator
 class PCG {
 public:
-
   //-------Properties--------
 
   uint64_t state; // internal state of the generator
   uint64_t inc; // increment, different increments generate different orthogonal sequences from the same internal states
   // TODO is it true?
 
-
   //-----------Constructors-----------
   /// Default constructor
-
 
   /// Constructor with parameters
   ///@param initial state of the generator
@@ -49,7 +46,7 @@ public:
   };
 
   //------------Methods-----------
-  ///@brief generate random number and advance internal state
+  ///@brief generate random uint32 and advance internal state
   uint32_t random() {
     uint64_t old_state = state;
     state = old_state * 6364136223846793005ull + inc;
@@ -60,6 +57,11 @@ public:
     return (xorshifted >> rot) | (xorshifted << ((-rot) & 31u));
   };
 
+  ///@brief generate random float uniformly distributed in [0, 1)
+  float random_float() {
+    uint32_t ran = random();
+    return static_cast<float>(ran) / pow(2.f, 32);
+  }
 
   ///@brief extract random numbers and discard them
   ///@param how many numbers to discard
