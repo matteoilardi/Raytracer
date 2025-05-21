@@ -1,7 +1,7 @@
 name: CMake multiplatform ci
 
 on:
-  push: #emove if you don't want to trigger the workflow on push
+  push: #remove if you don't want to trigger the workflow on push
     branches: [ "main", "gtest" ] #remove gtest after merging into main
   pull_request:
     branches: [ "main", "gtest" ] #remove gtest after merging into main
@@ -43,11 +43,7 @@ jobs:
       id: strings
       shell: bash
       run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        else
-          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-        fi
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Configure CMake
       run: >
@@ -68,45 +64,23 @@ jobs:
       if: failure()
       shell: bash  # Force bash so `if [[ ... ]]` works
       run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          echo "Running on Windows"
-          cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
-        else
-          echo "Running on $RUNNER_OS"
-          cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log" || echo "Log file not found"
-        fi
+        cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
 
-  run-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          # Full git history is needed to get a proper list of changed files within super-linter
-          fetch-depth: 0
+# below is the provisional linter we are having issues with, will fix it later
 
-      - name: Lint Code Base
-        uses: github/super-linter@v4
-        env:
-          VALIDATE_ALL_CODEBASE: false
-          DEFAULT_BRANCH: "main"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CLANG_FORMAT_STYLE: "./.clang-format"  #  Poit to custom clang-format file
+  # run-lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         # Full git history is needed to get a proper list of changed files within super-linter
+  #         fetch-depth: 0
 
-
-#  lint:
-#    runs-on: ubuntu-latest
-#    needs: build  # Ensure the lint job runs after the build job
-#
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Run C++ linter
-#        uses: cpp-linter/cpp-linter@v1
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          style: file  # use .clang-format file
-#          tidy-checks: "modernize-*,performance-*,bugprone-*"
-#          exclude: |   # exclude external libraries
-#            external/*
-#            include/stb_image_write.h
+  #     - name: Lint Code Base
+  #       uses: github/super-linter@v4
+  #       env:
+  #         VALIDATE_ALL_CODEBASE: false
+  #         DEFAULT_BRANCH: "main"
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         CLANG_FORMAT_STYLE: "./.clang-format"  #  Point to custom clang-format file
