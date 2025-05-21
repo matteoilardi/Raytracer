@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest] # I removed windows since the workflow was failing on windows, but will add it back later
+        os: [ubuntu-latest, windows-latest, macos-latest] 
         build_type: [Release]
         #c_compiler: [gcc, clang, cl]
         include:
@@ -44,7 +44,7 @@ jobs:
       shell: bash
       run: |
         if [[ "$RUNNER_OS" == "Windows" ]]; then
-          echo "build-output-dir=${{ github.workspace }}\\build" >> "$GITHUB_OUTPUT"
+          echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         else
           echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
         fi
