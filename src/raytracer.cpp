@@ -3,10 +3,7 @@
 #include "shapes.hpp"
 #include <fstream>
 #include <iostream>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "CLI11.hpp"
-#include "stb_image_write.h"
 
 std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
                                           const Transformation &obs_transformation);
