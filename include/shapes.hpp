@@ -270,13 +270,26 @@ public:
     return closest_hit; // return the closest hit (or nullopt if none found)
   }
 
+  /// @brief returns the first intersection of a ray with the objects in the world list (regardless of the distance)
+  /// @param ray to be traced through the world
+  /// @return std::optional<HitRecord> containing the info on the first intersection in the list (or std::nullopt if no hit)
+  std::optional<HitRecord> on_off_ray_intersection(const Ray &ray) const {
+    std::optional<HitRecord> first_hit; // first hit found in the list (if any)
+    // loop through all objects in World
+    for (const auto &object : objects) {
+      first_hit = object->ray_intersection(ray); // try intersecting with this object
+      if(first_hit.has_value()) {
+        return first_hit; // return the first hit found
+      }
+    }
+    return first_hit; // return the first hit (or nullopt if none found)
+  }
+
   /// @brief method for ON/OFF tracing
   /// @param ray originating from a camera
   /// @return white if an object is hit, black otherwise
   Color on_off_trace(Ray ray) {
-    // NOTE implementation is not efficient: the loop through the objects (in ray_intersection) should be broken at the
-    // first intersection
-    if (ray_intersection(ray)) {
+    if (on_off_ray_intersection(ray)) { //use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
       return Color(1.f, 1.f, 1.f);
     } // Turns out to be white if the only other color is black
     else {
