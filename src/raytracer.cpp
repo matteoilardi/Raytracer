@@ -1,9 +1,9 @@
+#include "CLI11.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
 #include "shapes.hpp"
 #include <fstream>
 #include <iostream>
-#include "CLI11.hpp"
 
 std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
                                           const Transformation &obs_transformation);
@@ -36,12 +36,8 @@ int main(int argc, char **argv) {
   // Parse image width and height (# pixels)
   int width = 1280;
   int height = 960;
-  demo_subc->add_option("--width", width, "Specify image width")
-      ->check(CLI::PositiveNumber)
-      ->default_val(1280);
-  demo_subc->add_option("--height", height, "Specify image height")
-      ->check(CLI::PositiveNumber)
-      ->default_val(960);
+  demo_subc->add_option("--width", width, "Specify image width")->check(CLI::PositiveNumber)->default_val(1280);
+  demo_subc->add_option("--height", height, "Specify image height")->check(CLI::PositiveNumber)->default_val(960);
   ;
 
   // Choose between perspective and orthogonal projection
@@ -63,15 +59,18 @@ int main(int argc, char **argv) {
       ->excludes(orthogonal_flag)
       ->default_val(1.f);
 
-  demo_subc->add_option_function<float>(
-      "--theta-deg", [&theta](const float &theta_deg) { theta = theta_deg / 180.f * std::numbers::pi; },
-      "Specify observer's angle theta")
+  demo_subc
+      ->add_option_function<float>(
+          "--theta-deg", [&theta](const float &theta_deg) { theta = theta_deg / 180.f * std::numbers::pi; },
+          "Specify observer's angle theta")
       ->default_val(90.f);
 
-  demo_subc->add_option_function<float>(
-      "--phi-deg", [&phi](const float &phi_deg) { phi = phi_deg / 180.f * std::numbers::pi; },
-      "Specify observer's angle phi")
-      ->default_val(0.f);;
+  demo_subc
+      ->add_option_function<float>(
+          "--phi-deg", [&phi](const float &phi_deg) { phi = phi_deg / 180.f * std::numbers::pi; },
+          "Specify observer's angle phi")
+      ->default_val(0.f);
+  ;
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
