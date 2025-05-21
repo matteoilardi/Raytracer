@@ -11,7 +11,8 @@
 
 #include "colors.hpp"
 #include "geometry.hpp"
-#include <limits> // library to have infinity as a float
+#include <functional> // library for std::function
+#include <limits>     // library to have infinity as a float
 #include <memory>
 
 // ------------------------------------------------------------------------------------------------------------
@@ -22,7 +23,8 @@ class Ray;
 class Camera;
 class ImageTracer;
 
-const float infinite = std::numeric_limits<float>::infinity(); // Define infinity as a float
+/// @brief define infinity as a float
+const float infinite = std::numeric_limits<float>::infinity();
 
 // ------------------------------------------------------------------------------------------------------------
 // -----------RAY CLASS------------------
@@ -63,7 +65,7 @@ public:
 };
 
 // ------------------------------------------------------------------------------------------------------------
-// -----------CAMERA CLASS------------------
+// -----------CAMERA CLASS (abstract)------------------
 // ------------------------------------------------------------------------------------------------------------
 
 class Camera {
@@ -87,7 +89,9 @@ public:
   /// @brief virtual method that fires a ray through a point of the screen
   /// @param screen coordinate u
   /// @param screen coordinate v
-  virtual Ray fire_ray(float u, float v) const = 0; //
+  virtual Ray fire_ray(float u, float v) const {
+    throw std::logic_error("Camera.fire_ray is an abstract method and cannot be called directly");
+  };
 };
 
 class OrthogonalCamera : public Camera {
@@ -176,9 +180,9 @@ public:
 
   // note we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own,
   // rather than creating a parent class with a virtual method to be implemented by derived classes)
-  using RaySolver = Color(Ray); // General function that takes a Ray as input and returns a Color
+  using RaySolver = std::function<Color(Ray)>; // General function that takes a Ray as input and returns a Color
 
-  void fire_all_rays(RaySolver *func) {
+  void fire_all_rays(RaySolver func) {
     for (int col = 0; col < image->width; ++col) {
       for (int row = 0; row < image->height; ++row) {
         Ray ray = fire_ray(col, row);
