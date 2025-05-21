@@ -2,9 +2,9 @@ name: CMake multiplatform ci
 
 on:
   push: #remove if you don't want to trigger the workflow on push
-    branches: [ "main", "demo" ] #remove gtest ande demo after merging into main
+    branches: [ "main", "pathtracing" ] #remove pathtracing after merging into main
   pull_request:
-    branches: [ "main", "demo" ] #remove gtest and demo after merging into main
+    branches: [ "main", "pathtracing" ] #remove pathtracing after merging into main
   workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
 
 jobs:
