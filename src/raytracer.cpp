@@ -2,9 +2,6 @@
 #include <fstream>
 #include <iostream>
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 int main(int argc, char *argv[]) {
   // Step 1: Parse command-line arguments
   Parameters parameters;

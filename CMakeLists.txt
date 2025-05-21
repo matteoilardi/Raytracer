@@ -1,5 +1,5 @@
 # Minimum CMake version
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.14)
 
 # Define the project
 project(raytracer
@@ -12,23 +12,18 @@ project(raytracer
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Ensure GTest uses shared C runtime (/MD on windows) to avoid linking errors
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
 # Enable CMake's testing framework
 enable_testing()
 
 # -------------------------------
-# Main executable: raytracer 
+# Main executable: raytracer
 # -------------------------------
 
-# Add the main application source
 add_executable(raytracer
         src/raytracer.cpp
-)
-
-# Add flags to avoid deprecated warnings
-set_source_files_properties(
-        src/raytracer.cpp
-        PROPERTIES
-        COMPILE_FLAGS "-Wno-deprecated-declarations"
 )
 
 # Include the headers in the "include" directory
@@ -38,61 +33,40 @@ target_include_directories(raytracer PUBLIC
 )
 
 # -------------------------------
-# Test: colors_test
+# Add GoogleTest from external/
 # -------------------------------
 
-add_executable(colorTest
-        test/colors_test.cpp
-)
-
-# Make the test target aware of the headers
-target_include_directories(colorTest PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-)
-
-# Register the test so you can run it with `ctest`
-add_test(NAME colorTest
-        COMMAND colorTest
-)
+add_subdirectory(external/googletest)
+include(GoogleTest)
 
 # -------------------------------
-# Test: geometry_test
+# Helper function to add gtest-based tests
 # -------------------------------
 
-# New test for the geometry.hpp file
-add_executable(geometryTest
-        test/geometry_test.cpp
-)
-
-# Make the test target aware of the headers
-target_include_directories(geometryTest PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-)
-
-# Register this new test too
-add_test(NAME geometryTest
-        COMMAND geometryTest
-)
+function(add_gtest TEST_NAME TEST_FILE)
+    add_executable(${TEST_NAME} ${TEST_FILE})
+    target_include_directories(${TEST_NAME} PUBLIC include)
+    target_link_libraries(${TEST_NAME} gtest_main)
+    gtest_discover_tests(${TEST_NAME})
+endfunction()
 
 # -------------------------------
-# Test: cameras_test
+# Register test files
 # -------------------------------
 
+add_gtest(colorTest test/colors_Gtest.cpp)
+add_gtest(geometryTest test/geometry_Gtest.cpp)
+add_gtest(camerasTest test/cameras_Gtest.cpp)
 
-# New test for the geometry.hpp file
-add_executable(camerasTest
-        test/cameras_test.cpp
-)
+# -------------------------------
+# Disable warnings due to deprecated functions in library include/stb_image_write.h
+# -------------------------------
 
-# Make the test target aware of the headers
-target_include_directories(camerasTest PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-)
+foreach(tgt raytracer colorTest geometryTest camerasTest)
+    if(MSVC)
+        target_compile_options(${tgt} PRIVATE /wd4996)
+    else()
+        target_compile_options(${tgt} PRIVATE -Wno-deprecated-declarations)
+    endif()
+endforeach()
 
-# Register this new test too
-add_test(NAME camerasTest
-        COMMAND camerasTest
-)

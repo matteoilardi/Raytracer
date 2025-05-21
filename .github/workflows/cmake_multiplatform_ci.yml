@@ -1,0 +1,86 @@
+name: CMake multiplatform ci
+
+on:
+  push: #remove if you don't want to trigger the workflow on push
+    branches: [ "main", "gtest" ] #remove gtest after merging into main
+  pull_request:
+    branches: [ "main", "gtest" ] #remove gtest after merging into main
+  workflow_dispatch:  #(added from GitHub template) allow manual triggering of the workflow
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest] 
+        build_type: [Release]
+        #c_compiler: [gcc, clang, cl]
+        include:
+          - os: ubuntu-latest
+            c_compiler: gcc
+            cpp_compiler: g++
+            build_type: Release
+          - os: ubuntu-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+            build_type: Release
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+            build_type: Release
+          - os: macos-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+            build_type: Release
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable strings
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -S ${{ github.workspace }}
+
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      run: ctest --build-config ${{ matrix.build_type }}
+
+    - name: Print test log on failure
+      if: failure()
+      shell: bash  # Force bash so `if [[ ... ]]` works
+      run: |
+        cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
+
+# below is the provisional linter we are having issues with, will fix it later
+
+  # run-lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         # Full git history is needed to get a proper list of changed files within super-linter
+  #         fetch-depth: 0
+
+  #     - name: Lint Code Base
+  #       uses: github/super-linter@v4
+  #       env:
+  #         VALIDATE_ALL_CODEBASE: false
+  #         DEFAULT_BRANCH: "main"
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         CLANG_FORMAT_STYLE: "./.clang-format"  #  Point to custom clang-format file
