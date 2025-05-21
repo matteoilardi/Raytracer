@@ -11,6 +11,7 @@
 
 #include <cstdint> // library for fixed size integer types
 #include <iostream>
+#include <cmath> // library for math functions
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -60,7 +61,7 @@ public:
   ///@brief generate random float uniformly distributed in [0, 1)
   float random_float() {
     uint32_t ran = random();
-    return static_cast<float>(ran) / pow(2.f, 32);
+    return static_cast<float>(ran) / std::pow(2.f,32);
   }
 
   ///@brief extract random numbers and discard them
