@@ -398,7 +398,7 @@ public:
     }
   }
 
-  void write_pfm(const std::string& filename) {
+  void write_pfm(const std::string &filename) {
     std::ofstream of(filename);
     write_pfm(of);
     of.close();
