@@ -12,6 +12,9 @@ project(raytracer
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Ensure GTest uses shared C runtime (/MD on windows) to avoid linking errors
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
 # Enable CMake's testing framework
 enable_testing()
 
@@ -21,13 +24,6 @@ enable_testing()
 
 add_executable(raytracer
         src/raytracer.cpp
-)
-
-# Add flags to avoid deprecated warnings
-set_source_files_properties(
-        src/raytracer.cpp
-        PROPERTIES
-        COMPILE_FLAGS "-Wno-deprecated-declarations"
 )
 
 # Include the headers in the "include" directory
@@ -55,10 +51,23 @@ function(add_gtest TEST_NAME TEST_FILE)
 endfunction()
 
 # -------------------------------
-# Register your test files here
+# Register test files
 # -------------------------------
 
 add_gtest(colorTest test/colors_Gtest.cpp)
 add_gtest(geometryTest test/geometry_Gtest.cpp)
 add_gtest(camerasTest test/cameras_Gtest.cpp)
 add_gtest(shapesTest test/shapes_Gtest.cpp)
+
+# -------------------------------
+# Disable warnings due to deprecated functions in library include/stb_image_write.h
+# -------------------------------
+
+foreach(tgt raytracer colorTest geometryTest camerasTest)
+    if(MSVC)
+        target_compile_options(${tgt} PRIVATE /wd4996)
+    else()
+        target_compile_options(${tgt} PRIVATE -Wno-deprecated-declarations)
+    endif()
+endforeach()
+

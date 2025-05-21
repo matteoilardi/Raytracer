@@ -10,6 +10,7 @@
 #pragma once
 
 #include "colors.hpp"
+#include <numbers>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -72,7 +73,7 @@ public:
   //-----------Constructors-----------
 
   /// Default constructor initializes to (0, 0, 0)
-  Vec() : x(0), y(0), z(0) {}
+  Vec() : x(0.f), y(0.f), z(0.f) {}
 
   /// Constructor with parameters
   Vec(float x, float y, float z) : x(x), y(y), z(z) {}
@@ -135,7 +136,7 @@ public:
   //-----------Constructors-----------
 
   /// Default constructor initializes to (0, 0, 0)
-  Point() : x(0), y(0), z(0) {}
+  Point() : x(0.f), y(0.f), z(0.f) {}
 
   /// Constructor with parameters
   Point(float x, float y, float z) : x(x), y(y), z(z) {}
@@ -175,7 +176,7 @@ public:
   //-----------Constructors-----------
 
   /// Default constructor initializes to (0, 0, 0)
-  Normal() : x(0), y(0), z(0) {}
+  Normal() : x(0.f), y(0.f), z(0.f) {}
 
   /// Constructor with parameters
   Normal(float x, float y, float z) : x(x), y(y), z(z) {}
@@ -241,10 +242,10 @@ public:
     // Fill linear part (identity)
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 3; ++j)
-        linear_part[i][j] = (i == j ? 1.0f : 0.0f);
+        linear_part[i][j] = (i == j ? 1.f : 0.f);
 
     // Fill translation vector (0)
-    translation_vec.x = translation_vec.y = translation_vec.z = 0.0f;
+    translation_vec.x = translation_vec.y = translation_vec.z = 0.f;
   }
 
   /// @brief constructor accepting linear part and translation vector
@@ -258,7 +259,7 @@ public:
   HomMatrix(const Vec &translation_vec) : translation_vec(translation_vec) {
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 3; ++j)
-        linear_part[i][j] = (i == j ? 1.0f : 0.0f);
+        linear_part[i][j] = (i == j ? 1.f : 0.f);
   }
 
   //------------Methods-----------
@@ -345,21 +346,21 @@ public:
     // Check if product of linear parts of hom_matrix and inverse_hom_matrix is the identity
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
-        float sum = 0.0f;
+        float sum = 0.f;
         for (int k = 0; k < 3; ++k) {
           sum += hom_matrix.linear_part[i][k] * inverse_hom_matrix.linear_part[k][j];
         }
-        if (i == j && !are_close(sum, 1.0f, DEFAULT_ERROR_TOLERANCE)) {
+        if (i == j && !are_close(sum, 1.f, DEFAULT_ERROR_TOLERANCE)) {
           return false;
-        } else if (i != j && !are_close(sum, 0.0f, DEFAULT_ERROR_TOLERANCE)) {
+        } else if (i != j && !are_close(sum, 0.f, DEFAULT_ERROR_TOLERANCE)) {
           return false;
         }
       }
     }
     // check if product of translation vectors is the identity
     Vec vec = (hom_matrix * (inverse_hom_matrix.translation_vec)) + hom_matrix.translation_vec;
-    if (!are_close(vec.x, 0.0f, DEFAULT_ERROR_TOLERANCE) || !are_close(vec.y, 0.0f, DEFAULT_ERROR_TOLERANCE) ||
-        !are_close(vec.z, 0.0f, DEFAULT_ERROR_TOLERANCE)) {
+    if (!are_close(vec.x, 0.f, DEFAULT_ERROR_TOLERANCE) || !are_close(vec.y, 0.f, DEFAULT_ERROR_TOLERANCE) ||
+        !are_close(vec.z, 0.f, DEFAULT_ERROR_TOLERANCE)) {
       return false;
     } else {
       return true;
@@ -602,6 +603,6 @@ public:
 //------------------------------- FURTHER GLOBAL CONSTANTS ----------------------
 //-------------------------------------------------------------------------------------------------------------
 
-const Vec VEC_X = Vec(1.0, 0.0, 0.0);
-const Vec VEC_Y = Vec(0.0, 1.0, 0.0);
-const Vec VEC_Z = Vec(0.0, 0.0, 1.0);
+const Vec VEC_X = Vec(1.f, 0.f, 0.f);
+const Vec VEC_Y = Vec(0.f, 1.f, 0.f);
+const Vec VEC_Z = Vec(0.f, 0.f, 1.f);

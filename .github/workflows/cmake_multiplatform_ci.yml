@@ -1,4 +1,4 @@
-name: CMake multiplatform linter #choose the name you like
+name: CMake multiplatform ci
 
 on:
   push: #remove if you don't want to trigger the workflow on push
@@ -15,16 +15,26 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-latest] # I removed windows since the workflow was failing on windows, but will add it back later
+        os: [ubuntu-latest, windows-latest, macos-latest] 
         build_type: [Release]
-        c_compiler: [gcc, clang]
+        #c_compiler: [gcc, clang, cl]
         include:
           - os: ubuntu-latest
             c_compiler: gcc
             cpp_compiler: g++
+            build_type: Release
           - os: ubuntu-latest
             c_compiler: clang
             cpp_compiler: clang++
+            build_type: Release
+          - os: windows-latest
+            c_compiler: cl
+            cpp_compiler: cl
+            build_type: Release
+          - os: macos-latest
+            c_compiler: clang
+            cpp_compiler: clang++
+            build_type: Release
 
     steps:
     - uses: actions/checkout@v4
@@ -52,4 +62,25 @@ jobs:
 
     - name: Print test log on failure
       if: failure()
-      run: cat ${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log || tru
+      shell: bash  # Force bash so `if [[ ... ]]` works
+      run: |
+        cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
+
+# below is the provisional linter we are having issues with, will fix it later
+
+  # run-lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         # Full git history is needed to get a proper list of changed files within super-linter
+  #         fetch-depth: 0
+
+  #     - name: Lint Code Base
+  #       uses: github/super-linter@v4
+  #       env:
+  #         VALIDATE_ALL_CODEBASE: false
+  #         DEFAULT_BRANCH: "main"
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         CLANG_FORMAT_STYLE: "./.clang-format"  #  Point to custom clang-format file
