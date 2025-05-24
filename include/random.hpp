@@ -64,6 +64,9 @@ public:
     return static_cast<float>(ran) / std::pow(2.f, 32);
   }
 
+  // TODO add method for Phong solid angle sampling
+  // TODO add method form uniform solid angle sampling (perhaps calling Phong with n = 0)
+
   ///@brief extract random numbers and discard them
   ///@param how many numbers to discard
   void discard(int n) {
