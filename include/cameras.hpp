@@ -14,6 +14,7 @@
 #include <functional> // library for std::function
 #include <limits>     // library to have infinity as a float
 #include <memory>
+#include "random.hpp" // random numbers for antialiasing
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -148,14 +149,20 @@ public:
   std::unique_ptr<HdrImage> image;
   std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object
                                   // Camera is the ImageTracer
+  int samples_per_pixel_edge;     // total samples per pixel = samples_per_pixel_side^2
+  std::shared_ptr<PCG> pcg;       // random number generator, for antialiasing (stratified sampling)
 
   //-----------Constructors-----------
 
   /// Default constructor
 
   /// Constructor with parameters
-  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera)
-      : image(std::move(image)), camera(std::move(camera)) {}
+  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera, int samples_per_pixel_edge = 1, std::shared_ptr<PCG> pcg = nullptr)
+      : image(std::move(image)), camera(std::move(camera)), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
+        if (!pcg) {
+          this->pcg = std::make_shared<PCG>();
+        }
+      }
   // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to
   // heap memory is as fast as access to stack NOTE pay attention to dangling pointers inside the main
 
@@ -185,9 +192,29 @@ public:
   void fire_all_rays(RaySolver func) {
     for (int col = 0; col < image->width; ++col) {
       for (int row = 0; row < image->height; ++row) {
-        Ray ray = fire_ray(col, row);
-        Color color = func(ray);
-        image->set_pixel(col, row, color);
+
+        Color cum_color = Color();
+        Ray ray;
+        const int spp = samples_per_pixel_edge; // just for code readability
+
+        if (spp > 1) { // perform antialiasing
+          for (int i = 0; i < spp; i++) {    // i: intra-pixel col
+            for (int j = 0; j < spp; j++) {  // j: intra-pixel row (as opposed to v, v_pixel increases downwards)
+              float u_pixel = ((float)i + pcg->random_float()) / spp;
+              float v_pixel = ((float)j + pcg->random_float()) / spp;
+
+              ray = fire_ray(col, row, u_pixel, v_pixel);
+              cum_color += func(ray);
+            }
+          }
+          cum_color /= (spp*spp);
+
+        } else {
+          ray = fire_ray(col, row);
+          cum_color = func(ray);
+        }
+
+        image->set_pixel(col, row, cum_color);
       }
     }
   }
