@@ -169,3 +169,29 @@ TEST_F(ImageTracerTest, test_image_orientation) {
   Ray bottom_right_ray = tracer->fire_ray(3, 1, 1.f, 1.f);
   EXPECT_TRUE(Point(0.f, -2.f, -1.f).is_close(bottom_right_ray.at(1.f)));
 }
+
+// test stratified sampling for a small 1-pixel image
+TEST(TestAntialiasing, test_stratified_sample) {
+  auto small_img = std::make_unique<HdrImage>(1, 1);
+  auto cam = std::make_unique<OrthogonalCamera>();
+  ImageTracer tracer{std::move(small_img), std::move(cam), 10}; // 10 samples per pixel edge
+
+  int n_rays = 0; // number of traced rays
+
+  // lambda that returns the same color for every ray after checking that it lands inside the screen
+  auto trace_ray = [&tracer, &n_rays] (Ray ray) -> Color {
+    Point point = ray.at(1.f);
+    EXPECT_TRUE(are_close(point.x, 0.f));
+    EXPECT_TRUE(point.y > -1.f && point.y < 1.f);
+    EXPECT_TRUE(point.z > -1.f && point.z < 1.f);
+
+    n_rays++;
+
+    return Color(1.f, 2.f, 3.f);
+  };
+
+  tracer.fire_all_rays(trace_ray);
+
+  EXPECT_EQ(n_rays, 100); // check that the total number of traced rays is the expected one
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close_to(Color(1.f, 2.f, 3.f))); // check color normalization
+}

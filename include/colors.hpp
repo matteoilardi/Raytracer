@@ -110,11 +110,38 @@ public:
   // Sum of two colors
   Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
 
+  // Compound addition assigmenent
+  Color& operator+=(const Color &other) {
+    *this = *this + other;
+    return *this;
+  }
+
   // Product of two colors
   Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
 
+  // Compound product assigmenent of two Colors
+  Color& operator*=(const Color &other) {
+    *this = *this * other;
+    return *this;
+  }
+
   // Product: color * scalar
   Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
+
+  // Compound product assigmenent of a color and a scalar
+  Color& operator*=(float scalar) {
+    *this = *this * scalar;
+    return *this;
+  }
+
+  // Division: color / scalar
+  Color operator/(float scalar) const { return *this * (1.f/scalar); }
+
+  // Compound division assigment of a color and a scalar
+  Color& operator/=(float scalar) {
+    *this = *this / scalar;
+    return *this;
+  }
 
   // Friend function to allow commutative product: scalar * color
   friend Color operator*(float scalar, const Color &my_color) {
