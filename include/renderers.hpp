@@ -17,36 +17,72 @@
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
 // ----------------------------------------------------------------------------------------
 
-class Render;
-class PathTriacing;
+class Renderer;
+class FlatTracer;
+class PathTracer;
 
 /// @brief abstract functor that associates a Color to a Ray
 class Renderer {
 public:
+  //------------Properties-----------
+  std::shared_ptr<World> world; // world to render
+  Color background;             // background color
+
+  //-----------Constructors-----------
+  Renderer(std::shared_ptr<World> world, Color background = Color()) : world(world), background(background) {};
+
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
 };
 
-/// @brief functor performing the path tracing algorithm
-/// @details importance sampling in MC integration based on the scatter_ray method of the BRDF
-class PathTracing : public Renderer {
+/// @brief functor performing flat tracing, i. e. returning for each ray the color of the closest object to be hit
+class FlatTracer : public Renderer {
 public:
-  //-------Properties--------
-  std::shared_ptr<World> world; // world to render
-  std::shared_ptr<PCG> pcg;     // random number generator
-  int n_rays;                   // number of rays recursively scattered
-  int russian_roulette_lim;     // maximum ray depth before russian roulette kicks in
-  int max_depth;                // maximum ray depth
-  Color background;             // background color
+  //------------Properties-----------
 
   //-----------Constructors-----------
-
   /// Constructor with parameters
+  /// @param world to render
+  /// @param background color
+  FlatTracer(std::shared_ptr<World> world, Color background = Color()) : Renderer(world, background) {};
+
+  //------------Methods-----------
+  virtual Color operator()(Ray ray) const {
+    // Save the colosest hit or return background Color if no object gets hit
+    std::optional<HitRecord> hit = world->ray_intersection(ray);
+    if (!hit) {
+      return background;
+    }
+
+    // Return Color of the hit object
+    return (*hit->shape->material->brdf->pigment)(hit->surface_point);
+  };
+};
+
+/// @brief functor performing the path tracing algorithm
+/// @details importance sampling in MC integration based on the scatter_ray method of the BRDF
+class PathTracer : public Renderer {
+public:
+  //-------Properties--------
+  std::shared_ptr<PCG> pcg; // random number generator
+  int n_rays;               // number of rays recursively scattered
+  int russian_roulette_lim; // maximum ray depth before russian roulette kicks in
+  int max_depth;            // maximum ray depth
+
+  //-----------Constructors-----------
   // TODO choose reasonable value for n_rays
-  PathTracing(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 100,
-              int russian_roulette_lim = 2, int max_depth = 2, Color background = Color())
-      : world(world), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim), max_depth(max_depth),
-        background(background) {
+
+  /// @brief constructor with parameters
+  /// @param world to render
+  /// @param pcg
+  /// @param number of rays recursively scattered
+  /// @param ray depth before russian roulette kicks in
+  /// @param maximum ray depth
+  /// @param background color
+  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 100,
+             int russian_roulette_lim = 2, int max_depth = 2, Color background = Color())
+      : Renderer(world, background), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim),
+        max_depth(max_depth) {
     if (!this->pcg) {
       pcg = std::make_shared<PCG>();
     }
@@ -59,7 +95,7 @@ public:
       return Color();
     }
 
-    // 2.Return background Color if no object gets hit
+    // 2. Return background Color if no object gets hit
     std::optional<HitRecord> hit = world->ray_intersection(ray);
     if (!hit) {
       return background;
