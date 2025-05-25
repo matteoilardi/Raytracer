@@ -12,6 +12,8 @@
 #include <cmath>   // library for math functions
 #include <cstdint> // library for fixed size integer types
 #include <iostream>
+#include <numbers> // library for pi
+#include <utility>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -64,8 +66,24 @@ public:
     return static_cast<float>(ran) / std::pow(2.f, 32);
   }
 
-  // TODO add method for Phong solid angle sampling
-  // TODO add method form uniform solid angle sampling (perhaps calling Phong with n = 0)
+  ///@brief Generate random (theta, phi) sampling Phong distribution on hemiphere
+  ///@param n
+  ///@details Phong: p(omega) = (n+1)/2pi * cos^n(theta)
+  std::pair<float, float> random_phong(int n) {
+    // sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
+    float x = random_float();
+    float theta = std::acos(std::pow(x, 1.f/(n+1)));
+
+    // sample phi
+    float phi = random_float() * 2*std::numbers::pi;
+
+    return {theta, phi};
+  }
+
+  ///@brief generate random (theta, phi) sampling uniform distribution on hemisphere
+  std::pair<float, float> random_unif_hemisphere() {
+    return random_phong(0); // Phong distribution for n = 0 is the uniform distribution
+  }
 
   ///@brief extract random numbers and discard them
   ///@param how many numbers to discard

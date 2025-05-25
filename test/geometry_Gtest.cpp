@@ -198,19 +198,16 @@ TEST(ONBTest, test_is_consistent){
   EXPECT_FALSE(wrong_onb2.is_consistent());
 }
 
-TEST(ONBTest, test_ONB_from_normal) {
+TEST(ONBTest, test_ONB_from_Duff) {
   PCG pcg;
 
-  // perform random testing on 1000 normals
+  // perform random testing on 1000 inputs
+  for (int i = 0; i < 1e4; i++) {
+    auto [theta, phi] = pcg.random_unif_hemisphere(); // uniform sampling of the hemisphere
+    Vec v = Vec(theta, phi);
+    ONB onb{v};
 
-  // uniform sampling of solid angle
-
-
-
-  // TODO finish test implementation following the point below
-  // sample point on the sphere
-  // initialize normal ancd check normalization
-  // construct a ONB
-  // check e3 == normal
-  // check consistency
+    EXPECT_TRUE(v.is_close(onb.e3));
+    EXPECT_TRUE(onb.is_consistent());
+  }
 }
