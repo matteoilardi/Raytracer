@@ -74,16 +74,20 @@ public:
   ///@brief transformation describing the position of the shape
   Transformation transformation;
   ///@brief properties of the shape as a function of (u, v)
-  Material material;
+  std::shared_ptr<Material> material;
 
   //-----------Constructors-----------
   /// Default constructor
-  Shape() : transformation(Transformation()), material(Material()) {};
+  Shape() : transformation(Transformation()) { material = std::make_shared<Material>(); };
 
   /// @brief Constructor with parameters
   /// @param tranformation taking you to the shape reference frame
-  Shape(Transformation transformation, Material material = Material())
-      : transformation(transformation), material(material) {};
+  Shape(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : transformation(transformation), material(material) {
+    if (!this->material) {
+      material = std::make_shared<Material>();
+    }
+  };
 
   virtual ~Shape() {}
 
@@ -122,7 +126,8 @@ public:
   Sphere() : Shape() {};
 
   /// Constructor with parameters
-  Sphere(Transformation transformation, Material material = Material()) : Shape(transformation, material) {};
+  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -198,7 +203,8 @@ public:
   Plane() : Shape() {};
 
   /// Constructor with parameters
-  Plane(Transformation transformation, Material material = Material()) : Shape(transformation, material) {};
+  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 

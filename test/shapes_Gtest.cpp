@@ -257,8 +257,8 @@ TEST(WorldTest, test_on_off_tracing) {
 
   World world = World();
   auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));
-  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}),
-                                         Material(std::make_shared<DiffusiveBRDF>(pigment)));
+  auto material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(pigment));
+  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
   world.add_object(sphere);
 
   tracer.fire_all_rays([&world](Ray ray) -> Color { return world.on_off_trace(ray); });

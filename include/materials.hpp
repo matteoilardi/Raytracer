@@ -9,8 +9,10 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
+#include "cameras.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "random.hpp"
 #include <cmath>
 #include <memory>
 #include <numbers>
@@ -39,7 +41,7 @@ struct Pigment {
   virtual Color operator()(Vec2d uv) const = 0;
 };
 
-/// @biref returns constant Color
+/// @brief returns constant Color
 struct UniformPigment : public Pigment {
 
   //-------Properties--------
@@ -102,6 +104,15 @@ public:
   /// @param outgoing direction
   /// @ (u, v) coordinates
   virtual Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const = 0;
+
+  /// @brief scatters ray in random direction using BRDF-based importance sampling
+  /// @param used to generate random numbers
+  /// @param direction of the incolming ray
+  /// @param point where the incoming ray hits the surface
+  /// @param normal to the surface at that point
+  /// @param depth value for the newly scattered ray
+  virtual Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal,
+                          int depth) const = 0;
 };
 
 /// @brief BRDF for isotropic light diffusion
@@ -109,6 +120,7 @@ class DiffusiveBRDF : public BRDF {
 public:
   //-------Properties--------
   float reflectance; // reflectance of the object
+  // QUESTION isn't reflactance already encoded in the pigment (three reflectances, one for each band)???
 
   //-----------Constructor-----------
   /// @param reflectance of the object
@@ -121,9 +133,23 @@ public:
   };
 
   //------------Methods-----------
-  Color eval(Normal normale, Vec in_dir, Vec out_dir, Vec2d uv) const override {
+  Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
     return (*pigment)(uv)*reflectance * (1.f / std::numbers::pi);
   }
+
+  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal,
+                  int depth) const override {
+    normal.normalize(); // QUESTION is it necessary?
+    ONB onb{normal.to_vector()};
+    auto [theta, phi] =
+        pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to cos(theta),
+                              // hence we perform importance sampling using Phong n=1 distribution
+    Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
+                     onb.e3 * std::cos(theta)};
+
+    // QUESTION why should tmin be bigger than usual? see lab 11 slide 13
+    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth);
+  };
 };
 
 //-------------------------------------------------------------------------------------------------------------
