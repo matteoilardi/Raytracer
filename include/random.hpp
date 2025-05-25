@@ -10,6 +10,7 @@
 #pragma once
 
 #include <iostream>
+#include <cmath>
 #include <cstdint> // library for fixed size integer types
 
 // ------------------------------------------------------------------------------------------------------------
