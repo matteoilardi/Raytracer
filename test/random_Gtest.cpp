@@ -27,7 +27,3 @@ TEST(PCGTest, test_default_sequence) {
     EXPECT_EQ(ran, pcg.random());
   }
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> pathtracing
