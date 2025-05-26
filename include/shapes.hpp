@@ -26,6 +26,8 @@ class HitRecord;
 class Shape;
 class Sphere;
 class Plane;
+class PointLightSource;
+class World;
 
 //-------------------------------------------------------------------------------------------------------------
 // -----------HIT RECORD CLASS------------------
@@ -229,6 +231,25 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------------------
+// ----------- POINT LIGHT SOURCE CLASS ------------------
+// ------------------------------------------------------------------------------------------------------------
+
+/// @brief point-like light source, used in point light tracing
+class PointLightSource {
+
+  // ------- Properties --------
+  Point point;
+  Color color;
+
+  // ------- Constructors --------
+  /// Constructor with arguments
+  /// @param position of the light source
+  /// @param color of the light
+  PointLightSource(Point point = Point(), Color color = Color(1.f, 1.f, 1.f)) : point(point), color(color) {};
+};
+
+
+//-------------------------------------------------------------------------------------------------------------
 // -----------WORLD CLASS ------------------
 // ------------------------------------------------------------------------------------------------------------
 /// @brief World class contains all the objects in the scene and trace rays against them
@@ -236,8 +257,10 @@ class World {
 public:
   // ------- Properties --------
 
-  ///@brief list of all the shapes present in the scene (stored as shared_ptr for polymorphism and memory safety)
+  /// @brief vector containing the shapes in the scene (stored as shared_ptr for polymorphism and memory safety)
   std::vector<std::shared_ptr<Shape>> objects;
+  /// @brief vector containing the light sources in the scene (use for illumination in point-light tracing)
+  std::vector<std::shared_ptr<PointLightSource>> light_sources;
 
   // ----------- Constructors -----------
 
@@ -247,8 +270,12 @@ public:
   // -------------------- Methods ----------------------
 
   /// @brief adds a shape to the scene
-  /// @param object shape to add to the scene
+  /// @param object shape to add
   void add_object(std::shared_ptr<Shape> object) { objects.push_back(object); }
+
+  /// @brief add a point light source to the scene
+  /// @param point light source to add
+  void add_light_source(std::shared_ptr<PointLightSource> light_source) { light_sources.push_back(light_source); }
 
   /// @brief returns the closest intersection of a ray with the objects in the scene
   /// @param ray to be traced through the world
