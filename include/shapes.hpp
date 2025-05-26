@@ -12,6 +12,7 @@
 #include "cameras.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "materials.hpp"
 
 #include <cmath>
 #include <memory> // library for smart pointers
@@ -38,6 +39,8 @@ class HitRecord {
 public:
   //-------Properties--------
 
+  std::shared_ptr<const Shape>
+      shape;           // shape that was hit (required in order to trace back to the material that was hit)
   Point world_point;   // 3D coordinates of the intersection point in real world
   Normal normal;       // normal to the surface at the intersection point
   Vec2d surface_point; // 2D coordinates on the surface
@@ -49,10 +52,11 @@ public:
   HitRecord() : world_point(Point()), normal(Normal()), surface_point(Vec2d()), ray(Ray()), t(0.) {};
 
   /// Constructor with parameters
-  HitRecord(Point world_point, Normal normal, Vec2d surface_point, Ray ray, float t)
-      : world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
+  HitRecord(std::shared_ptr<const Shape> shape, Point world_point, Normal normal, Vec2d surface_point, Ray ray, float t)
+      : shape(shape), world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
 
   //------------Methods-----------
+  // TODO method below doesn't check if the shape is the same!
   bool is_close(HitRecord other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return world_point.is_close(other.world_point, error_tolerance) && normal.is_close(other.normal, error_tolerance) &&
            surface_point.is_close(other.surface_point, error_tolerance) && ray.is_close(other.ray, error_tolerance) &&
@@ -65,19 +69,27 @@ public:
 // ------------------------------------------------------------------------------------------------------------
 
 /// @brief Shape class is the base class for all shapes in the scene
-class Shape {
+class Shape : public std::enable_shared_from_this<Shape> { // Shape must inherit from this template class in for one of
+                                                           // its methods to return a shared_ptr to this
 public:
   //-------Properties--------
-  ///@brief transformation taking to the proper reference frame of the shape
+  ///@brief transformation describing the position of the shape
   Transformation transformation;
+  ///@brief properties of the shape as a function of (u, v)
+  std::shared_ptr<Material> material;
 
   //-----------Constructors-----------
   /// Default constructor
-  Shape() : transformation(Transformation()) {};
+  Shape() : transformation(Transformation()) { material = std::make_shared<Material>(); };
 
   /// @brief Constructor with parameters
   /// @param tranformation taking you to the shape reference frame
-  Shape(Transformation transformation) : transformation(transformation) {};
+  Shape(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : transformation(transformation), material(material) {
+    if (!this->material) {
+      material = std::make_shared<Material>();
+    }
+  };
 
   virtual ~Shape() {}
 
@@ -116,7 +128,8 @@ public:
   Sphere() : Shape() {};
 
   /// Constructor with parameters
-  Sphere(Transformation transformation) : Shape(transformation) {};
+  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -172,7 +185,8 @@ public:
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
     // nullable type cannot be build calling the construcor directly, need to use emplace or similar syntax instead
-    hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_first_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
+                ray_world_frame, t_first_hit);
     return hit;
   };
 };
@@ -191,7 +205,8 @@ public:
   Plane() : Shape() {};
 
   /// Constructor with parameters
-  Plane(Transformation transformation) : Shape(transformation) {};
+  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -225,7 +240,8 @@ public:
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
-    hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
+                ray_world_frame, t_hit);
     return hit;
   };
 };

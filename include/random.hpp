@@ -9,9 +9,11 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include <iostream>
-#include <cmath>
+#include <cmath>   // library for math functions
 #include <cstdint> // library for fixed size integer types
+#include <iostream>
+#include <numbers> // library for pi
+#include <utility>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -26,17 +28,13 @@ class PCG;
 /// @brief Permuted congruential generator
 class PCG {
 public:
-
   //-------Properties--------
 
   uint64_t state; // internal state of the generator
   uint64_t inc; // increment, different increments generate different orthogonal sequences from the same internal states
   // TODO is it true?
 
-
   //-----------Constructors-----------
-  /// Default constructor
-
 
   /// Constructor with parameters
   ///@param initial state of the generator
@@ -50,7 +48,8 @@ public:
   };
 
   //------------Methods-----------
-  ///@brief generate random number and advance internal state
+
+  ///@brief generate random uint32 and advance internal state
   uint32_t random() {
     uint64_t old_state = state;
     state = old_state * 6364136223846793005ull + inc;
@@ -65,6 +64,25 @@ public:
   float random_float() {
     uint32_t ran = random();
     return static_cast<float>(ran) / std::pow(2.f, 32);
+  }
+
+  ///@brief Generate random (theta, phi) sampling Phong distribution on hemiphere
+  ///@param n
+  ///@details Phong: p(omega) = (n+1)/2pi * cos^n(theta)
+  std::pair<float, float> random_phong(int n) {
+    // sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
+    float x = random_float();
+    float theta = std::acos(std::pow(x, 1.f/(n+1)));
+
+    // sample phi
+    float phi = random_float() * 2*std::numbers::pi;
+
+    return {theta, phi};
+  }
+
+  ///@brief generate random (theta, phi) sampling uniform distribution on hemisphere
+  std::pair<float, float> random_unif_hemisphere() {
+    return random_phong(0); // Phong distribution for n = 0 is the uniform distribution
   }
 
   ///@brief extract random numbers and discard them

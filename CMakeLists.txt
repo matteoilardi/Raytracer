@@ -59,12 +59,15 @@ add_gtest(geometryTest test/geometry_Gtest.cpp)
 add_gtest(camerasTest test/cameras_Gtest.cpp)
 add_gtest(shapesTest test/shapes_Gtest.cpp)
 add_gtest(randomTest test/random_Gtest.cpp)
+add_gtest(materialsTest test/materials_Gtest.cpp)
+add_gtest(renderersTest test/renderers_Gtest.cpp)
 
 # -------------------------------
 # Disable warnings due to deprecated functions in library include/stb_image_write.h
 # -------------------------------
 
-foreach(tgt raytracer colorTest geometryTest camerasTest shapesTest randomTest)
+
+foreach(tgt raytracer colorTest geometryTest camerasTest shapesTest randomTest materialsTest renderersTest)
     if(MSVC)
         target_compile_options(${tgt} PRIVATE /wd4996)
     else()
