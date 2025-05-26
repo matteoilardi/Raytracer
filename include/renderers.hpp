@@ -19,6 +19,7 @@
 
 class Renderer;
 class FlatTracer;
+class PointLightTracer;
 class PathTracer;
 
 /// @brief abstract functor that associates a Color to a Ray
@@ -56,6 +57,56 @@ public:
 
     // Return Color of the hit object
     return (*hit->shape->material->brdf->pigment)(hit->surface_point);
+  };
+};
+
+/// @brief functor performing point light tracing (see PR #11)
+class PointLightTracer : public Renderer {
+public:
+  //------------Properties-----------
+  Color ambient_color; // constant base illumination applied to all surfaces (used when no light source is in sight)
+
+  //-----------Constructors-----------
+  /// Constructor with parameters
+  /// @param world to render
+  /// @param ambient color
+  /// @param background color
+  PointLightTracer(std::shared_ptr<World> world, Color ambient_color = Color(), Color background_color = Color())
+      : Renderer(world, background_color), ambient_color(ambient_color) {};
+
+  //------------Methods-----------
+  virtual Color operator()(Ray ray) const {
+    // 1. Save the colosest hit or return background Color if no object gets hit
+    std::optional<HitRecord> hit = world->ray_intersection(ray);
+    if (!hit) {
+      return background;
+    }
+
+    // 2. Unpack hit
+    std::shared_ptr<Material> hit_material = hit->shape->material;
+    std::shared_ptr<BRDF> brdf = hit_material->brdf;
+
+    // 3. Initalize pixel color
+    Color cum_radiance =
+        ambient_color +
+        (*hit_material->emitted_radiance)(
+            hit->surface_point); // QUESTION emitted radiance is summed later and rescaled in pytracer: why?
+
+    // 4. Loop over point light sources and add a contribution to radiance if the light source is visible
+    for (auto source : world->light_sources) {
+      std::optional<Vec> in_dir = world->offset_if_visible(source->point, hit->world_point, hit->normal);
+
+      if (in_dir.has_value()) {
+        float distance = in_dir->norm();
+        float distance_factor =
+            (source->emission_radius > 0.f) ? std::pow((source->emission_radius / distance), 2) : 1.f;
+        // angle between normal at hitting point and incoming direction (from light source)
+        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) * hit->normal.to_vector();
+        cum_radiance += source->color * distance_factor * cos_theta *
+                        brdf->eval(hit->normal, *in_dir, -hit->ray.direction, hit->surface_point);
+      }
+    }
+    return cum_radiance;
   };
 };
 
@@ -108,11 +159,12 @@ public:
 
     // 4. Apply russian roulette: decide whether to scatter new rays and renormalize the BRDF to compesate for possible
     // truncations
-    float hit_lum = std::max({reflected_color.r, reflected_color.g,
-                        reflected_color.b});
+    float hit_lum = std::max({reflected_color.r, reflected_color.g, reflected_color.b});
     if (ray.depth > russian_roulette_lim) {
       float q = std::max(1.f - hit_lum, 0.05f);
-      if (pcg->random_float() > q) { // stop with higher probability if the hit point has low reflactance: this improves efficiency without penalizing variance too much. Keep a finite stopiing probability even if hit_lum is close to 1
+      if (pcg->random_float() >
+          q) { // stop with higher probability if the hit point has low reflactance: this improves efficiency without
+               // penalizing variance too much. Keep a finite stopiing probability even if hit_lum is close to 1
       } else {
         return emitted_radiance;
       }

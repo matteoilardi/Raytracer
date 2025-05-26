@@ -252,18 +252,21 @@ public:
 
 /// @brief point-like light source, used in point light tracing
 class PointLightSource {
-
+public:
   // ------- Properties --------
   Point point;
   Color color;
+  float emission_radius; // fictitious radius r of the light source, used to compute solid angle rescaling at distance
+                         // d: (r/d)^2
 
   // ------- Constructors --------
   /// Constructor with arguments
   /// @param position of the light source
   /// @param color of the light
-  PointLightSource(Point point = Point(), Color color = Color(1.f, 1.f, 1.f)) : point(point), color(color) {};
+  /// @param fictitious radius, used to compute solid angle rescaling with distance
+  PointLightSource(Point point = Point(), Color color = Color(1.f, 1.f, 1.f), float emission_radius = 0.f)
+      : point(point), color(color), emission_radius(emission_radius) {};
 };
-
 
 //-------------------------------------------------------------------------------------------------------------
 // -----------WORLD CLASS ------------------
@@ -281,7 +284,7 @@ public:
   // ----------- Constructors -----------
 
   /// default constructor
-  World() : objects() {};
+  World() : objects(), light_sources() {};
 
   // -------------------- Methods ----------------------
 
@@ -341,4 +344,28 @@ public:
       return Color();
     }
   };
+
+  /// @brief returns ray connecting a viewer's point to a point on the surface of an object if the latter is visible
+  /// @param viewer point
+  /// @param surface point
+  /// @param normal at the surface
+  std::optional<Vec> offset_if_visible(Point viewer_point, Point surface_point, Normal normal_at_surface) {
+    Vec in_dir = surface_point - viewer_point;
+    Ray in_ray{viewer_point, in_dir};
+
+    // return null if the ray comes from inside the object
+    if (in_dir * normal_at_surface.to_vector() > 0.f) {
+      return std::nullopt;
+    }
+
+    // QUESTION what if the point light source is visible via a speculaar reflection?
+    // loop over the objects in the World and return null if one of them sits before surface_point
+    for (const auto &object : objects) {
+      std::optional<HitRecord> hit = object->ray_intersection(in_ray);
+      if (hit.has_value() && hit->t < 1.f && !hit->world_point.is_close(surface_point)) {
+        return std::nullopt;
+      }
+    }
+    return std::make_optional<Vec>(in_dir);
+  }
 };
