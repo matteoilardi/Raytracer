@@ -108,12 +108,11 @@ public:
 
     // 4. Apply russian roulette: decide whether to scatter new rays and renormalize the BRDF to compesate for possible
     // truncations
-    float q = std::max({reflected_color.r, reflected_color.g,
-                        reflected_color.b}); // stopping probability <-> reflected_color luminosity
-    // QUESTION why?
+    float hit_lum = std::max({reflected_color.r, reflected_color.g,
+                        reflected_color.b});
     if (ray.depth > russian_roulette_lim) {
-      if (pcg->random_float() > q) {
-        reflected_color = reflected_color * (1.f / (1.f - q));
+      float q = std::max(1.f - hit_lum, 0.05f);
+      if (pcg->random_float() > q) { // stop with higher probability if the hit point has low reflactance: this improves efficiency without penalizing variance too much. Keep a finite stopiing probability even if hit_lum is close to 1
       } else {
         return emitted_radiance;
       }
@@ -126,7 +125,7 @@ public:
     // distribution. A further multiplicative factor should probably be supplied for other BRDFs: remember to do the
     // maths ad check.
     Color cum_radiance = Color();
-    if (q > 0.f) { // proceed with recursion only if reflection is possible
+    if (hit_lum > 0.f) { // proceed with recursion only if reflection is possible
       for (int i_ray = 0; i_ray < n_rays; i_ray++) {
         Ray new_ray = hit_material->brdf->scatter_ray(
             pcg, ray.direction, hit->world_point, hit->normal,
