@@ -18,6 +18,8 @@
 // ----------------------------------------------------------------------------------------
 
 class Renderer;
+
+class OnOffTracer;
 class FlatTracer;
 class PathTracer;
 
@@ -34,6 +36,29 @@ public:
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
 };
+
+
+/// @brief functor performing ON/OFF tracing: returns white if the ray hits a object, black otherwise
+class OnOffTracer : public Renderer {
+public:
+  //------------Properties-----------
+
+  //-----------Constructors-----------
+  /// Constructor with parameters
+  /// @param world to render
+  OnOffTracer(std::shared_ptr<World> world) : Renderer(world) {};
+
+  //------------Methods-----------
+  virtual Color operator()(Ray ray) const {
+    if (world->on_off_ray_intersection(ray)) { // use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
+      return Color(1.f, 1.f, 1.f); // Turns out to be white if the only other color is black
+    }
+    else {
+      return Color();
+    }
+  }
+};
+
 
 /// @brief functor performing flat tracing, i. e. returning for each ray the color of the closest object to be hit
 class FlatTracer : public Renderer {

@@ -301,17 +301,4 @@ public:
     }
     return first_hit; // return the first hit (or nullopt if none found)
   }
-
-  /// @brief method for ON/OFF tracing
-  /// @param ray originating from a camera
-  /// @return white if an object is hit, black otherwise
-  Color on_off_trace(Ray ray) {
-    if (on_off_ray_intersection(ray)) { // use ad hoc implemented on_off_ray_intersection method to stop looping over
-                                        // objects as soon as one is hit
-      return Color(1.f, 1.f, 1.f);
-    } // Turns out to be white if the only other color is black
-    else {
-      return Color();
-    }
-  };
 };

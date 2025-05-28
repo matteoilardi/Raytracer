@@ -2,6 +2,7 @@
 #include "colors.hpp"
 #include "geometry.hpp"
 #include "shapes.hpp"
+#include "renderers.hpp"
 #include <fstream>
 #include <iostream>
 
@@ -154,7 +155,7 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
   ImageTracer tracer(std::move(img), std::move(cam));
 
   // Initialize demo World
-  World world = World();
+  auto world = std::make_shared<World>();
 
   scaling sc({0.1f, 0.1f, 0.1f}); // common scaling for all spheres
 
@@ -164,14 +165,11 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
 
   for (const Vec &pos : sphere_positions) {
     auto sphere = std::make_shared<Sphere>(translation(pos) * sc);
-    world.add_object(sphere);
+    world->add_object(sphere);
   }
 
   // Perform on/off tracing
-  tracer.fire_all_rays([&world](Ray ray) -> Color {
-    return world.on_off_trace(ray);
-  }); // World::on_off_trace requires three arguments, the first one being the World instance, hence it is not
-      // compatible with type RaySolver. A lambda wrapping is therefore needed.
+  tracer.fire_all_rays(OnOffTracer(world));
 
   // Return demo image
   return std::move(tracer.image);

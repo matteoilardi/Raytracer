@@ -10,6 +10,7 @@
 #include "cameras.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "renderers.hpp"
 #include "shapes.hpp"
 #include <gtest/gtest.h>
 
@@ -255,13 +256,13 @@ TEST(WorldTest, test_on_off_tracing) {
   auto cam = std::make_unique<OrthogonalCamera>();
   ImageTracer tracer(std::move(img), std::move(cam));
 
-  World world = World();
+  auto world = std::make_shared<World>();
   auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));
   auto material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(pigment));
   auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
-  world.add_object(sphere);
+  world->add_object(sphere);
 
-  tracer.fire_all_rays([&world](Ray ray) -> Color { return world.on_off_trace(ray); });
+  tracer.fire_all_rays(OnOffTracer(world));
 
   EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close_to(Color()));
   EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close_to(Color()));
