@@ -119,14 +119,11 @@ public:
 class DiffusiveBRDF : public BRDF {
 public:
   //-------Properties--------
-  float reflectance; // reflectance of the object
-  // QUESTION isn't reflactance already encoded in the pigment (three reflectances, one for each band)???
 
   //-----------Constructor-----------
   /// @param reflectance of the object
   /// @param pigment of the object
-  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr, float reflectance = 1.f)
-      : BRDF(pigment), reflectance(reflectance) {
+  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr, float reflectance = 1.f) : BRDF(pigment) {
     if (!this->pigment) {
       this->pigment = std::make_shared<UniformPigment>();
     }
@@ -134,7 +131,7 @@ public:
 
   //------------Methods-----------
   Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
-    return (*pigment)(uv)*reflectance * (1.f / std::numbers::pi);
+    return (*pigment)(uv) * (1.f / std::numbers::pi);
   }
 
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal,
