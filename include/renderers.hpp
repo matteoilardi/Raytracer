@@ -76,23 +76,41 @@ public:
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
-    // 1. Save the colosest hit or return background Color if no object gets hit
-    std::optional<HitRecord> hit = world->ray_intersection(ray);
-    if (!hit.has_value()) {
-      return background_color;
-    }
+    // Forward declarations
+    std::optional<HitRecord> hit;
+    std::shared_ptr<Material> hit_material;
+    std::shared_ptr<BRDF> brdf;
 
-    // 2. Unpack hit
-    std::shared_ptr<Material> hit_material = hit->shape->material;
-    std::shared_ptr<BRDF> brdf = hit_material->brdf;
+    do {
+      // 1. Save the closest hit or return background Color if no object gets hit
+      hit = world->ray_intersection(ray);
+      if (!hit.has_value()) {
+        return background_color;
+      }
 
-    // 3. Initalize pixel color
+      // 2. Unpack hit
+      hit_material = hit->shape->material;
+      brdf = hit_material->brdf;
+
+      auto specular = false; // delete this line and restore the next one when implementation of SpecularBRDF is ready
+      // auto specular = std::dynamic_pointer_cast<SpecularBRDF>(brdf); // returns nullptr if brdf is not a pointer to an object of the derived class SpecularBRDF
+      // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by the reflection law; otherwise go ahead with color evaluation
+      if (!specular) {
+              break;
+      }
+
+      Vec new_dir = ray.direction - 2*hit->normal.to_vector() * (hit->normal.to_vector()*ray.direction);
+      ray = Ray(hit->world_point, new_dir);
+
+    } while (true);
+
+    // 4. Initalize pixel color
     Color cum_radiance =
         ambient_color +
         (*hit_material->emitted_radiance)(
             hit->surface_point); // QUESTION emitted radiance is summed later and rescaled in pytracer: why?
 
-    // 4. Loop over point light sources and add a contribution to radiance if the light source is visible
+    // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
     for (auto source : world->light_sources) {
       std::optional<Vec> in_dir = world->offset_if_visible(source->point, hit->world_point, hit->normal);
 
