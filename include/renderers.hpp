@@ -108,7 +108,7 @@ public:
     Color cum_radiance =
         ambient_color +
         (*hit_material->emitted_radiance)(
-            hit->surface_point); // QUESTION emitted radiance is summed later and rescaled in pytracer: why?
+            hit->surface_point);
 
     // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
     for (auto source : world->light_sources) {

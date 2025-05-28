@@ -48,6 +48,36 @@ TEST(FlatTracerTest, test_example) {
   EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close_to(Color()));
 }
 
+TEST(PointLightTracer, test_example) {
+  // A single ray is scattered along the x axis
+  auto img = std::make_unique<HdrImage>(1, 1);
+  auto cam = std::make_unique<OrthogonalCamera>();
+  ImageTracer tracer{std::move(img), std::move(cam), 1};
+
+  auto plane_pigment = std::make_shared<UniformPigment>(Color(0.2f, 0.f, 0.f));
+  auto plane_brdf = std::make_shared<DiffusiveBRDF>(plane_pigment);
+  auto plane_emitted_radiance = std::make_shared<UniformPigment>(Color(0.f, 0.3f, 0.f));
+  auto plane_material = std::make_shared<Material>(plane_brdf, plane_emitted_radiance);
+
+  // The ray intersects the plane 1 at (1, 0, 0)
+  auto world = std::make_shared<World>();
+  auto plane1 = std::make_shared<Plane>(translation(VEC_X)*rotation_y(-std::numbers::pi/2.f), plane_material);
+  auto plane2 = std::make_shared<Plane>(translation(VEC_Y)*rotation_x(std::numbers::pi/2.f), plane_material);
+  world->add_object(plane1);
+  world->add_object(plane2);
+  // The first light source is behind plane 2, the other two are visible from point (1, 0, 0)
+  world->add_light_source(std::make_shared<PointLightSource>(Point(0.f, 2.f, 0.f))); // default Color(1.f, 1.f, 1.f)
+  world->add_light_source(std::make_shared<PointLightSource>(Point(0.f, -2.f, 0.f)));
+  world->add_light_source(std::make_shared<PointLightSource>(Point(0.f, -3.f, 0.f)));
+
+  PointLightTracer renderer{world, Color(0.f, 0.f, 0.1f)}; // provided ambient color, default background color is black
+  tracer.fire_all_rays(renderer);
+
+  // Expected r component: cos_theta * brdf_r_component * light_source_color (= 1) / pi for each visible source
+  Color expected_color = Color(0.f, 0.3f, 0.1f) + (1.f/std::sqrt(5.f) + 1.f/std::sqrt(10.f))*Color(0.2f, 0.f, 0.f)/std::numbers::pi;
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close_to(expected_color));
+}
+
 // Furnace test: cast a ray inside a closed surface with diffusive BRDF and uniform reflectance rho_d and emitted
 // radiance L_e; scatter exactly one ray at every hit (every ray should yield the same contribution regardless of its
 // direction); stop after a large number of reflections; compare with the analytical solution: L = L_e/(1 - rho_d),
