@@ -9,9 +9,9 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include <iostream>
 #include <cmath>
 #include <cstdint> // library for fixed size integer types
+#include <iostream>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -26,17 +26,14 @@ class PCG;
 /// @brief Permuted congruential generator
 class PCG {
 public:
-
   //-------Properties--------
 
   uint64_t state; // internal state of the generator
   uint64_t inc; // increment, different increments generate different orthogonal sequences from the same internal states
   // TODO is it true?
 
-
   //-----------Constructors-----------
   /// Default constructor
-
 
   /// Constructor with parameters
   ///@param initial state of the generator
@@ -70,9 +67,9 @@ public:
   ///@brief extract random numbers and discard them
   ///@param how many numbers to discard
   void discard(int n) {
-    uint32_t ran;
     while (n > 0) {
-      ran = random();
+      random(); // Intentionally discard the return value of random(); calling it advances the RNG state, which is the
+                // purpose here. Assigning to a dummy variable may trigger a compiler warning for unused variable.
       n--;
     }
     return;
