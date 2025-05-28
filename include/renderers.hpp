@@ -27,10 +27,10 @@ class Renderer {
 public:
   //------------Properties-----------
   std::shared_ptr<World> world; // world to render
-  Color background;             // background color
+  Color background_color;       // background color
 
   //-----------Constructors-----------
-  Renderer(std::shared_ptr<World> world, Color background = Color()) : world(world), background(background) {};
+  Renderer(std::shared_ptr<World> world, Color background_color = Color()) : world(world), background_color(background_color) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
@@ -45,14 +45,14 @@ public:
   /// Constructor with parameters
   /// @param world to render
   /// @param background color
-  FlatTracer(std::shared_ptr<World> world, Color background = Color()) : Renderer(world, background) {};
+  FlatTracer(std::shared_ptr<World> world, Color background_color = Color()) : Renderer(world, background_color) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
     // Save the colosest hit or return background Color if no object gets hit
     std::optional<HitRecord> hit = world->ray_intersection(ray);
     if (!hit) {
-      return background;
+      return background_color;
     }
 
     // Return Color of the hit object
@@ -78,8 +78,8 @@ public:
   virtual Color operator()(Ray ray) const {
     // 1. Save the colosest hit or return background Color if no object gets hit
     std::optional<HitRecord> hit = world->ray_intersection(ray);
-    if (!hit) {
-      return background;
+    if (!hit.has_value()) {
+      return background_color;
     }
 
     // 2. Unpack hit
@@ -149,7 +149,7 @@ public:
     // 2. Return background Color if no object gets hit
     std::optional<HitRecord> hit = world->ray_intersection(ray);
     if (!hit) {
-      return background;
+      return background_color;
     }
 
     // 3. Unpack hit
