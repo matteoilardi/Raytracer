@@ -1,5 +1,9 @@
 # HEAD
 
+
+#   [0.2.0] - 2025-05-28
+-   Release second version of the code
+
 ## 2025-05-21
 -   Implement demo command [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
 -   Create shapes.hpp library [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
