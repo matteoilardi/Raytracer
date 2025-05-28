@@ -166,6 +166,3 @@ public:
     return cum_radiance;
   }
 };
-
-// TODO on/off tracing is currently implemented as a method of the class World and as such it requires a lambda wrapping
-// inside the main, which is not very elegant. Consider moving it here a class derived from Renderer.

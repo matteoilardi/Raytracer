@@ -264,15 +264,15 @@ TEST(WorldTest, test_on_off_tracing) {
 
   tracer.fire_all_rays(OnOffTracer(world));
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close_to(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close(Color()));
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close_to(Color(1.f, 1.f, 1.f)));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close_to(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close(Color(1.f, 1.f, 1.f)));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close(Color()));
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close_to(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(Color()));
 }

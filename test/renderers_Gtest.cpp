@@ -35,17 +35,17 @@ TEST(FlatTracerTest, test_example) {
 
   tracer.fire_all_rays(renderer);
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close_to(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close(Color()));
 
-  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close_to(sphere_color));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close_to(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close(sphere_color));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close(Color()));
 
-  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close_to(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close_to(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(Color()));
 }
 
 // Furnace test: cast a ray inside a closed surface with diffusive BRDF and uniform reflectance rho_d and emitted
@@ -80,6 +80,6 @@ TEST(PathTracerTest, test_furnace) {
 
     Color total_radiance = renderer(ray);
     Color expected{luminosity / (1.f - reflectance), 0.f, 0.f};
-    EXPECT_TRUE(total_radiance.is_close_to(expected));
+    EXPECT_TRUE(total_radiance.is_close(expected));
   }
 }
