@@ -4,6 +4,9 @@
 #   [0.2.0] - 2025-05-28
 -   Release second version of the code
 
+## 2025-05-26
+-   Implement antialiasing [PR#10](https://github.com/matteoilardi/Raytracer/pull/10)
+
 ## 2025-05-21
 -   Implement demo command [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
 -   Create shapes.hpp library [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
