@@ -193,5 +193,5 @@ TEST(TestAntialiasing, test_stratified_sample) {
   tracer.fire_all_rays(trace_ray);
 
   EXPECT_EQ(n_rays, 100); // check that the total number of traced rays is the expected one
-  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close_to(Color(1.f, 2.f, 3.f))); // check color normalization
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color(1.f, 2.f, 3.f))); // check color normalization
 }
