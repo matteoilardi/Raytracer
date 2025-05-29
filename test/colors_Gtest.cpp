@@ -25,9 +25,9 @@ bool is_little_endian() {
 // test constructor, is_close_to
 TEST(ColorTest, test_is_close) {
   Color color1(1.f, 2.f, 3.f);
-  EXPECT_TRUE(color1.is_close_to(Color(1.f, 2.f, 3.f)));
-  EXPECT_FALSE(color1.is_close_to(Color(2.f, 1.f, 3.f)));
-  EXPECT_FALSE(color1.is_close_to(Color(1.f, 2.f, 3.0001f)));
+  EXPECT_TRUE(color1.is_close(Color(1.f, 2.f, 3.f)));
+  EXPECT_FALSE(color1.is_close(Color(2.f, 1.f, 3.f)));
+  EXPECT_FALSE(color1.is_close(Color(1.f, 2.f, 3.0001f)));
 }
 
 // test +, *, scalar multiplication
@@ -231,8 +231,8 @@ TEST(HdrImageTest, test_normalize_image) {
 
   img.normalize_image(10.f);
 
-  EXPECT_TRUE(img.get_pixel(0, 0).is_close_to(Color(5.0e-1f, 10.0e-1f, 15.0e-1f)));
-  EXPECT_TRUE(img.get_pixel(1, 0).is_close_to(Color(5.0e1f, 10.0e1f, 15.0e1f)));
+  EXPECT_TRUE(img.get_pixel(0, 0).is_close(Color(5.0e-1f, 10.0e-1f, 15.0e-1f)));
+  EXPECT_TRUE(img.get_pixel(1, 0).is_close(Color(5.0e1f, 10.0e1f, 15.0e1f)));
 }
 
 // test clamp_image

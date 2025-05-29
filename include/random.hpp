@@ -9,11 +9,17 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
+<<<<<<< HEAD
 #include <cmath>   // library for math functions
 #include <cstdint> // library for fixed size integer types
 #include <iostream>
 #include <numbers> // library for pi
 #include <utility>
+=======
+#include <cmath>
+#include <cstdint> // library for fixed size integer types
+#include <iostream>
+>>>>>>> 23d135870e7b4ced8d7748de18f5c9e402d6d823
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -88,9 +94,9 @@ public:
   ///@brief extract random numbers and discard them
   ///@param how many numbers to discard
   void discard(int n) {
-    uint32_t ran;
     while (n > 0) {
-      ran = random();
+      random(); // Intentionally discard the return value of random(); calling it advances the RNG state, which is the
+                // purpose here. Assigning to a dummy variable may trigger a compiler warning for unused variable.
       n--;
     }
     return;

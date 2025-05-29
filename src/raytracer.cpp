@@ -7,7 +7,7 @@
 #include <iostream>
 
 std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
-                                          const Transformation &obs_transformation);
+                                          const Transformation &obs_transformation, int samples_per_pixel_edge);
 
 int main(int argc, char **argv) {
   CLI::App app{"Raytracer"};    // Define the main App
@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
   float distance = 1.f;
   float theta = std::numbers::pi / 2.f;
   float phi = 0.f;
+  int samples_per_pixel_edge = 3;
 
   demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")
       ->excludes(orthogonal_flag)
@@ -72,6 +73,11 @@ int main(int argc, char **argv) {
           "Specify observer's angle phi")
       ->default_val(0.f);
   ;
+
+  demo_subc
+      ->add_option<int>("--antialiasing", samples_per_pixel_edge,
+                        "Specify #samples per pixel edge (square root of #samples per pixel)")
+      ->default_val(3);
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -103,7 +109,7 @@ int main(int argc, char **argv) {
         rotation_z(phi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-VEC_X * distance);
 
     std::cout << "Rendering demo image... " << std::flush;
-    img = make_demo_image(orthogonal, width, height, observer_transformation);
+    img = make_demo_image(orthogonal, width, height, observer_transformation, samples_per_pixel_edge);
     std::cout << "Done." << std::endl;
 
     // Save PFM image
@@ -138,7 +144,7 @@ int main(int argc, char **argv) {
 }
 
 std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
-                                          const Transformation &obs_transformation) {
+                                          const Transformation &obs_transformation, int samples_per_pixel_edge) {
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
 
@@ -152,7 +158,7 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
     // provide default *origin-screen* distance, aspect ratio and observer transformation
     cam = std::make_unique<PerspectiveCamera>(1.f, aspect_ratio, obs_transformation);
   }
-  ImageTracer tracer(std::move(img), std::move(cam));
+  ImageTracer tracer(std::move(img), std::move(cam), samples_per_pixel_edge);
 
   // Initialize demo World
   auto world = std::make_shared<World>();

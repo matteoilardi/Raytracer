@@ -98,14 +98,14 @@ public:
 
   // Check if color is close to another color within some tolerance.
   // If no tolerance is provided, DEFAULT_ERROR_TOLERANCE is used.
-  bool is_close_to(const Color &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+  bool is_close(const Color &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return (are_close(r, other.r, error_tolerance) && are_close(g, other.g, error_tolerance) &&
             are_close(b, other.b, error_tolerance));
   }
 
-  // Check if two colors are close calling is_close_to on the first one
+  // Check if two colors are close calling is_close on the first one
   // (symmetric syntax)
-  friend bool are_close(const Color &color1, const Color &color2) { return color1.is_close_to(color2); }
+  friend bool are_close(const Color &color1, const Color &color2) { return color1.is_close(color2); }
 
   // Sum of two colors
   Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
