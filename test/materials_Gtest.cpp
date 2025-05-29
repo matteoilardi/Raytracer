@@ -19,10 +19,10 @@ TEST(PigmentsTest, test_uniform_pigment) {
   Color color = Color(1.f, 2.f, 3.f);
   UniformPigment pigment = UniformPigment(color);
 
-  EXPECT_TRUE(pigment(Vec2d(0.f, 0.f)).is_close_to(color));
-  EXPECT_TRUE(pigment(Vec2d(0.f, 1.f)).is_close_to(color));
-  EXPECT_TRUE(pigment(Vec2d(1.f, 0.f)).is_close_to(color));
-  EXPECT_TRUE(pigment(Vec2d(1.f, 1.f)).is_close_to(color));
+  EXPECT_TRUE(pigment(Vec2d(0.f, 0.f)).is_close(color));
+  EXPECT_TRUE(pigment(Vec2d(0.f, 1.f)).is_close(color));
+  EXPECT_TRUE(pigment(Vec2d(1.f, 0.f)).is_close(color));
+  EXPECT_TRUE(pigment(Vec2d(1.f, 1.f)).is_close(color));
 }
 
 // test CheckeredPigment
@@ -46,8 +46,8 @@ TEST(PigmentsTest, test_checkered_pigment) {
   //   (0, 1) +------+------+ (1, 1)
   //              (0.5, 1)
 
-  EXPECT_TRUE(pigment(Vec2d(0.25f, 0.25f)).is_close_to(color1));
-  EXPECT_TRUE(pigment(Vec2d(0.25f, 0.75f)).is_close_to(color2));
-  EXPECT_TRUE(pigment(Vec2d(0.75f, 0.25f)).is_close_to(color2));
-  EXPECT_TRUE(pigment(Vec2d(0.75f, 0.75f)).is_close_to(color1));
+  EXPECT_TRUE(pigment(Vec2d(0.25f, 0.25f)).is_close(color1));
+  EXPECT_TRUE(pigment(Vec2d(0.25f, 0.75f)).is_close(color2));
+  EXPECT_TRUE(pigment(Vec2d(0.75f, 0.25f)).is_close(color2));
+  EXPECT_TRUE(pigment(Vec2d(0.75f, 0.75f)).is_close(color1));
 }
