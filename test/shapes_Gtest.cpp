@@ -79,12 +79,8 @@ TEST(SphereTest, test_normals) {
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
 
   ASSERT_TRUE(hit1);
-  // TODO consider changing the implementation of Normal::normalize(), perhaps it should return a Normal
-  // ANSWER Isn't it already returning a Normal? it's a void method within the Normal class, so it should be
-  Normal computed_normal = hit1->normal;
-  Normal expected_normal = Normal(1.f, 4.f, 0.f);
-  computed_normal.normalize();
-  expected_normal.normalize();
+  Normal computed_normal = (hit1->normal).normalize();
+  Normal expected_normal = (Normal(1.f, 4.f, 0.f)).normalize();
   EXPECT_TRUE(computed_normal.is_close(expected_normal));
 }
 

@@ -139,7 +139,7 @@ public:
 
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal,
                   int depth) const override {
-    normal.normalize(); // QUESTION is it necessary?
+    normal = normal.normalize(); // QUESTION is it necessary?
     ONB onb{normal.to_vector()};
     auto [theta, phi] =
         pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to cos(theta),

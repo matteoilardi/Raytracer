@@ -110,14 +110,12 @@ public:
   float norm() const { return std::sqrt(squared_norm()); }
 
   /// normalize the vector
-  void normalize() {
+  [[nodiscard]] Vec normalize() const {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero vector");
     }
-    x = x / n;
-    y = y / n;
-    z = z / n;
+    return Vec(x/n, y/n, z/n);
   }
 
   /// convert vector to a normal
@@ -213,14 +211,12 @@ public:
   float norm() const { return std::sqrt(squared_norm()); }
 
   /// normalize the normal
-  void normalize() {
+  [[nodiscard]] Normal normalize() const {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero normal");
     }
-    x = x / n;
-    y = y / n;
-    z = z / n;
+    return Normal(x/n, y/n, z/n);
   }
 
   /// convert normal to a vector
@@ -652,5 +648,3 @@ struct ONB {
     return true;
   }
 };
-
-
