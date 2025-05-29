@@ -1,5 +1,8 @@
 # HEAD
 
+## 2025-05-29
+-  Implement point light tracing [PR#11](https://github.com/matteoilardi/Raytracer/pull/11)
+
 ## 2025-05-21
 -   Implement demo command [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
 -   Create shapes.hpp library [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)

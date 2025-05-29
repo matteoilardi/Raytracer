@@ -11,10 +11,10 @@
 
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "random.hpp" // random numbers for antialiasing
 #include <functional> // library for std::function
 #include <limits>     // library to have infinity as a float
 #include <memory>
-#include "random.hpp" // random numbers for antialiasing
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -157,12 +157,13 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera, int samples_per_pixel_edge = 1, std::shared_ptr<PCG> pcg = nullptr)
+  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera, int samples_per_pixel_edge = 1,
+              std::shared_ptr<PCG> pcg = nullptr)
       : image(std::move(image)), camera(std::move(camera)), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
-        if (!pcg) {
-          this->pcg = std::make_shared<PCG>();
-        }
-      }
+    if (!pcg) {
+      this->pcg = std::make_shared<PCG>();
+    }
+  }
   // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to
   // heap memory is as fast as access to stack NOTE pay attention to dangling pointers inside the main
 
@@ -197,9 +198,9 @@ public:
         Ray ray;
         const int spp = samples_per_pixel_edge; // just for code readability
 
-        if (spp > 1) { // perform antialiasing
-          for (int i = 0; i < spp; i++) {    // i: intra-pixel col
-            for (int j = 0; j < spp; j++) {  // j: intra-pixel row (as opposed to v, v_pixel increases downwards)
+        if (spp > 1) {                      // perform antialiasing
+          for (int i = 0; i < spp; i++) {   // i: intra-pixel col
+            for (int j = 0; j < spp; j++) { // j: intra-pixel row (as opposed to v, v_pixel increases downwards)
               float u_pixel = ((float)i + pcg->random_float()) / spp;
               float v_pixel = ((float)j + pcg->random_float()) / spp;
 
@@ -207,7 +208,7 @@ public:
               cum_color += func(ray);
             }
           }
-          cum_color /= (spp*spp);
+          cum_color /= (spp * spp);
 
         } else {
           ray = fire_ray(col, row);

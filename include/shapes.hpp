@@ -12,6 +12,7 @@
 #include "cameras.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "materials.hpp"
 
 #include <cmath>
 #include <memory> // library for smart pointers
@@ -26,6 +27,8 @@ class HitRecord;
 class Shape;
 class Sphere;
 class Plane;
+class PointLightSource;
+class World;
 
 //-------------------------------------------------------------------------------------------------------------
 // -----------HIT RECORD CLASS------------------
@@ -36,6 +39,8 @@ class HitRecord {
 public:
   //-------Properties--------
 
+  std::shared_ptr<const Shape>
+      shape;           // shape that was hit (required in order to trace back to the material that was hit)
   Point world_point;   // 3D coordinates of the intersection point in real world
   Normal normal;       // normal to the surface at the intersection point
   Vec2d surface_point; // 2D coordinates on the surface
@@ -47,10 +52,11 @@ public:
   HitRecord() : world_point(Point()), normal(Normal()), surface_point(Vec2d()), ray(Ray()), t(0.) {};
 
   /// Constructor with parameters
-  HitRecord(Point world_point, Normal normal, Vec2d surface_point, Ray ray, float t)
-      : world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
+  HitRecord(std::shared_ptr<const Shape> shape, Point world_point, Normal normal, Vec2d surface_point, Ray ray, float t)
+      : shape(shape), world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
 
   //------------Methods-----------
+  // TODO method below doesn't check if the shape is the same!
   bool is_close(HitRecord other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return world_point.is_close(other.world_point, error_tolerance) && normal.is_close(other.normal, error_tolerance) &&
            surface_point.is_close(other.surface_point, error_tolerance) && ray.is_close(other.ray, error_tolerance) &&
@@ -63,19 +69,27 @@ public:
 // ------------------------------------------------------------------------------------------------------------
 
 /// @brief Shape class is the base class for all shapes in the scene
-class Shape {
+class Shape : public std::enable_shared_from_this<Shape> { // Shape must inherit from this template class in for one of
+                                                           // its methods to return a shared_ptr to this
 public:
   //-------Properties--------
-  ///@brief transformation taking to the proper reference frame of the shape
+  ///@brief transformation describing the position of the shape
   Transformation transformation;
+  ///@brief properties of the shape as a function of (u, v)
+  std::shared_ptr<Material> material;
 
   //-----------Constructors-----------
   /// Default constructor
-  Shape() : transformation(Transformation()) {};
+  Shape() : transformation(Transformation()) { material = std::make_shared<Material>(); };
 
   /// @brief Constructor with parameters
   /// @param tranformation taking you to the shape reference frame
-  Shape(Transformation transformation) : transformation(transformation) {};
+  Shape(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : transformation(transformation), material(material) {
+    if (!this->material) {
+      material = std::make_shared<Material>();
+    }
+  };
 
   virtual ~Shape() {}
 
@@ -114,7 +128,8 @@ public:
   Sphere() : Shape() {};
 
   /// Constructor with parameters
-  Sphere(Transformation transformation) : Shape(transformation) {};
+  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -170,7 +185,8 @@ public:
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
     // nullable type cannot be build calling the construcor directly, need to use emplace or similar syntax instead
-    hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_first_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
+                ray_world_frame, t_first_hit);
     return hit;
   };
 };
@@ -189,7 +205,8 @@ public:
   Plane() : Shape() {};
 
   /// Constructor with parameters
-  Plane(Transformation transformation) : Shape(transformation) {};
+  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr)
+      : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -223,9 +240,32 @@ public:
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
-    hit.emplace(transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
+                ray_world_frame, t_hit);
     return hit;
   };
+};
+
+//-------------------------------------------------------------------------------------------------------------
+// ----------- POINT LIGHT SOURCE CLASS ------------------
+// ------------------------------------------------------------------------------------------------------------
+
+/// @brief point-like light source, used in point light tracing
+class PointLightSource {
+public:
+  // ------- Properties --------
+  Point point;
+  Color color;
+  float emission_radius; // fictitious radius r of the light source, used to compute solid angle rescaling at distance
+                         // d: (r/d)^2
+
+  // ------- Constructors --------
+  /// Constructor with arguments
+  /// @param position of the light source
+  /// @param color of the light
+  /// @param fictitious radius, used to compute solid angle rescaling with distance
+  PointLightSource(Point point = Point(), Color color = Color(1.f, 1.f, 1.f), float emission_radius = 0.f)
+      : point(point), color(color), emission_radius(emission_radius) {};
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -236,19 +276,25 @@ class World {
 public:
   // ------- Properties --------
 
-  ///@brief list of all the shapes present in the scene (stored as shared_ptr for polymorphism and memory safety)
+  /// @brief vector containing the shapes in the scene (stored as shared_ptr for polymorphism and memory safety)
   std::vector<std::shared_ptr<Shape>> objects;
+  /// @brief vector containing the light sources in the scene (use for illumination in point-light tracing)
+  std::vector<std::shared_ptr<PointLightSource>> light_sources;
 
   // ----------- Constructors -----------
 
   /// default constructor
-  World() : objects() {};
+  World() : objects(), light_sources() {};
 
   // -------------------- Methods ----------------------
 
   /// @brief adds a shape to the scene
-  /// @param object shape to add to the scene
+  /// @param object shape to add
   void add_object(std::shared_ptr<Shape> object) { objects.push_back(object); }
+
+  /// @brief add a point light source to the scene
+  /// @param point light source to add
+  void add_light_source(std::shared_ptr<PointLightSource> light_source) { light_sources.push_back(light_source); }
 
   /// @brief returns the closest intersection of a ray with the objects in the scene
   /// @param ray to be traced through the world
@@ -298,4 +344,28 @@ public:
       return Color();
     }
   };
+
+  /// @brief returns ray connecting a viewer's point to a point on the surface of an object if the latter is visible
+  /// @param viewer point
+  /// @param surface point
+  /// @param normal at the surface
+  std::optional<Vec> offset_if_visible(Point viewer_point, Point surface_point, Normal normal_at_surface) {
+    Vec in_dir = surface_point - viewer_point;
+    Ray in_ray{viewer_point, in_dir};
+
+    // return null if the ray comes from inside the object
+    if (in_dir * normal_at_surface.to_vector() > 0.f) {
+      return std::nullopt;
+    }
+
+    // QUESTION what if the point light source is visible via a speculaar reflection?
+    // loop over the objects in the World and return null if one of them sits before surface_point
+    for (const auto &object : objects) {
+      std::optional<HitRecord> hit = object->ray_intersection(in_ray);
+      if (hit.has_value() && hit->t < 1.f && !hit->world_point.is_close(surface_point)) {
+        return std::nullopt;
+      }
+    }
+    return std::make_optional<Vec>(in_dir);
+  }
 };

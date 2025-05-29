@@ -10,6 +10,7 @@
 #pragma once
 
 #include "colors.hpp"
+#include <cmath> // Necesary for copysignf function
 #include <numbers>
 
 // ------------------------------------------------------------------------------------------------------------
@@ -27,7 +28,7 @@ Vec operator*(const HomMatrix &a, const Transformation &b);
 Vec operator*(const HomMatrix &a, const Vec &b);
 
 // ------------------------------------------------------------------------------------------------------------
-// ------------------ VECTOR CLASS (3d)
+// ------------------ VECTOR CLASS (2d)
 // ------------------------------------------------------------------------------------------------------------
 
 class Vec2d {
@@ -75,8 +76,11 @@ public:
   /// Default constructor initializes to (0, 0, 0)
   Vec() : x(0.f), y(0.f), z(0.f) {}
 
-  /// Constructor with parameters
+  /// Constructor accepting cartesian coordinates
   Vec(float x, float y, float z) : x(x), y(y), z(z) {}
+
+  /// Constructor for a normalized Vec accepting polar coordinates
+  Vec(float theta, float phi) : x(std::sin(theta)*std::cos(phi)), y(std::sin(theta)*std::sin(phi)), z(std::cos(theta)){}
 
   //--------------------Methods----------------------
 
@@ -606,3 +610,47 @@ public:
 const Vec VEC_X = Vec(1.f, 0.f, 0.f);
 const Vec VEC_Y = Vec(0.f, 1.f, 0.f);
 const Vec VEC_Z = Vec(0.f, 0.f, 1.f);
+
+
+//-------------------------------------------------------------------------------------------------------------
+//------------------------------- ORTHONORMAL BASIS OBJECT ----------------------
+//-------------------------------------------------------------------------------------------------------------
+
+///@brief orthonormal basis of 3d vectors
+struct ONB {
+  // ------- Properties --------
+  Vec e1, e2, e3;
+
+  // ------- Constructors --------
+  /// @brief Default constructor: same base as the world's reference frame
+  ONB() : e1(VEC_X), e2(VEC_Y), e3(VEC_Z) {};
+
+  /// @brief Constructor from three Vec
+  ONB(Vec e1, Vec e2, Vec e3) : e1(e1), e2(e2), e3(e3) {};
+
+  /// @brief Branchless constructor from a Vec (cast into e_3)
+  /// @details Assumes the input Vec to be normalized. Based on the algorithm by Duff et al. (2017)
+  /// @param normalized Vec = e_3
+  ONB(Vec vec) : e3(vec) {
+    float sign = std::copysignf(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the second one
+    const float a = -1.f / (sign + e3.z);
+    const float b = e3.x * e3.y * a;
+
+    e1 = Vec(1.f + sign * e3.x * e3.x * a, sign * b, -sign * e3.x);
+    e2 = Vec(b, sign + e3.y * e3.y * a, -e3.y);
+  }
+
+  // -------------------- Methods ----------------------
+  /// @brief Returns true if it's actually a ONB, false otherwise
+  bool is_consistent() const {
+    if (!are_close(e1 * e2, 0.f) || !are_close(e1 * e3, 0.f) || !are_close(e2 * e3, 0.f)) {
+      return false;
+    }
+    if (!are_close(e1.squared_norm(), 1.f) || !are_close(e2.squared_norm(), 1.f) || !are_close(e1.squared_norm(), 1.f)) {
+      return false;
+    }
+    return true;
+  }
+};
+
+

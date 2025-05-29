@@ -1,6 +1,7 @@
 #include "CLI11.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "renderers.hpp"
 #include "shapes.hpp"
 #include <fstream>
 #include <iostream>
@@ -160,7 +161,7 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
   ImageTracer tracer(std::move(img), std::move(cam), samples_per_pixel_edge);
 
   // Initialize demo World
-  World world = World();
+  auto world = std::make_shared<World>();
 
   scaling sc({0.1f, 0.1f, 0.1f}); // common scaling for all spheres
 
@@ -170,14 +171,26 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
 
   for (const Vec &pos : sphere_positions) {
     auto sphere = std::make_shared<Sphere>(translation(pos) * sc);
-    world.add_object(sphere);
+    world->add_object(sphere);
   }
 
-  // Perform on/off tracing
-  tracer.fire_all_rays([&world](Ray ray) -> Color {
-    return world.on_off_trace(ray);
-  }); // World::on_off_trace requires three arguments, the first one being the World instance, hence it is not
-      // compatible with type RaySolver. A lambda wrapping is therefore needed.
+//COMMENT TO RESTORE THE OLD DEMO
+  auto sphere_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f))));
+  for (auto sphere : world->objects) {
+    sphere->material = sphere_material;
+  }
+  auto source = std::make_shared<PointLightSource>();
+  world->add_light_source(source);
+  PointLightTracer renderer{world, Color(0.0002f, 0.0002f, 0.0002f), Color(0.0001f, 0.0001f, 0.0001f)};
+  tracer.fire_all_rays(renderer);
+
+
+//UNCOMMENT TO RESTORE OLD DEMO
+//  // Perform on/off tracing
+//  tracer.fire_all_rays([&world](Ray ray) -> Color {
+//    return world->on_off_trace(ray);
+//  }); // World::on_off_trace requires three arguments, the first one being the World instance, hence it is not
+//      // compatible with type RaySolver. A lambda wrapping is therefore needed.
 
   // Return demo image
   return std::move(tracer.image);

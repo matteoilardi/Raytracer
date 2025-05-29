@@ -10,6 +10,7 @@
 
 #include "colors.hpp"
 #include "geometry.hpp"
+#include "random.hpp"
 #include <cmath>
 #include <gtest/gtest.h>
 #include <iostream>
@@ -179,4 +180,34 @@ TEST(TransformationTest, test_scalings) {
   Transformation expected = scaling({6.f, 10.f, 40.f});
 
   EXPECT_TRUE(expected.is_close(sc1 * sc2));
+}
+
+
+// ------------------------------------------------------------------------------------------------------------
+// -------------------------TESTS FOR ONB-----------------
+// ------------------------------------------------------------------------------------------------------------
+
+TEST(ONBTest, test_is_consistent){
+  ONB world_onb;
+  EXPECT_TRUE(world_onb.is_consistent());
+
+  ONB wrong_onb1{VEC_X, VEC_Y, VEC_Y};
+  EXPECT_FALSE(wrong_onb1.is_consistent());
+
+  ONB wrong_onb2{1.1f*VEC_X, VEC_Y, VEC_Z};
+  EXPECT_FALSE(wrong_onb2.is_consistent());
+}
+
+TEST(ONBTest, test_ONB_from_Duff) {
+  PCG pcg;
+
+  // perform random testing on 1000 inputs
+  for (int i = 0; i < 1e4; i++) {
+    auto [theta, phi] = pcg.random_unif_hemisphere(); // uniform sampling of the hemisphere
+    Vec v = Vec(theta, phi);
+    ONB onb{v};
+
+    EXPECT_TRUE(v.is_close(onb.e3));
+    EXPECT_TRUE(onb.is_consistent());
+  }
 }
