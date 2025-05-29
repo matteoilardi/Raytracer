@@ -373,8 +373,12 @@ public:
   // Default constructor: if dimensions are positive, initializes the pixels
   // vector with width*height copies of Color(); otherwise, creates an empty
   // vector.
-  HdrImage(int32_t w, int32_t h)
-      : width(w), height(h), pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
+  HdrImage(int32_t w, int32_t h) : width(w), height(h) {
+    if (w <= 0 || h <= 0) {
+        throw std::invalid_argument("HdrImage dimensions must be positive");
+    }
+    pixels.resize(static_cast<size_t>(w * h), Color());
+  }
 
   // First constructor pfm file --> Hdr image
   // Read a PFM file from a stream invoking `read_pfm_file` method

@@ -1,10 +1,10 @@
 name: CMake multiplatform ci
 
 on:
-  push: #remove if you don't want to trigger the workflow on push
-    branches: [ "main", "pathtracing", "pointlighttracing"]
+  #push:
+  #  branches: ["main", "pathtracing"]
   pull_request:
-    branches: [ "main", "pathtracing", "pointlighttracing"]
+    branches: ["main", "pathtracing"]
   workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
 
 jobs:
