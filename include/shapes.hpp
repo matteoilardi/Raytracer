@@ -37,13 +37,12 @@ class HitRecord {
 public:
   //-------Properties--------
 
-  std::shared_ptr<const Shape>
-      shape;           // shape that was hit (required in order to trace back to the material that was hit)
-  Point world_point;   // 3D coordinates of the intersection point in real world
-  Normal normal;       // normal to the surface at the intersection point
-  Vec2d surface_point; // 2D coordinates on the surface
-  Ray ray;             // the ray that actually hit the shape
-  float t;             // distance from the origin of the ray to the intersection point
+  std::shared_ptr<const Shape> shape; // shape that was hit (required in order to trace back to the material that was hit)
+  Point world_point;                  // 3D coordinates of the intersection point in real world
+  Normal normal;                      // normal to the surface at the intersection point
+  Vec2d surface_point;                // 2D coordinates on the surface
+  Ray ray;                            // the ray that actually hit the shape
+  float t;                            // distance from the origin of the ray to the intersection point
 
   //-----------Constructors-----------
   /// Default constructor
@@ -54,11 +53,10 @@ public:
       : shape(shape), world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
 
   //------------Methods-----------
-  // TODO method below doesn't check if the shape is the same!
   bool is_close(HitRecord other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
-    return world_point.is_close(other.world_point, error_tolerance) && normal.is_close(other.normal, error_tolerance) &&
-           surface_point.is_close(other.surface_point, error_tolerance) && ray.is_close(other.ray, error_tolerance) &&
-           are_close(t, other.t, error_tolerance);
+    return (this->shape == other.shape) && world_point.is_close(other.world_point, error_tolerance) &&
+           normal.is_close(other.normal, error_tolerance) && surface_point.is_close(other.surface_point, error_tolerance) &&
+           ray.is_close(other.ray, error_tolerance) && are_close(t, other.t, error_tolerance);
   }
 };
 
@@ -67,28 +65,33 @@ public:
 // ------------------------------------------------------------------------------------------------------------
 
 /// @brief Shape class is the base class for all shapes in the scene
-class Shape : public std::enable_shared_from_this<Shape> { // Shape must inherit from this template class in for one of
-                                                           // its methods to return a shared_ptr to this
+class Shape : public std::enable_shared_from_this<Shape> {
+  // Shape must inherit from this template class in order for its methods to return a shared_ptr to itself
+  // via the shared_from_this() method built into the std::enable_shared_from_this<Shape> class
+  // this is needed in the ray_intersection method to return a shared_ptr to the shape that was hit
 public:
   //-------Properties--------
-  ///@brief transformation describing the position of the shape
+  ///@brief transformation describing the actual position of the shape in the world reference frame
   Transformation transformation;
-  ///@brief properties of the shape as a function of (u, v)
+  ///@brief properties (pigment and brdf) of the shape as a function of (u, v)
   std::shared_ptr<Material> material;
 
   //-----------Constructors-----------
   /// Default constructor
   Shape() : transformation(Transformation()) { material = std::make_shared<Material>(); };
 
-  /// @brief Constructor with parameters
+  /// Constructor with parameters
   /// @param tranformation taking you to the shape reference frame
+  /// @param material properties of the shape (pigment and brdf) as a function of (u, v)
   Shape(Transformation transformation, std::shared_ptr<Material> material = nullptr)
       : transformation(transformation), material(material) {
     if (!this->material) {
-      material = std::make_shared<Material>();
+      material = std::make_shared<Material>(); // if no material is provided, set default material with both diffusive BRDF black
+                                               // and uniform pigment black
     }
   };
 
+  /// virtual destructor to ensure proper cleanup of derived classes
   virtual ~Shape() {}
 
   //--------------------Methods----------------------
@@ -126,8 +129,7 @@ public:
   Sphere() : Shape() {};
 
   /// Constructor with parameters
-  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr)
-      : Shape(transformation, material) {};
+  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr) : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -167,9 +169,8 @@ public:
     Point hit_point = ray.at(t_first_hit);
 
     // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
-    Normal normal =
-        Normal(hit_point.x, hit_point.y, hit_point.z); // normal to the sphere is just the vector from the origin
-    normal = enforce_correct_normal_orientation(normal, ray);
+    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z); // normal to the sphere is just the vector from the origin
+    normal = enforce_correct_normal_orientation(normal, ray);      // enforce normal and hitting ray have opposite directions
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
     // reference frame by our convention)
@@ -182,9 +183,9 @@ public:
 
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
-    // nullable type cannot be build calling the construcor directly, need to use emplace or similar syntax instead
-    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
-                ray_world_frame, t_first_hit);
+    // nullable type cannot be built by calling the construcor directly, need to use emplace or similar syntax instead
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
+                t_first_hit);
     return hit;
   };
 };
@@ -203,8 +204,7 @@ public:
   Plane() : Shape() {};
 
   /// Constructor with parameters
-  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr)
-      : Shape(transformation, material) {};
+  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr) : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -238,8 +238,8 @@ public:
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
-    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
-                ray_world_frame, t_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
+                t_hit);
     return hit;
   };
 };
@@ -263,7 +263,7 @@ public:
   // -------------------- Methods ----------------------
 
   /// @brief adds a shape to the scene
-  /// @param object shape to add to the scene
+  /// @param object shape to be added to the scene
   void add_object(std::shared_ptr<Shape> object) { objects.push_back(object); }
 
   /// @brief returns the closest intersection of a ray with the objects in the scene
@@ -277,7 +277,7 @@ public:
       std::optional<HitRecord> hit = object->ray_intersection(ray); // try intersecting with this object
       // object->ray_intersection(ray) is shorthand for (*object).ray_intersection(ray)
 
-      // if there's a valid hit and it's closer than any previous one update closest_hit
+      // if there's a valid hit and it's closer than any previous hit, update closest_hit
       // (note there's no need to check hit->t > 0 since we already do it inside ray_intersection method of Shapes)
       if (hit.has_value() && hit->t < (closest_hit.has_value() ? closest_hit->t : infinite)) {
         closest_hit = hit;
@@ -286,7 +286,8 @@ public:
     return closest_hit; // return the closest hit (or nullopt if none found)
   }
 
-  /// @brief returns the first intersection of a ray with the objects in the world list (regardless of the distance)
+  /// @brief returns first intersection of a ray with objects in the world list (in iteration order, not necessarily the closest)
+  /// used to speed up on_off rendering of images
   /// @param ray to be traced through the world
   /// @return std::optional<HitRecord> containing the info on the first intersection in the list (or std::nullopt if no
   /// hit)

@@ -31,8 +31,10 @@
 #include <vector>
 
 // ------------------------------------------------------------------------------------------------------------
-// CONSTANTS, ENDIANNESS, EXCEPTIONS, GLOBAL FUNCTIONS
+// ----- CONSTANTS, ENDIANNESS, EXCEPTIONS, GLOBAL FUNCTIONS, FORWARD DECLARATIONS
 // ------------------------------------------------------------------------------------------------------------
+
+class Color;
 
 constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5f; // Default tolerance to decide if two float numbers are close
 
@@ -65,9 +67,7 @@ public:
   }
 };
 
-bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
-  return std::fabs(x - y) < error_tolerance;
-}
+bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) { return std::fabs(x - y) < error_tolerance; }
 
 /// @brief normalize a float number (between 0 and 1) using the formula
 /// x/(1+x) (almost x for small x, but saturates to 1 for large x)
@@ -90,8 +90,7 @@ public:
 
   Color() : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
 
-  Color(float red, float green,
-        float blue) // Constructor with externally assigned values
+  Color(float red, float green, float blue) // Constructor with externally assigned values
       : r(red), g(green), b(blue) {}
 
   // Methods
@@ -346,8 +345,7 @@ public:
   // Default constructor: if dimensions are positive, initializes the pixels
   // vector with width*height copies of Color(); otherwise, creates an empty
   // vector.
-  HdrImage(int32_t w, int32_t h)
-      : width(w), height(h), pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
+  HdrImage(int32_t w, int32_t h) : width(w), height(h), pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
 
   // First constructor pfm file --> Hdr image
   // Read a PFM file from a stream invoking `read_pfm_file` method
@@ -360,7 +358,7 @@ public:
     std::ifstream stream(file_name);
     if (!stream.is_open()) {
       std::string error_msg = "Failed to open file \"" + file_name + "\"";
-      if (errno) { // errno is a system-specific number that identifies an error occured
+      if (errno) {                                        // errno is a system-specific number that identifies an error occured
         error_msg += ": " + std::string(strerror(errno)); // convert errno to the string describing the message
       }
       throw std::runtime_error(error_msg);
@@ -561,3 +559,16 @@ public:
     output_ldr_file_name = argv[4];
   }
 };
+
+//-------------------------------------------------------------------------------------------------------------
+//---------- PREDEFINED COLORS ------------------
+//-------------------------------------------------------------------------------------------------------------
+
+Color BLACK(0.0f, 0.0f, 0.0f);
+Color WHITE(1.0f, 1.0f, 1.0f);
+Color RED(1.0f, 0.0f, 0.0f);
+Color GREEN(0.0f, 1.0f, 0.0f);
+Color BLUE(0.0f, 0.0f, 1.0f);
+Color YELLOW(1.0f, 1.0f, 0.0f);
+Color PURPLE(1.0f, 0.0f, 1.0f);
+Color CYAN(0.0f, 1.0f, 1.0f);
