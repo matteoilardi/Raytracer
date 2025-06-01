@@ -32,7 +32,7 @@ class SpecularBRDF;
 class Material;
 
 //-------------------------------------------------------------------------------------------------------------
-// -----------PIGMENT ABSTRACT STRUCT and DERIVATED ------------------
+// -----------PIGMENT ABSTRACT STRUCT ------------------
 // ------------------------------------------------------------------------------------------------------------
 
 /// @brief abstract functor that associates a Color to a Vec2d
@@ -41,6 +41,10 @@ struct Pigment {
   //------------Methods-----------
   virtual Color operator()(Vec2d uv) const = 0;
 };
+
+//-------------------------------------------------------------------------------------------------------------
+//------ UNIFORM PIGMENT ------------------
+// ------------------------------------------------------------------------------------------------------------
 
 /// @brief returns constant Color for all (u, v) coordinates
 struct UniformPigment : public Pigment {
@@ -59,6 +63,10 @@ struct UniformPigment : public Pigment {
   //------------Methods-----------
   virtual Color operator()(Vec2d uv) const override { return color; };
 };
+
+//-------------------------------------------------------------------------------------------------------------
+//------ CHECKERED PIGMENT ------------------
+// ------------------------------------------------------------------------------------------------------------
 
 /// @brief return checkered pattern of two Colors
 struct CheckeredPigment : public Pigment {
@@ -84,6 +92,43 @@ struct CheckeredPigment : public Pigment {
       return color2; // it has color 2 otherwise
     }
   };
+};
+
+//-------------------------------------------------------------------------------------------------------------
+// -----------IMAGE PIGMENT ------------------
+// ------------------------------------------------------------------------------------------------------------
+/// @brief pigment obtained by wrapping an HDR image (pfm format) around the given shape
+/// @brief uv coordinates on the surface are mapped to column and row of the image and the corresponding pixel color is returned
+class ImagePigment : public Pigment {
+public:
+  // ------- Properties -------
+  HdrImage image; // HDR image used as a texture to be wrapped around the shape
+
+  // ------- Constructor -------
+  /// @brief Construct an ImagePigment from a given PFM image file
+  /// @param filename path to the pfm file containing the HDR image
+  ImagePigment(const std::string &filename) : image(filename) {}
+
+  // ------- Methods -------
+  /// @brief Given surface UV coordinates, return the corresponding Color from the texture
+  /// @param uv coordinates in [0, 1)^2 identifying a point on the surface
+  /// @return color extracted from the HDR image at that position
+  virtual Color operator()(Vec2d uv) const override {
+    // Convert UV ∈ [0,1) to pixel indices in the image (truncating to floor integer)
+    int col = static_cast<int>(uv.u * image.width);
+    int row = static_cast<int>(uv.v * image.height);
+
+    // Clamp indices to avoid potential out-of-bounds (only needed if u or v == 1.0)
+    // NOTE Technically, uv should be in [0, 1) so this is just a safety check, but Tomasi has it in Pytracer... should we keep
+    // it?
+    if (col >= image.width)
+      col = image.width - 1;
+    if (row >= image.height)
+      row = image.height - 1;
+
+    // Return the corresponding pixel color from the image
+    return image.get_pixel(col, row);
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
