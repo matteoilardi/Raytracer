@@ -135,6 +135,13 @@ public:
   /// instead of Shirley & Morley formula)
   /// @return
   float luminosity_arithemic_avg() const { return (r + g + b) / 3.f; }
+
+  /// clamp the color values to the range [0, 1]
+  void clamp() {
+    r = std::clamp(r, 0.f, 1.f);
+    g = std::clamp(g, 0.f, 1.f);
+    b = std::clamp(b, 0.f, 1.f);
+  }
 };
 
 // ------------------------------------------------------------------------------------------------------------

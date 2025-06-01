@@ -279,13 +279,16 @@ public:
   Material(std::shared_ptr<BRDF> brdf = nullptr, std::shared_ptr<Pigment> emitted_radiance = nullptr)
       : brdf(brdf), emitted_radiance(emitted_radiance) {
     if (!this->brdf) {
-      this->brdf = std::make_shared<DiffusiveBRDF>(); // if no BRDF is provided, set diffusive BRDF with uniform pigment (black)
+      this->brdf = std::make_shared<DiffusiveBRDF>(); // if no BRDF is provided, set diffusive BRDF with uniform pigment black
     }
     if (!this->emitted_radiance) {
       this->emitted_radiance =
-          std::make_shared<UniformPigment>(); // if no emitted radiance is provided, set uniform pigment (black)
+          std::make_shared<UniformPigment>(); // if no emitted radiance is provided, set uniform pigment black
     }
   }
+
+  // Costructor with only emitted radiance
+  Material(std::shared_ptr<Pigment> emitted_radiance) : Material(nullptr, emitted_radiance) {}
 
   //------------Methods-----------
 };

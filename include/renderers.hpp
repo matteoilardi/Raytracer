@@ -23,6 +23,10 @@ class OnOffTracer;
 class FlatTracer;
 class PathTracer;
 
+// ------------------------------------------------------------------------------------------------------------
+// --------------- RENDERER ABSTRACT CLASS -------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
 /// @brief abstract functor that associates a Color to a Ray
 class Renderer {
 public:
@@ -31,14 +35,18 @@ public:
   Color background;             // background color
 
   //-----------Constructors-----------
+  /// Constructor with parameters
   Renderer(std::shared_ptr<World> world, Color background = Color()) : world(world), background(background) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
 };
 
+// ------------------------------------------------------------------------------------------------------------
+// --------------- ON_OFF RENDERER -------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
 
-/// @brief functor performing ON/OFF tracing: returns white if the ray hits a object, black otherwise
+/// @brief functor performing ON/OFF tracing: returns white if the ray hits any object, black otherwise
 class OnOffTracer : public Renderer {
 public:
   //------------Properties-----------
@@ -50,17 +58,20 @@ public:
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
-    if (world->on_off_ray_intersection(ray)) { // use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
-      return Color(1.f, 1.f, 1.f); // Turns out to be white if the only other color is black
-    }
-    else {
-      return Color();
+    if (world->on_off_ray_intersection(
+            ray)) { // use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
+      return WHITE; // return white if any object is hit
+    } else {
+      return Color(); // return black if no object is hit
     }
   }
 };
 
+//----------------------------------------------------------------------------------------------------------------
+// --------------- FLAT RENDERER -------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------
 
-/// @brief functor performing flat tracing, i. e. returning for each ray the color of the closest object to be hit
+/// @brief functor performing flat tracing, i. e. returning for each ray just the plain color of the closest object hit
 class FlatTracer : public Renderer {
 public:
   //------------Properties-----------
@@ -73,16 +84,19 @@ public:
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
-    // Save the colosest hit or return background Color if no object gets hit
-    std::optional<HitRecord> hit = world->ray_intersection(ray);
+    std::optional<HitRecord> hit = world->ray_intersection(ray); // save the closest hit (if any)
     if (!hit) {
-      return background;
+      return background; // Return background color if no object is hit
     }
-
-    // Return Color of the hit object
-    return (*hit->shape->material->brdf->pigment)(hit->surface_point);
+    // Return the color of the closest object hit (if any), both the brdf pigment and the emitted radiance (see Tomasi's Pytracer)
+    return (*(hit->shape->material->brdf->pigment))(hit->surface_point) +
+           (*(hit->shape->material->emitted_radiance))(hit->surface_point);
   };
 };
+
+// ------------------------------------------------------------------------------------------------------------
+// --------------- PATH TRACER -------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
 
 /// @brief functor performing the path tracing algorithm
 /// @details importance sampling in MC integration based on the scatter_ray method of the BRDF
@@ -104,10 +118,9 @@ public:
   /// @param ray depth before russian roulette kicks in
   /// @param maximum ray depth
   /// @param background color
-  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 100,
-             int russian_roulette_lim = 2, int max_depth = 2, Color background = Color())
-      : Renderer(world, background), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim),
-        max_depth(max_depth) {
+  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 100, int russian_roulette_lim = 2,
+             int max_depth = 2, Color background = Color())
+      : Renderer(world, background), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim), max_depth(max_depth) {
     if (!this->pcg) {
       pcg = std::make_shared<PCG>();
     }
@@ -133,11 +146,12 @@ public:
 
     // 4. Apply russian roulette: decide whether to scatter new rays and renormalize the BRDF to compesate for possible
     // truncations
-    float hit_lum = std::max({reflected_color.r, reflected_color.g,
-                        reflected_color.b});
+    float hit_lum = std::max({reflected_color.r, reflected_color.g, reflected_color.b});
     if (ray.depth > russian_roulette_lim) {
       float q = std::max(1.f - hit_lum, 0.05f);
-      if (pcg->random_float() > q) { // stop with higher probability if the hit point has low reflactance: this improves efficiency without penalizing variance too much. Keep a finite stopiing probability even if hit_lum is close to 1
+      if (pcg->random_float() >
+          q) { // stop with higher probability if the hit point has low reflactance: this improves efficiency without penalizing
+               // variance too much. Keep a finite stopiing probability even if hit_lum is close to 1
       } else {
         return emitted_radiance;
       }
