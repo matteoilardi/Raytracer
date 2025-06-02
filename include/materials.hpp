@@ -104,10 +104,15 @@ public:
   // ------- Properties -------
   HdrImage image; // HDR image used as a texture to be wrapped around the shape
 
-  // ------- Constructor -------
+  // ------- Constructors -------
+  /// @brief Construct an ImagePigment from a given HdrImage object
+  /// @param image HdrImage object containing the HDR image
+  ImagePigment(const HdrImage &image) : image(image) {}
+  
   /// @brief Construct an ImagePigment from a given PFM image file
   /// @param filename path to the pfm file containing the HDR image
   ImagePigment(const std::string &filename) : image(filename) {}
+
 
   // ------- Methods -------
   /// @brief Given surface UV coordinates, return the corresponding Color from the texture
