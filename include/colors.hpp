@@ -119,6 +119,13 @@ public:
   friend Color operator*(float scalar, const Color &my_color) {
     return my_color * scalar; // Reuse the member function
   }
+  
+  // Helper method to display the color in a readable format.
+  std::string to_string() const {
+    std::ostringstream oss;
+    oss << "Color(r: " << r << ", g: " << g << ", b: " << b << ")";
+    return oss.str();
+  }
 
   // Helper method to display the color.
   void display() const { std::cout << "r: " << r << " g: " << g << " b: " << b; }

@@ -67,3 +67,47 @@ HdrImage image(2, 2);
   EXPECT_TRUE(pigment(Vec2d(0.f, 0.5f)).is_close(Color(2.f, 1.f, 3.f)));  
   EXPECT_TRUE(pigment(Vec2d(0.5f, 0.5f)).is_close(Color(3.f, 2.f, 1.f)));
 }
+
+// ------------------------------------------------------------------------------------------------------------
+// -------------TESTS FOR BRDF -------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
+// test SpecularBRDF
+
+TEST(BRDFTest, test_specular_brdf_reflection) {
+  // Setup: incident direction and surface normal
+  Vec in_dir = Vec(0.f, -1.f, -1.f);
+  in_dir.normalize();
+  Normal normal = Normal(0.f, 0.f, 1.f); 
+  Point hit_point = Point(0.f, 0.f, 0.f); // arbitrary intersection point
+
+  // Expected reflected direction
+  Vec expected_out = Vec(0.f, -1.f, 1.f);
+  expected_out.normalize();
+
+  // Build the BRDF
+  auto pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
+  SpecularBRDF brdf(pigment);
+  auto pcg = std::make_shared<PCG>();
+
+  // Call scatter_ray
+  Ray scattered = brdf.scatter_ray(pcg, in_dir, hit_point, normal, 1);
+  Vec out_dir = scattered.direction;
+  out_dir.normalize(); // Ensure the direction is normalized
+  
+
+  // Test reflected direction
+  EXPECT_TRUE(out_dir.is_close(expected_out));
+
+  // Test eval returns correct color
+  Color reflected_color = brdf.eval(normal, in_dir, expected_out, Vec2d(0.5f, 0.5f));
+  EXPECT_TRUE(reflected_color.is_close(Color(0.5f, 0.5f, 0.5f)));
+
+  // Should return black for incorrect out direction
+  Color wrong_color_1 = brdf.eval(normal, in_dir, VEC_X, Vec2d(0.5f, 0.5f));
+  EXPECT_TRUE(wrong_color_1.is_close(BLACK));
+
+  // Should return black for ray hitting from the inside (incidence angle>pi/2)
+  Color wrong_color_2 = brdf.eval(normal, VEC_X, -VEC_X, Vec2d(0.5f, 0.5f));
+  EXPECT_TRUE(wrong_color_2.is_close(BLACK));
+}

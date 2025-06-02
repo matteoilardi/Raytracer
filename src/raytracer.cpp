@@ -230,11 +230,9 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
   return std::move(tracer.image);
 }
 
-
 //--------------------- Flat Tracing demo image ---------------------
 
-std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int height, const Transformation
-&obs_transformation) {
+std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int height, const Transformation &obs_transformation) {
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
 
@@ -280,10 +278,55 @@ std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int h
 
 //--------------------- MonteCarlo path tracing demo image ---------------------
 
+//TODO check implementation and take care of camera orientation (see demo in Tomasi Pytracer)
+
+
 std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, const Transformation &obs_transformation) {
-  // TODO implement Monte Carlo path tracing demo image generation (just a placeholder for now)
-  std::cout << "Monte Carlo path tracing demo is not implemented yet." << std::endl;
-  return std::make_unique<HdrImage>(width, height); // Return an empty image for now
+  // 1. Create World
+  std::shared_ptr<World> world = std::make_shared<World>();
+
+  // 2. Define Pigments and Materials
+  auto sky_emission = std::make_shared<UniformPigment>(Color(0.7f, 0.5f, 1.0f));
+  auto black_pigment = std::make_shared<UniformPigment>(BLACK);
+  auto sky_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(black_pigment), sky_emission);
+
+  auto ground_pattern = std::make_shared<CheckeredPigment>(Color(0.3f, 0.5f, 0.1f), Color(0.1f, 0.2f, 0.5f), 4);
+  auto ground_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(ground_pattern),
+                                                    std::make_shared<UniformPigment>(Color(0.f, 0.f, 0.f)));
+
+  auto grey_pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
+  auto sphere_material = std::make_shared<Material>(std::make_shared<SpecularBRDF>(grey_pigment),
+                                                    std::make_shared<UniformPigment>(Color(0.f, 0.f, 0.f)));
+
+  // 3. Add objects
+  Transformation sky_transform = rotation_y(5.f * std::numbers::pi / 6.f)* translation(Vec(0.f, 0.f, 100.f));
+  world->add_object(std::make_shared<Plane>(sky_transform, sky_material));
+  world->add_object(std::make_shared<Plane>(Transformation(), ground_material));
+  world->add_object(std::make_shared<Sphere>(translation(Vec(0.f, 0.f, 1.f)), sphere_material));
+
+  // 4. Add light source //NOTE off for now, it is in Tomasi, maybe turn it on later
+ // world->add_light(std::make_shared<PointLight>(Point(10.f, 10.f, 10.f), Color(1.f, 1.f, 1.f), 1.0f));
+
+  // 5. Setup camera
+  std::unique_ptr<Camera> camera;
+  //Transformation my_obs_transformation = translation(Vec(-4.f, 0.f, 1.f)) * rotation_z(30.f * std::numbers::pi / 180.f);
+
+  if (orthogonal) { 
+    camera = std::make_unique<OrthogonalCamera>(static_cast<float>(height) / width, obs_transformation);
+  } else {
+    camera = std::make_unique<PerspectiveCamera>(1.f, static_cast<float>(height) / width, obs_transformation);
+  }
+
+  // 6. Render image with Montecarlo path tracing
+  auto pcg = std::make_shared<PCG>();
+  PathTracer path_tracer(world, pcg, 10, 2, 4); // tweakable: n_rays, roulette limit, max_depth
+
+  // 7. Trace the image
+  auto image = std::make_unique<HdrImage>(width, height);
+  ImageTracer image_tracer(std::move(image), std::move(camera));
+  image_tracer.fire_all_rays(path_tracer);
+
+  return std::move(image_tracer.image);
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------

@@ -210,7 +210,7 @@ public:
     // surface if we used the same default tolerance as everywhere else in the code, then we would allow these `almost parallel'
     // rays to immediately hit the scattering surface itself
     // REMOVE_TAG when you read this comment
-    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth);
+    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth); //QUESTION shouldn't it be depth+1 instead of depth?
   };
 };
 
@@ -218,6 +218,8 @@ public:
 // -----------SPECULAR BRDF  ------------------
 // ------------------------------------------------------------------------------------------------------------
 
+//TODO the actual implementation of the specular BRDF in Tomasi is weird, please check it and see if it makes sense to you
+//the version below is the one I think makes more sense, but it is not the one in Tomasi's Pytracer
 /// @brief BRDF for ideal mirror-like surfaces
 class SpecularBRDF : public BRDF {
 public:
@@ -225,7 +227,7 @@ public:
   float threshold_angle_rad; // threshold angle between incoming and outgoing directions below which the BRDF is non-zero
 
   //-----------Constructor-----------
-  SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr, float threshold_angle_rad = std::numbers::pi / 1800.f)
+  SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr, float threshold_angle_rad = std::numbers::pi * 0.5f)
       : BRDF(pigment), threshold_angle_rad(threshold_angle_rad) {
     if (!this->pigment) {
       this->pigment =
@@ -247,11 +249,13 @@ public:
     in.normalize();
     out.normalize();
 
-    float theta_in = std::acos(n * in);   // incidence angle
+    float theta_in = std::acos(n * -in);   // incidence angle
     float theta_out = std::acos(n * out); // reflection angle
 
-    if (std::abs(theta_in - theta_out) < threshold_angle_rad) {
-      return (*pigment)(uv); // if angle between incoming and outgoing directions is below threshold, return the pigment color
+    
+    if (are_close(theta_in,theta_out) && theta_in < threshold_angle_rad) {
+      return (*pigment)(uv); // if incidence and reflection angles agree and if ray hits the surface from outside (theta_in < pi/2)
+                             // return the color of the pigment at the given uv coordinates
     } else {
       return Color(0.f, 0.f, 0.f); // otherwise return black
     }
@@ -270,7 +274,7 @@ public:
     // NOTE in pytracer the tmin is set to 1.e-5f for mirror like surfaces, so I guess the bigger tmin for diffusive surfaces is
     // due the MC direction 
     //REMOVE_TAG when you read this comment
-    return Ray(intersection_point, reflected, 1.e-5f, infinite, depth);
+    return Ray(intersection_point, reflected, 1.e-5f, infinite, depth); //QUESTION shouldn't it be depth+1 instead of depth?
   }
 };
 
