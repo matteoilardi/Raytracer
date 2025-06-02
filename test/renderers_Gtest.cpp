@@ -24,7 +24,9 @@ TEST(FlatTracerTest, test_example) {
   auto brdf = std::make_shared<DiffusiveBRDF>(pigment);
   auto material = std::make_shared<Material>(brdf);
 
-  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
+  //move the sphere to the center of the screen and make it small enough to cover only the central pixel
+  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material); 
+  
   auto world = std::make_shared<World>();
   world->add_object(sphere);
   FlatTracer renderer{world, Color()};
@@ -35,23 +37,23 @@ TEST(FlatTracerTest, test_example) {
 
   tracer.fire_all_rays(renderer);
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(BLACK));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close(BLACK));
+  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close(BLACK));
 
-  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close(BLACK));
   EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close(sphere_color));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close(BLACK));
 
-  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close(BLACK));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close(BLACK));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(BLACK));
 }
 
 // Furnace test: cast a ray inside a closed surface with diffusive BRDF and uniform reflectance rho_d and emitted
 // radiance L_e; scatter exactly one ray at every hit (every ray should yield the same contribution regardless of its
-// direction); stop after a large number of reflections; compare with the analytical solution: L = L_e/(1 - rho_d),
-// which arises from a geometric sum; repeat 200 times for random valued of reflectance and emitted radiance
+// direction); stop after a large number of reflections (200); compare with the analytical solution: L = L_e/(1 - rho_d),
+// which arises from a geometric sum; repeat 100 times for random valued of reflectance and emitted radiance
 TEST(PathTracerTest, test_furnace) {
 
   // 1. Build material
@@ -61,19 +63,19 @@ TEST(PathTracerTest, test_furnace) {
   auto material = std::make_shared<Material>(brdf, emitted_radiance);
 
   // 2. Build enclosing sphere and world
-  auto enclosure = std::make_shared<Sphere>(Transformation(), material);
+  auto enclosure = std::make_shared<Sphere>(Transformation(), material); //unit sphere at the origin with material above
   auto world = std::make_shared<World>();
   world->add_object(enclosure);
 
   // 3. Cast ray and compute total radiance
   Ray ray{Point(), VEC_X};
   auto pcg = std::make_shared<PCG>();
-  PathTracer renderer{world, pcg, 1, 200,
-                      200}; // russian roulette is not invoked up to depth=200, which is the max depth
+  PathTracer renderer{world, pcg, 1, 200, 200}; 
+  // russian roulette is not invoked up to depth=200, which is the max depth
 
   // 4. Compute total radiance and compare with expected result
   for (int i = 0; i < 100; i++) {
-    float reflectance = pcg->random_float() * 0.9f; // avoid rho_d = 1
+    float reflectance = pcg->random_float() * 0.9f; // avoid rho_d = 1 for numerical stability
     float luminosity = pcg->random_float();
     pigment->color = Color(reflectance, 0.f, 0.f);
     emitted_radiance->color = Color(luminosity, 0.f, 0.f);

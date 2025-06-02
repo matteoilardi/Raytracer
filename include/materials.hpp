@@ -190,12 +190,15 @@ public:
   }
 
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    normal.normalize(); // QUESTION is it necessary?
+    // NOTE we should not normalize the normal since the whole point of Duff onb algorithm is to save operations, so if we then
+    //  normalize here it loses sense and we might just as well normalize inside the onb algorithm
+    // normal.normalize();
     ONB onb{normal.to_vector()};
-    auto [theta, phi] = pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to
-                                              // cos(theta), hence we perform importance sampling using Phong n=1 distribution
+    auto [theta, phi] =
+        pcg->random_phong(1); // since diffusive BRDF is constant, doing importance sampling for the rendering integral
+                              // with distribution p~ BRDF*cos(theta)~cos(theta), hence use Phong n=1 distribution
     Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
-                     onb.e3 * std::cos(theta)};
+                     onb.e3 * std::cos(theta)}; // get outgoing direction from the local ONB basis
 
     // QUESTION why should tmin be bigger than usual? see lab 11 slide 13
     // ANSWER  My guess is that it because the ray is scattered in a random direction which could be almost parallel to the
@@ -252,14 +255,16 @@ public:
   /// @brief deterministic perfect mirror reflection
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
     incoming_dir.normalize(); // QUESTION in pytracer Tomasi normalizes, but it is not necessary... should we remove it and save
-                              // operations?
+                              // operations? it is not as bad as in the diffusive BRDF case since we do not use montecarlo, still
+                              // it saves operations
     Vec n = normal.to_vector();
     n.normalize();
 
     Vec reflected = incoming_dir - n * 2.f * (n * incoming_dir);
 
     // NOTE in pytracer the tmin is set to 1.e-5f for mirror like surfaces, so I guess the bigger tmin for diffusive surfaces is
-    // due the MC direction REMOVE_TAG when you read this comment
+    // due the MC direction 
+    //REMOVE_TAG when you read this comment
     return Ray(intersection_point, reflected, 1.e-5f, infinite, depth);
   }
 };

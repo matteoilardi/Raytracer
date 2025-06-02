@@ -207,7 +207,7 @@ TEST(ONBTest, test_ONB_from_Duff) {
     Vec v = Vec(theta, phi);
     ONB onb{v};
 
-    EXPECT_TRUE(v.is_close(onb.e3));
+    EXPECT_TRUE(v.is_close(onb.e3)); // check if e3 is indeed the input vector
     EXPECT_TRUE(onb.is_consistent());
   }
 }
