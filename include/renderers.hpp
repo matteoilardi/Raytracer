@@ -30,7 +30,8 @@ public:
   Color background_color;       // background color
 
   //-----------Constructors-----------
-  Renderer(std::shared_ptr<World> world, Color background_color = Color()) : world(world), background_color(background_color) {};
+  Renderer(std::shared_ptr<World> world, Color background_color = Color())
+      : world(world), background_color(background_color) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
@@ -64,7 +65,8 @@ public:
 class PointLightTracer : public Renderer {
 public:
   //------------Properties-----------
-  Color ambient_color; // constant base illumination applied to all surfaces (used when no light source is in sight)
+  Color ambient_color; // constant base illumination applied to all surfaces (used when no light source is in sight to
+                       // avoid  completely dark pixels)
 
   //-----------Constructors-----------
   /// Constructor with parameters
@@ -92,34 +94,35 @@ public:
       hit_material = hit->shape->material;
       brdf = hit_material->brdf;
 
-      auto specular = false; // delete this line and restore the next one when implementation of SpecularBRDF is ready
-      // auto specular = std::dynamic_pointer_cast<SpecularBRDF>(brdf); // returns nullptr if brdf is not a pointer to an object of the derived class SpecularBRDF
-      // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by the reflection law; otherwise go ahead with color evaluation
+      auto specular =
+          false; // NOTE delete this line and restore the next one when implementation of SpecularBRDF is ready
+      // auto specular = std::dynamic_pointer_cast<SpecularBRDF>(brdf); // returns nullptr if brdf is not a pointer to
+      // an object of the derived class SpecularBRDF
+      // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by
+      // the reflection law; otherwise go ahead with color evaluation
       if (!specular) {
-              break;
+        break;
       }
 
-      Vec new_dir = ray.direction - 2*hit->normal.to_vector() * (hit->normal.to_vector()*ray.direction);
+      Vec new_dir = ray.direction - 2 * hit->normal.to_vector() * (hit->normal.to_vector() * ray.direction);
       ray = Ray(hit->world_point, new_dir);
 
     } while (true);
 
-    // 4. Initalize pixel color
-    Color cum_radiance =
-        ambient_color +
-        (*hit_material->emitted_radiance)(
-            hit->surface_point);
+    // 4. Initialize pixel color with ambient color and its own emitted radiance
+    Color cum_radiance = ambient_color + (*(hit_material->emitted_radiance))(hit->surface_point);
 
     // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
     for (auto source : world->light_sources) {
       std::optional<Vec> in_dir = world->offset_if_visible(source->point, hit->world_point, hit->normal);
+      // in offset_if_visible(..) the `viewer' is the light source and in_dir is the direction from it to the hit point
 
       if (in_dir.has_value()) {
         float distance = in_dir->norm();
         float distance_factor =
             (source->emission_radius > 0.f) ? std::pow((source->emission_radius / distance), 2) : 1.f;
         // angle between normal at hitting point and incoming direction (from light source)
-        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) * hit->normal.to_vector();
+        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) * (hit->normal); //QUESTION why the minus sign? and why we multiply by costheta?
         cum_radiance += source->color * distance_factor * cos_theta *
                         brdf->eval(hit->normal, *in_dir, -hit->ray.direction, hit->surface_point);
       }

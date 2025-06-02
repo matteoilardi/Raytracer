@@ -271,7 +271,7 @@ public:
 //-------------------------------------------------------------------------------------------------------------
 // -----------WORLD CLASS ------------------
 // ------------------------------------------------------------------------------------------------------------
-/// @brief World class contains all the objects in the scene and trace rays against them
+/// @brief World class contains all the objects in the scene (and light sources for pointlight tracing) and trace rays against them
 class World {
 public:
   // ------- Properties --------
@@ -354,11 +354,12 @@ public:
     Ray in_ray{viewer_point, in_dir};
 
     // return null if the ray comes from inside the object
-    if (in_dir * normal_at_surface.to_vector() > 0.f) {
+    if (in_dir * normal_at_surface > 0.f) {
       return std::nullopt;
     }
 
     // QUESTION what if the point light source is visible via a speculaar reflection?
+    // ANSWER shouldn't this case be handled in the point light renderer?
     // loop over the objects in the World and return null if one of them sits before surface_point
     for (const auto &object : objects) {
       std::optional<HitRecord> hit = object->ray_intersection(in_ray);
