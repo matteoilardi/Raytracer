@@ -143,3 +143,60 @@ TEST(InputStreamTest, test_lexer) {
   Token eof = input_file.read_token();
   EXPECT_EQ(eof.type, TokenType::STOP_TOKEN);
 }
+
+// ---- Test GrammarError functionality of lexer --------------------------------------------------------
+
+TEST(InputStreamTest, test_GrammarError) {
+  // 1. Test invalid float number
+  {
+    // Set up a stream with an invalid float: "12.3.4" is not a valid float (two dots not allowed)
+    std::istringstream ss("12.3.4");
+    InputStream input_file(ss);
+
+    try {
+      input_file.read_token(); // This should try to parse and throw GrammarError
+      // If no exception is thrown, FAIL() will execute and the test will fail here
+      FAIL() << "A GrammarError for invalid float was expected, but none was thrown";
+    } catch (const GrammarError &err) {
+      // If a GrammarError is thrown, control jumps here and the following assertions run
+
+      // Check that the error message says it's an invalid floating-point number
+      EXPECT_NE(std::string(err.what()).find("invalid floating-point number"), std::string::npos);
+
+      // Check that the error is reported on line 1, column 1
+      // (in IputStream code is arranged so that error are reported from the start of the token)
+      EXPECT_EQ(err.get_location().line, 1);
+      EXPECT_EQ(err.get_location().column, 1);
+
+    } catch (...) {
+      // If an unexpected exception type is thrown, mark the test as failed
+      FAIL() << "Expected GrammarError, got different exception";
+    }
+  }
+
+  // 2. Test invalid character (e.g. @)
+  {
+    // Set up a stream with an invalid character: "@" is not valid in your syntax
+    std::istringstream ss("@");
+    InputStream input_file(ss);
+
+    try {
+      input_file.read_token(); // Should throw GrammarError for invalid character
+      // If no exception is thrown, FAIL() will execute and the test will fail here
+      FAIL() << "A GrammarError for invalid character was expected, but none was thrown";
+    } catch (const GrammarError &err) {
+      // If a GrammarError is thrown, control jumps here and the following assertions run
+
+      // Check that the error message says 'Invalid character'
+      EXPECT_NE(std::string(err.what()).find("Invalid character"), std::string::npos);
+
+      // Check the error is on line 1, column 1 (where the "@" appears)
+      // (in IputStream code is arranged so that error are reported from the start of the token)
+      EXPECT_EQ(err.get_location().line, 1);
+      EXPECT_EQ(err.get_location().column, 1);
+    } catch (...) {
+      // If a different exception is thrown, mark the test as failed
+      FAIL() << "Expected GrammarError, got different exception";
+    }
+  }
+}

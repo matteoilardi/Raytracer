@@ -23,8 +23,8 @@
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
 // ----------------------------------------------------------------------------------------
 
-const std::string SYMBOLS = "(){},[]:;=<>"; //declare our symbols // NOTE adjust as needed
-enum class KeywordEnum; //forward declare our keywords (see section below)
+const std::string SYMBOLS = "(){},[]:;=<>"; // declare our symbols // NOTE adjust as needed
+enum class KeywordEnum;                     // forward declare our keywords (see section below)
 
 //----------------------------------------------------------------------------------------------------
 //------------------- KEYWORDS and related HELPERS -------------------------
@@ -341,45 +341,44 @@ public:
     }
   }
 
-// --- READ A SINGLE CHARACTER FROM THE STREAM (handles pushback/unreading) ---------------------------------------------
+  // --- READ A SINGLE CHARACTER FROM THE STREAM (handles pushback/unreading) ---------------------------------------------
 
-/// @brief Read a single character from the input stream, handling pushback/unreading of characters
-char read_char() {
+  /// @brief Read a single character from the input stream, handling pushback/unreading of characters
+  char read_char() {
     char ch;
 
     if (saved_char.has_value()) { // If a character was pushed back, use it first
-        ch = saved_char.value();
-        saved_char = std::nullopt;
-        // Restore saved location before consuming the char
-        if (saved_location.has_value()) {
-            location = saved_location.value();
-            saved_location = std::nullopt;
-        }
-        update_pos(ch); // <<---- NEW: Always update the location, even for pushback
+      ch = saved_char.value();
+      saved_char = std::nullopt;
+      // Restore saved location before consuming the char
+      if (saved_location.has_value()) {
+        location = saved_location.value();
+        saved_location = std::nullopt;
+      }
+      update_pos(ch); // <<---- NEW: Always update the location, even for pushback
     } else {
-        saved_location = location; // Save current location so we can restore it in unread_char
-        ch = static_cast<char>(stream.get());
-        if (!stream) {
-            ch = 0; // End of stream
-        }
-        update_pos(ch); // Update the source location based on the character read
+      saved_location = location; // Save current location so we can restore it in unread_char
+      ch = static_cast<char>(stream.get());
+      if (!stream) {
+        ch = 0; // End of stream
+      }
+      update_pos(ch); // Update the source location based on the character read
     }
 
     return ch;
-}
+  }
 
-// --- UNREAD (PUSH BACK) A CHARACTER INTO THE STREAM ---------------------------------------------------------
+  // --- UNREAD (PUSH BACK) A CHARACTER INTO THE STREAM ---------------------------------------------------------
 
-/// @brief Push back a single character into the input stream (for lookahead)
-void unread_char(char ch) {
+  /// @brief Push back a single character into the input stream (for lookahead)
+  void unread_char(char ch) {
     assert(!saved_char.has_value()); // Only one char of pushback at a time is supported, this should never happen
     saved_char = ch;
     // Restore previous location to match what it was before reading the character
     if (saved_location.has_value()) {
-        location = saved_location.value();
+      location = saved_location.value();
     }
-}
-
+  }
 
   // --- SKIP WHITESPACES AND COMMENTS (we start comments with # ... until end of line) -------------------------
 
@@ -439,30 +438,37 @@ void unread_char(char ch) {
   // --- PARSE A FLOATING POINT NUMBER --------------------------------------------------------------------------
 
   /// @brief Parse a floating-point number from the input stream
-  Token parse_float_token(char first_char, const SourceLocation &token_location) {
+Token parse_float_token(char first_char, const SourceLocation &token_location) {
     std::string token_str(1, first_char);
 
     // read stream characters until we reach a non-digit character
     while (true) {
-      char ch = read_char();
-      if (!std::isdigit(ch) && ch != '.' && ch != 'e' && ch != 'E') { // Allow digits, '.', 'e', 'E' for scientific notation
-        unread_char(ch);
-        break;
-      }
-      token_str += ch; // Append character to the number string and keep looping
+        char ch = read_char();
+        if (!std::isdigit(ch) && ch != '.' && ch != 'e' && ch != 'E') { // Allow digits, '.', 'e', 'E' for scientific notation
+            unread_char(ch);
+            break;
+        }
+        token_str += ch; // Append character to the number string and keep looping
     }
 
     // try converting the string to a float and creating the token
     try {
-      float value = std::stof(token_str); // Convert the string to a float
-      // Create a token with the parsed number and the appropriate constructor/methods
-      Token token(token_location, TokenType::LITERAL_NUMBER);
-      token.assign_number(value);
-      return token;
+        // ----------- CHANGE STARTS HERE -----------
+        size_t processed = 0;
+        float value = std::stof(token_str, &processed); // Convert the string to a float
+        if (processed != token_str.size()) {
+            // Not all characters were consumed: malformed float (e.g. "12.3.4")
+            throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
+        }
+        // ----------- CHANGE ENDS HERE -----------
+        // Create a token with the parsed number and the appropriate constructor/methods
+        Token token(token_location, TokenType::LITERAL_NUMBER);
+        token.assign_number(value);
+        return token;
     } catch (...) { // If conversion fails, throw a GrammarError specific for floating-point numbers
-      throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
+        throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
     }
-  }
+}
 
   // --- PARSE A KEYWORD OR IDENTIFIER --------------------------------------------------------------------------
 
@@ -511,16 +517,17 @@ void unread_char(char ch) {
 
     skip_whitespaces_and_comments(); // get rid of whitespace and comments, then start reading the next token
 
+    // Save current location for token start
+    // (do it BEFORE reading the character: we want error location to be at the start of the token)
+    SourceLocation token_location = location;
+
     char ch = read_char(); // read the first character
 
     if (ch == 0) { // You got to the end of file: create and return a STOP_TOKEN
-      Token token(location, TokenType::STOP_TOKEN);
+      Token token(token_location, TokenType::STOP_TOKEN);
       token.assign_stop_token(false);
       return token;
     }
-
-    // Save current location for token start
-    SourceLocation token_location = location;
 
     // Handle single-character symbols or otherwise start parsing other token types
     if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
@@ -537,7 +544,7 @@ void unread_char(char ch) {
       return parse_keyword_or_identifier_token(ch, token_location);
     } else {
       // If it is an invalid character (all valid cases are ruled out already), throw a GrammarError
-      throw GrammarError(location, std::string("Invalid character: '") + ch + "'");
+      throw GrammarError(token_location, std::string("Invalid character: '") + ch + "'");
     }
   }
 
