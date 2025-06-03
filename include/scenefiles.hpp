@@ -23,145 +23,8 @@
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
 // ----------------------------------------------------------------------------------------
 
-enum class KeywordEnum;
-
-//----------------------------------------------------------------------------------------------------
-//------------------- TOKEN CLASS (using std::variant) and AUXILIARY SUBCLASSES -------------------------
-//----------------------------------------------------------------------------------------------------
-
-//------------SOURCE LOCATION: contains file name, line number and column number of the token----
-struct SourceLocation {
-  //------- Properties --------
-  std::string file; // File name (or empty string if not applicable e.g. source code was provided as a memory stream, or through a
-                    // network connection)
-  int line;         // Line number (starting from 1)
-  int column;       // Column number (starting from 1)
-
-  //----------- Constructors -----------
-  // Default constructor initializes to empty file and ZERO line/column
-  SourceLocation(const std::string &file = "", int line = 0, int column = 0) : file(file), line(line), column(column) {}
-
-  //----------- Methods -----------
-  ///@brief convert source location to string (for debugging)
-  std::string to_string() const {
-    return "File: " + file + ", Line: " + std::to_string(line) + ", Column: " + std::to_string(column);
-  }
-};
-
-//------------ TOKEN TYPE (used for dispatching at runtime)---------------
-enum class TokenType {
-  // these are the 6 types of token implemented in Pytracer
-  STOP_TOKEN,     // An (optional) token signalling the end of a file
-  KEYWORD,        // A token containing a keyword
-  SYMBOL,         // A token containing a symbol
-  IDENTIFIER,     // A token containing an identifier (i.e. a variable name)
-  LITERAL_STRING, // A token containing a literal string
-  LITERAL_NUMBER  // A token containing a literal number (i.e. a float)
-};
-
-//------------ TOKEN VALUE: variant for possible token values ---------------
-using TokenValue = std::variant<std::monostate, bool, KeywordEnum, char, std::string, float>;
-
-//------ TOKEN CLASS: product of `SourceLocation', `TokenType` and `TokenValue` (tagged union pattern in C++) ------
-class Token {
-public:
-  //------- Properties --------
-  SourceLocation source_location; // The source location
-  TokenType type;                 // The "tag"
-  TokenValue value;               // The type-safe tagged union
-
-  //----------- Constructors -----------
-  Token(const SourceLocation &loc, TokenType t) : source_location(loc), type(t), value(std::monostate{}) {
-    switch (type) {
-    case TokenType::STOP_TOKEN:
-      value = false; // default stop_token = false
-      break;
-    case TokenType::KEYWORD:
-      value = KeywordEnum::NONE;
-      break;
-    case TokenType::SYMBOL:
-      value = '\0';
-      break;
-    case TokenType::IDENTIFIER:
-      value = std::string("");
-      break;
-    case TokenType::LITERAL_STRING:
-      value = std::string("");
-      break;
-    case TokenType::LITERAL_NUMBER:
-      value = 0.0f;
-      break;
-    }
-  }
-
-  //----------- Methods -----------
-
-  ///@brief assign a stop token (signals EndOfFile)
-  void assign_stop_token(bool b = false) {
-    type = TokenType::STOP_TOKEN;
-    value = b;
-  }
-
-  ///@brief assign a keyword token
-  void assign_keyword(KeywordEnum kw) {
-    type = TokenType::KEYWORD;
-    value = kw;
-  }
-
-  ///@brief assign a single character symbol token
-  void assign_symbol(char c) {
-    type = TokenType::SYMBOL;
-    value = c;
-  }
-
-  ///@brief assign an identifier token (e.g. variable name)
-  void assign_identifier(const std::string &name) {
-    type = TokenType::IDENTIFIER;
-    value = name;
-  }
-
-  ///@brief assign a string token value
-  void assign_string(const std::string &s) {
-    type = TokenType::LITERAL_STRING;
-    value = s;
-  }
-
-  ///@brief assign a numeric token value
-  void assign_number(float val) {
-    type = TokenType::LITERAL_NUMBER;
-    value = val;
-  }
-
-  ///@brief print token information to the console
-  void print() const {
-    std::cout << "Token Type: " << static_cast<int>(type) << ", Value: ";
-    switch (type) {
-    case TokenType::STOP_TOKEN:
-      std::cout << (std::get<bool>(value) ? "true" : "false");
-      break;
-    case TokenType::KEYWORD:
-      std::cout << to_string(std::get<KeywordEnum>(value)) << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value))
-                << ")";
-      break;
-    case TokenType::SYMBOL:
-      std::cout << std::get<char>(value);
-      break;
-    case TokenType::IDENTIFIER:
-      std::cout << std::get<std::string>(value);
-      break;
-    case TokenType::LITERAL_STRING:
-      std::cout << std::get<std::string>(value);
-      break;
-    case TokenType::LITERAL_NUMBER:
-      std::cout << std::get<float>(value);
-      break;
-    default:
-      std::cout << "Unknown token type";
-      break;
-    }
-    std::cout << ", Source Location: " << source_location.to_string() << std::endl;
-  }
-};
+const std::string SYMBOLS = "(){},[]:;=<>"; //declare our symbols // NOTE adjust as needed
+enum class KeywordEnum; //forward declare our keywords (see section below)
 
 //----------------------------------------------------------------------------------------------------
 //------------------- KEYWORDS and related HELPERS -------------------------
@@ -264,6 +127,148 @@ std::string to_string(KeywordEnum kw) {
 }
 
 //----------------------------------------------------------------------------------------------------
+//------------------- TOKEN CLASS (using std::variant instead of union) and AUXILIARY SUBCLASSES -------------------------
+//----------------------------------------------------------------------------------------------------
+
+//------------SOURCE LOCATION: contains file name, line number and column number of the token----
+
+struct SourceLocation {
+  //------- Properties --------
+  std::string file; // File name (or empty string if not applicable e.g. source code was provided as a memory stream, or through a
+                    // network connection)
+  int line;         // Line number (starting from 1)
+  int column;       // Column number (starting from 1)
+
+  //----------- Constructors -----------
+  // Default constructor initializes to empty file and ZERO line/column
+  SourceLocation(const std::string &file = "", int line = 0, int column = 0) : file(file), line(line), column(column) {}
+
+  //----------- Methods -----------
+  ///@brief convert source location to string (for debugging)
+  std::string to_string() const {
+    return "File: " + file + ", Line: " + std::to_string(line) + ", Column: " + std::to_string(column);
+  }
+};
+
+//------------ TOKEN TYPE (used for dispatching at runtime)---------------
+
+enum class TokenType {
+  // these are the 6 types of token implemented in Pytracer
+  STOP_TOKEN,     // An (optional) token signalling the end of a file
+  KEYWORD,        // A token containing a keyword
+  SYMBOL,         // A token containing a symbol
+  IDENTIFIER,     // A token containing an identifier (i.e. a variable name)
+  LITERAL_STRING, // A token containing a literal string
+  LITERAL_NUMBER  // A token containing a literal number (i.e. a float)
+};
+
+//------------ TOKEN VALUE: variant for possible token values ---------------
+
+using TokenValue = std::variant<std::monostate, bool, KeywordEnum, char, std::string, float>;
+
+//------ TOKEN CLASS: product of `SourceLocation', `TokenType` and `TokenValue` (tagged union pattern in C++) ------
+
+class Token {
+public:
+  //------- Properties --------
+  SourceLocation source_location; // The source location
+  TokenType type;                 // The "tag"
+  TokenValue value;               // The type-safe tagged union
+
+  //----------- Constructors -----------
+  Token(const SourceLocation &loc, TokenType t) : source_location(loc), type(t), value(std::monostate{}) {
+    switch (type) {
+    case TokenType::STOP_TOKEN:
+      value = false; // default stop_token = false
+      break;
+    case TokenType::KEYWORD:
+      value = KeywordEnum::NONE;
+      break;
+    case TokenType::SYMBOL:
+      value = '\0';
+      break;
+    case TokenType::IDENTIFIER:
+      value = std::string("");
+      break;
+    case TokenType::LITERAL_STRING:
+      value = std::string("");
+      break;
+    case TokenType::LITERAL_NUMBER:
+      value = 0.0f;
+      break;
+    }
+  }
+
+  //----------- Methods -----------
+
+  ///@brief assign a stop token (signals EndOfFile)
+  void assign_stop_token(bool b = false) {
+    type = TokenType::STOP_TOKEN;
+    value = b;
+  }
+
+  ///@brief assign a keyword token
+  void assign_keyword(KeywordEnum kw) {
+    type = TokenType::KEYWORD;
+    value = kw;
+  }
+
+  ///@brief assign a single character symbol token
+  void assign_symbol(char c) {
+    type = TokenType::SYMBOL;
+    value = c;
+  }
+
+  ///@brief assign an identifier token (e.g. variable name)
+  void assign_identifier(const std::string &name) {
+    type = TokenType::IDENTIFIER;
+    value = name;
+  }
+
+  ///@brief assign a string token value
+  void assign_string(const std::string &s) {
+    type = TokenType::LITERAL_STRING;
+    value = s;
+  }
+
+  ///@brief assign a numeric token value
+  void assign_number(float val) {
+    type = TokenType::LITERAL_NUMBER;
+    value = val;
+  }
+
+  ///@brief print token information to the console
+  void print() const {
+    std::cout << "Token Type: " << static_cast<int>(type) << ", Value: ";
+    switch (type) {
+    case TokenType::STOP_TOKEN:
+      std::cout << (std::get<bool>(value) ? "true" : "false");
+      break;
+    case TokenType::KEYWORD:
+      std::cout << to_string(std::get<KeywordEnum>(value)) << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value))
+                << ")";
+      break;
+    case TokenType::SYMBOL:
+      std::cout << std::get<char>(value);
+      break;
+    case TokenType::IDENTIFIER:
+      std::cout << std::get<std::string>(value);
+      break;
+    case TokenType::LITERAL_STRING:
+      std::cout << std::get<std::string>(value);
+      break;
+    case TokenType::LITERAL_NUMBER:
+      std::cout << std::get<float>(value);
+      break;
+    default:
+      std::cout << "Unknown token type";
+      break;
+    }
+    std::cout << ", Source Location: " << source_location.to_string() << std::endl;
+  }
+};
+
+//----------------------------------------------------------------------------------------------------
 //------------------- ERROR CLASS FOR GRAMMAR/ LEXER / PARSER ERRORS -------------------------
 //----------------------------------------------------------------------------------------------------
 
@@ -336,40 +341,45 @@ public:
     }
   }
 
-  // --- READ A SINGLE CHARACTER FROM THE STREAM (handles pushback/unreading) ---------------------------------------------
+// --- READ A SINGLE CHARACTER FROM THE STREAM (handles pushback/unreading) ---------------------------------------------
 
-  /// @brief Read a single character from the input stream, handling pushback/unreading of characters
-  char read_char() {
+/// @brief Read a single character from the input stream, handling pushback/unreading of characters
+char read_char() {
     char ch;
 
     if (saved_char.has_value()) { // If a character was pushed back, use it first
-      ch = saved_char.value();
-      saved_char = std::nullopt;
-      // Restore saved location
-      if (saved_location.has_value()) {
-        location = saved_location.value();
-        saved_location = std::nullopt;
-      }
+        ch = saved_char.value();
+        saved_char = std::nullopt;
+        // Restore saved location before consuming the char
+        if (saved_location.has_value()) {
+            location = saved_location.value();
+            saved_location = std::nullopt;
+        }
+        update_pos(ch); // <<---- NEW: Always update the location, even for pushback
     } else {
-      ch = static_cast<char>(stream.get());
-      if (!stream) {
-        ch = 0; // End of stream
-      }
+        saved_location = location; // Save current location so we can restore it in unread_char
+        ch = static_cast<char>(stream.get());
+        if (!stream) {
+            ch = 0; // End of stream
+        }
+        update_pos(ch); // Update the source location based on the character read
     }
 
-    saved_location = location; // Save current location so we can restore it in unread_char
-    update_pos(ch);            // Update the source location based on the character read
     return ch;
-  }
+}
 
-  // --- UNREAD (PUSH BACK) A CHARACTER INTO THE STREAM ---------------------------------------------------------
+// --- UNREAD (PUSH BACK) A CHARACTER INTO THE STREAM ---------------------------------------------------------
 
-  /// @brief Push back a single character into the input stream (for lookahead)
-  void unread_char(char ch) {
-    assert(!saved_char.has_value()); // Only one char of pushback at a time is supported, this should never happen!
+/// @brief Push back a single character into the input stream (for lookahead)
+void unread_char(char ch) {
+    assert(!saved_char.has_value()); // Only one char of pushback at a time is supported, this should never happen
     saved_char = ch;
-    saved_location = location;
-  }
+    // Restore previous location to match what it was before reading the character
+    if (saved_location.has_value()) {
+        location = saved_location.value();
+    }
+}
+
 
   // --- SKIP WHITESPACES AND COMMENTS (we start comments with # ... until end of line) -------------------------
 
@@ -513,7 +523,6 @@ public:
     SourceLocation token_location = location;
 
     // Handle single-character symbols or otherwise start parsing other token types
-    const std::string SYMBOLS = "(){},[]:;=";         // NOTE I am taking these as in Pytracer, adjust as needed
     if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
       Token token(token_location, TokenType::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);

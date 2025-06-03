@@ -75,6 +75,7 @@ add_gtest(shapesTest test/shapes_Gtest.cpp)
 add_gtest(randomTest test/random_Gtest.cpp)
 add_gtest(materialsTest test/materials_Gtest.cpp)
 add_gtest(renderersTest test/renderers_Gtest.cpp)
+add_gtest(scenefilesTest test/scenefiles_Gtest.cpp)
 
 # -------------------------------
 # Disable warnings due to deprecated functions in library include/stb_image_write.h
