@@ -104,9 +104,7 @@ public:
   }
 
   //----------- Destructor -----------
-  ~Token() {
-    destroy_value();
-  }
+  ~Token() { destroy_value(); }
 
   ///@brief destroy the active union field if needed
   void destroy_value() {
@@ -166,15 +164,35 @@ public:
     new (&value.identifier) std::string(name);
   }
 
+  ///@brief convert a TokenType enum to a string (for printing/debugging)
+  static std::string to_string(TokenType t) {
+    switch (t) {
+    case TokenType::STOP_TOKEN:
+      return "STOP_TOKEN";
+    case TokenType::KEYWORD:
+      return "KEYWORD";
+    case TokenType::SYMBOL:
+      return "SYMBOL";
+    case TokenType::IDENTIFIER:
+      return "IDENTIFIER";
+    case TokenType::LITERAL_STRING:
+      return "LITERAL_STRING";
+    case TokenType::LITERAL_NUMBER:
+      return "LITERAL_NUMBER";
+    default:
+      return "UNKNOWN";
+    }
+  }
+
   ///@brief print token information to the console
   void print() const {
-    std::cout << "Token Type: " << static_cast<int>(type) << ", Value: ";
+    std::cout << "Token Type: " << to_string(type) << ", Value: ";
     switch (type) {
     case TokenType::STOP_TOKEN:
       std::cout << (value.stop_token ? "true" : "false");
       break;
     case TokenType::KEYWORD:
-      std::cout << to_string(value.keyword) << " (KeywordEnum: " << static_cast<int>(value.keyword) << ")";
+      std::cout << ::to_string(value.keyword) << " (KeywordEnum: " << static_cast<int>(value.keyword) << ")";
       break;
     case TokenType::SYMBOL:
       std::cout << value.symbol;
@@ -195,7 +213,6 @@ public:
     std::cout << ", Source Location: " << source_location.to_string() << std::endl;
   }
 };
-
 
 //----------------------------------------------------------------------------------------------------
 //------------------- KEYWORDS and related HELPERS -------------------------
