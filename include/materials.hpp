@@ -108,11 +108,10 @@ public:
   /// @brief Construct an ImagePigment from a given HdrImage object
   /// @param image HdrImage object containing the HDR image
   ImagePigment(const HdrImage &image) : image(image) {}
-  
+
   /// @brief Construct an ImagePigment from a given PFM image file
   /// @param filename path to the pfm file containing the HDR image
   ImagePigment(const std::string &filename) : image(filename) {}
-
 
   // ------- Methods -------
   /// @brief Given surface UV coordinates, return the corresponding Color from the texture
@@ -157,6 +156,8 @@ public:
   /// @param outgoing direction
   /// @param uv coordinates of the point on the surface
   virtual Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const = 0;
+  // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
+  // pass them by const reference?
 
   /// @brief scatters ray in random direction using BRDF-based importance sampling
   /// @param pcg used to generate random numbers for importance sampling MC
@@ -191,13 +192,14 @@ public:
   /// @brief evaluate the BRDF at the given point, by definition diffusive BRDF is just the color/pigment divided by pi
   // in fact this method will not be used since BRDF simplifies in importance sampling for MC pathtracing
   Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
+    // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
+    // pass them by const reference?
     return (*pigment)(uv) * (1.f / std::numbers::pi); // dereference pigment pointer, get color at uv coordinates, divide by pi
   }
 
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    // NOTE we should not normalize the normal since the whole point of Duff onb algorithm is to save operations, so if we then
-    //  normalize here it loses sense and we might just as well normalize inside the onb algorithm
-    // normal.normalize();
+    // TODO we should make sure we normalize only once, be it here, in the HitRecord, somewhereelse....
+    normal.normalize();
     ONB onb{normal.to_vector()};
     auto [theta, phi] =
         pcg->random_phong(1); // since diffusive BRDF is constant, doing importance sampling for the rendering integral
@@ -205,12 +207,7 @@ public:
     Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
                      onb.e3 * std::cos(theta)}; // get outgoing direction from the local ONB basis
 
-    // QUESTION why should tmin be bigger than usual? see lab 11 slide 13
-    // ANSWER  My guess is that it because the ray is scattered in a random direction which could be almost parallel to the
-    // surface if we used the same default tolerance as everywhere else in the code, then we would allow these `almost parallel'
-    // rays to immediately hit the scattering surface itself
-    // REMOVE_TAG when you read this comment
-    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth); //QUESTION shouldn't it be depth+1 instead of depth?
+    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth);
   };
 };
 
@@ -218,17 +215,13 @@ public:
 // -----------SPECULAR BRDF  ------------------
 // ------------------------------------------------------------------------------------------------------------
 
-//TODO the actual implementation of the specular BRDF in Tomasi is weird, please check it and see if it makes sense to you
-//the version below is the one I think makes more sense, but it is not the one in Tomasi's Pytracer
 /// @brief BRDF for ideal mirror-like surfaces
 class SpecularBRDF : public BRDF {
 public:
   //-------Properties--------
-  float threshold_angle_rad; // threshold angle between incoming and outgoing directions below which the BRDF is non-zero
 
   //-----------Constructor-----------
-  SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr, float threshold_angle_rad = std::numbers::pi * 0.5f)
-      : BRDF(pigment), threshold_angle_rad(threshold_angle_rad) {
+  SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr) : BRDF(pigment) {
     if (!this->pigment) {
       this->pigment =
           std::make_shared<UniformPigment>(WHITE); // if no pigment is provided, set uniform pigment WHITE for perfect mirror
@@ -240,7 +233,7 @@ public:
   /// @brief Evaluate the BRDF at the given point
   // in fact this method will not be used since BRDF simplifies in importance sampling for MC pathtracing
   Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
-    // QUESTION the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
+    // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
     // pass them by const reference?
     Normal n = normal;
     Vec in = in_dir;
@@ -249,13 +242,13 @@ public:
     in.normalize();
     out.normalize();
 
-    float theta_in = std::acos(n * -in);   // incidence angle
+    float theta_in = std::acos(n * -in);  // incidence angle
     float theta_out = std::acos(n * out); // reflection angle
 
-    
-    if (are_close(theta_in,theta_out) && theta_in < threshold_angle_rad) {
-      return (*pigment)(uv); // if incidence and reflection angles agree and if ray hits the surface from outside (theta_in < pi/2)
-                             // return the color of the pigment at the given uv coordinates
+    // check the reflection law (both angles equal and lie in the reflection plane)
+    if (are_close(theta_in, theta_out) && are_close((in ^ n) * out, 0) && theta_in < std::numbers::pi * 0.5f) {
+      return (*pigment)(uv); // if incidence and reflection angles agree and if ray hits the surface from outside (theta_in <
+                             // pi/2) return the color of the pigment at the given uv coordinates
     } else {
       return Color(0.f, 0.f, 0.f); // otherwise return black
     }
@@ -263,18 +256,14 @@ public:
 
   /// @brief deterministic perfect mirror reflection
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    incoming_dir.normalize(); // QUESTION in pytracer Tomasi normalizes, but it is not necessary... should we remove it and save
-                              // operations? it is not as bad as in the diffusive BRDF case since we do not use montecarlo, still
-                              // it saves operations
+    incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
+                              // somewhereelse
     Vec n = normal.to_vector();
     n.normalize();
 
     Vec reflected = incoming_dir - n * 2.f * (n * incoming_dir);
 
-    // NOTE in pytracer the tmin is set to 1.e-5f for mirror like surfaces, so I guess the bigger tmin for diffusive surfaces is
-    // due the MC direction 
-    //REMOVE_TAG when you read this comment
-    return Ray(intersection_point, reflected, 1.e-5f, infinite, depth); //QUESTION shouldn't it be depth+1 instead of depth?
+    return Ray(intersection_point, reflected, 1.e-5f, infinite, depth);
   }
 };
 
