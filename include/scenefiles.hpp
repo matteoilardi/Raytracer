@@ -17,7 +17,16 @@
 #include <optional> // C++ library for std::optional (used for pushback character and token)
 #include <string>
 #include <unordered_map> // C++ library for unordered maps (analogous to Python dictionaries) much faster than std::map
+#include <unordered_set> // C++ library for unordered sets (needed for overriddenVariables)
 #include <variant>       // C++17 library for type-safe tagged union replacement (used for TokenValue)
+
+#include "cameras.hpp"
+#include "colors.hpp" // include colors.hpp for Color class
+#include "geometry.hpp"
+#include "materials.hpp"
+#include "random.hpp"
+#include "renderers.hpp"
+#include "shapes.hpp"
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -162,12 +171,11 @@ enum class TokenType {
   LITERAL_NUMBER  // A token containing a literal number (i.e. a float)
 };
 
-//------------ TOKEN VALUE: variant for possible token values ---------------
-
-using TokenValue = std::variant<std::monostate, bool, KeywordEnum, char, std::string, float>;
+// ------------ TOKEN VALUE: variant for possible token values ---------------
+using TokenValue = std::variant<std::monostate, KeywordEnum, char, std::string, float>;
+//                ^ STOP_TOKEN is now just std::monostate, not bool
 
 //------ TOKEN CLASS: product of `SourceLocation', `TokenType` and `TokenValue` (tagged union pattern in C++) ------
-
 class Token {
 public:
   //------- Properties --------
@@ -179,7 +187,7 @@ public:
   Token(const SourceLocation &loc, TokenType t) : source_location(loc), type(t), value(std::monostate{}) {
     switch (type) {
     case TokenType::STOP_TOKEN:
-      value = false; // default stop_token = false
+      value = std::monostate{}; // No value needed for STOP_TOKEN
       break;
     case TokenType::KEYWORD:
       value = KeywordEnum::NONE;
@@ -202,9 +210,9 @@ public:
   //----------- Methods -----------
 
   ///@brief assign a stop token (signals EndOfFile)
-  void assign_stop_token(bool b = false) {
+  void assign_stop_token() {
     type = TokenType::STOP_TOKEN;
-    value = b;
+    value = std::monostate{}; // No value needed for STOP_TOKEN
   }
 
   ///@brief assign a keyword token
@@ -242,7 +250,7 @@ public:
     std::cout << "Token Type: " << static_cast<int>(type) << ", Value: ";
     switch (type) {
     case TokenType::STOP_TOKEN:
-      std::cout << (std::get<bool>(value) ? "true" : "false");
+      std::cout << "<STOP_TOKEN>";
       break;
     case TokenType::KEYWORD:
       std::cout << to_string(std::get<KeywordEnum>(value)) << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value))
@@ -265,6 +273,26 @@ public:
       break;
     }
     std::cout << ", Source Location: " << source_location.to_string() << std::endl;
+  }
+
+  ///@brief get the token value as a string (for debugging)
+  std::string type_to_string() const {
+    switch (type) {
+    case TokenType::STOP_TOKEN:
+      return "STOP_TOKEN";
+    case TokenType::KEYWORD:
+      return "KEYWORD";
+    case TokenType::SYMBOL:
+      return "SYMBOL";
+    case TokenType::IDENTIFIER:
+      return "IDENTIFIER";
+    case TokenType::LITERAL_STRING:
+      return "LITERAL_STRING";
+    case TokenType::LITERAL_NUMBER:
+      return "LITERAL_NUMBER";
+    default:
+      return "UNKNOWN_TOKEN_TYPE";
+    }
   }
 };
 
@@ -438,37 +466,37 @@ public:
   // --- PARSE A FLOATING POINT NUMBER --------------------------------------------------------------------------
 
   /// @brief Parse a floating-point number from the input stream
-Token parse_float_token(char first_char, const SourceLocation &token_location) {
+  Token parse_float_token(char first_char, const SourceLocation &token_location) {
     std::string token_str(1, first_char);
 
     // read stream characters until we reach a non-digit character
     while (true) {
-        char ch = read_char();
-        if (!std::isdigit(ch) && ch != '.' && ch != 'e' && ch != 'E') { // Allow digits, '.', 'e', 'E' for scientific notation
-            unread_char(ch);
-            break;
-        }
-        token_str += ch; // Append character to the number string and keep looping
+      char ch = read_char();
+      if (!std::isdigit(ch) && ch != '.' && ch != 'e' && ch != 'E') { // Allow digits, '.', 'e', 'E' for scientific notation
+        unread_char(ch);
+        break;
+      }
+      token_str += ch; // Append character to the number string and keep looping
     }
 
     // try converting the string to a float and creating the token
     try {
-        // ----------- CHANGE STARTS HERE -----------
-        size_t processed = 0;
-        float value = std::stof(token_str, &processed); // Convert the string to a float
-        if (processed != token_str.size()) {
-            // Not all characters were consumed: malformed float (e.g. "12.3.4")
-            throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
-        }
-        // ----------- CHANGE ENDS HERE -----------
-        // Create a token with the parsed number and the appropriate constructor/methods
-        Token token(token_location, TokenType::LITERAL_NUMBER);
-        token.assign_number(value);
-        return token;
-    } catch (...) { // If conversion fails, throw a GrammarError specific for floating-point numbers
+      // ----------- CHANGE STARTS HERE -----------
+      size_t processed = 0;
+      float value = std::stof(token_str, &processed); // Convert the string to a float
+      if (processed != token_str.size()) {
+        // Not all characters were consumed: malformed float (e.g. "12.3.4")
         throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
+      }
+      // ----------- CHANGE ENDS HERE -----------
+      // Create a token with the parsed number and the appropriate constructor/methods
+      Token token(token_location, TokenType::LITERAL_NUMBER);
+      token.assign_number(value);
+      return token;
+    } catch (...) { // If conversion fails, throw a GrammarError specific for floating-point numbers
+      throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
     }
-}
+  }
 
   // --- PARSE A KEYWORD OR IDENTIFIER --------------------------------------------------------------------------
 
@@ -525,7 +553,7 @@ Token parse_float_token(char first_char, const SourceLocation &token_location) {
 
     if (ch == 0) { // You got to the end of file: create and return a STOP_TOKEN
       Token token(token_location, TokenType::STOP_TOKEN);
-      token.assign_stop_token(false);
+      token.assign_stop_token();
       return token;
     }
 
@@ -555,4 +583,111 @@ Token parse_float_token(char first_char, const SourceLocation &token_location) {
     assert(!saved_token); // Only one token of pushback at a time is supported, this should never happen
     saved_token = std::make_shared<Token>(token);
   }
+};
+
+// ------------------------------------------------------------------------------------------------------------
+// ----------------------------------- SCENE DATA STRUCTURE & PARSING METHODS ---------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
+//NOTE I am implementing the parse functions as methods of the scene class, but I am not sure it is the best option
+// in the other case these methods should access the FloatVariables and overriddenVariables in scene class
+
+class Scene {
+public:
+  // ---- properties ----
+  std::unordered_map<std::string, Material> materials; // map of material names to Material objects
+  std::shared_ptr<World> world;
+  std::shared_ptr<Camera> camera = nullptr;
+  std::unordered_map<std::string, float> floatVariables;
+  std::unordered_set<std::string> overriddenVariables;
+
+  // -------- constructors --------
+  Scene() : world(std::make_shared<World>()) {}
+
+  // -------- methods --------
+
+  // -------- parsing helpers: EXPECT_* --------
+
+  /// @brief Read a token and check that it matches the symbol expected from our grammar.
+  void expect_symbol(InputStream &inputFile, char symbol) {
+    Token token = inputFile.read_token();
+    if (token.type != TokenType::SYMBOL || std::get<char>(token.value) != symbol) {
+      throw GrammarError(token.source_location,
+                         "got '" + std::string(1, std::get<char>(token.value)) + "' instead of '" + symbol + "'");
+    }
+  }
+
+  /// @brief Read a token and check it is one of the keywords your grammar allow in that position. Return the keyword.
+  KeywordEnum expect_keywords(InputStream &inputFile, const std::vector<KeywordEnum> &keywords) {
+    // second argument is a {...} list of keywords from KeywordEnum class
+    Token token = inputFile.read_token();
+    if (token.type != TokenType::KEYWORD) {
+      throw GrammarError(token.source_location, "expected a keyword instead of '" + token.type_to_string() + "'");
+    }
+    KeywordEnum kw = std::get<KeywordEnum>(token.value);
+    for (const auto &x : keywords) { // check if the keyword is one of the expected ones
+      if (kw == x)
+        return kw;
+    }
+    throw GrammarError(token.source_location, "unexpected keyword");
+  }
+
+  /// @brief Read a token and check that it is either a literal number or a float variable defined in scene
+  float expect_number(InputStream &inputFile) {
+    Token token = inputFile.read_token();
+    if (token.type == TokenType::LITERAL_NUMBER) {
+      return std::get<float>(token.value);
+    } else if (token.type == TokenType::IDENTIFIER) {
+      const std::string &variableName = std::get<std::string>(token.value);
+      auto map_entry = floatVariables.find(variableName); // look for the `dictionary` entry with the variable name
+      if (map_entry == floatVariables.end()) {            // if not found, throw an error
+        throw GrammarError(token.source_location, "unknown variable '" + variableName + "'");
+      }
+      return map_entry->second; // otherwise return the value of the variable stored in the `dictionary'
+    }
+    throw GrammarError(token.source_location, "got wrong token type instead of a number");
+  }
+
+  /// @brief Read a token and check that it is a literal string
+  std::string expect_string(InputStream &inputFile) {
+    Token token = inputFile.read_token();
+    if (token.type != TokenType::LITERAL_STRING) {
+      throw GrammarError(token.source_location, "got wrong token type instead of a literal string");
+    }
+    return std::get<std::string>(token.value);
+  }
+
+  /// @brief Read a token and check that it is an identifier
+  std::string expect_identifier(InputStream &inputFile) {
+    Token token = inputFile.read_token();
+    if (token.type != TokenType::IDENTIFIER) {
+      throw GrammarError(token.source_location, "got wrong token type instead of an identifier");
+    }
+    return std::get<std::string>(token.value);
+  }
+
+  //-----------------PARSER METHODS-----------------
+
+  ///@brief parse a vector from the input stream (expected format: [x, y, z])
+  Vec parse_vector(InputStream &inputFile) {
+    expect_symbol(inputFile, '[');
+    float x = expect_number(inputFile);
+    expect_symbol(inputFile, ',');
+    float y = expect_number(inputFile);
+    expect_symbol(inputFile, ',');
+    float z = expect_number(inputFile);
+    expect_symbol(inputFile, ']');
+    return Vec(x, y, z);
+  }
+
+  //TODO finish parser methods for the scene file
+  // 1. Color
+  // 2. pigment
+  // 3. BRDF
+  // 4. Material
+  // 5. Transformation
+  // 6. Sphere
+  // 7. Plane
+  // 8. Camera
+  // 9. Point light
 };
