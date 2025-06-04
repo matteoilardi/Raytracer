@@ -56,13 +56,13 @@ TEST(InputStreamTest, test_input_file) {
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 2);
 
-  // change on purpose from 'a' to 'A': you can unread any char X, not necessarily the one you just read
-  stream.unread_char('A');
+  // change on purpose from 'a' to 'X': you can unread any char X, not necessarily the one you just read
+  stream.unread_char('X');
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 1);
 
-  // Now read again, since you just unread 'A', you should get it back
-  EXPECT_EQ(stream.read_char(), 'A');
+  // Now read again, since you just unread 'X', you should get it back
+  EXPECT_EQ(stream.read_char(), 'X');
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 2);
 
