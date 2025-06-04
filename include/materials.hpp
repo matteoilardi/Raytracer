@@ -123,8 +123,8 @@ public:
     int row = static_cast<int>(uv.v * image.height);
 
     // Clamp indices to avoid potential out-of-bounds (only needed if u or v == 1.0)
-    // NOTE Technically, uv should be in [0, 1) so this is just a safety check, but Tomasi has it in Pytracer... should we keep
-    // it?
+    // TODO Technically, uv should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes u or v=1
+    // We should check if these 'if checks' slow down the code significantly, if so, we can remove them
     if (col >= image.width)
       col = image.width - 1;
     if (row >= image.height)

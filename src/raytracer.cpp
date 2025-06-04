@@ -86,14 +86,14 @@ int main(int argc, char **argv) {
   float theta = std::numbers::pi / 2.f;
   float phi = 0.f;
 
-  // specific transformations only make sense for perspective camera
-  // if user selects a transformation, orthogonal flag is automatically set to false
+  // specifying distance only makes sense for perspective camera
+  // if user selects a distance, orthogonal flag is automatically set to false
   demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")->excludes(orthogonal_flag)->default_val(1.f);
 
   demo_subc
       ->add_option_function<float>(
           "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi; },
-          "Specify observer's colatitude angle theta (default is 90 degrees, observer at equator)")
+          "Specify observer's colatitude angle theta (0 degree is north pole)")
       ->default_val(90.f);
 
   demo_subc
@@ -258,10 +258,10 @@ std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int h
                                        {0.0f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}};
 
   // set colors for spheres
-  std::shared_ptr<Pigment> only_emitted_radiance =
+  std::shared_ptr<Pigment> emitted_radiance =
       std::make_shared<CheckeredPigment>(Color(1.f, 0.f, 0.f), Color(0.f, 0.f, 1.f), 4);
-  std::shared_ptr<DiffusiveBRDF> diffusive_brdf = std::make_shared<DiffusiveBRDF>(only_emitted_radiance);
-  std::shared_ptr<Material> material = std::make_shared<Material>(diffusive_brdf, only_emitted_radiance);
+  std::shared_ptr<DiffusiveBRDF> diffusive_brdf = std::make_shared<DiffusiveBRDF>(emitted_radiance);
+  std::shared_ptr<Material> material = std::make_shared<Material>(diffusive_brdf, emitted_radiance);
 
   // add spheres to the world
   for (const Vec &pos : sphere_positions) {
@@ -279,7 +279,6 @@ std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int h
 //--------------------- MonteCarlo path tracing demo image ---------------------
 
 //TODO check implementation and take care of camera orientation (see demo in Tomasi Pytracer)
-
 
 std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, const Transformation &obs_transformation) {
   // 1. Create World
@@ -304,10 +303,7 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   world->add_object(std::make_shared<Plane>(translation(Vec(0.f, 0.f, -2.f)), ground_material));
   world->add_object(std::make_shared<Sphere>(translation(Vec(0.f, 0.f, 1.f)), sphere_material));
 
-  // 4. Add light source //NOTE off for now, it is in Tomasi, maybe turn it on later
- // world->add_light(std::make_shared<PointLight>(Point(10.f, 10.f, 10.f), Color(1.f, 1.f, 1.f), 1.0f));
-
-  // 5. Setup camera
+  // 4. Setup camera
   std::unique_ptr<Camera> camera;
   //Transformation my_obs_transformation = translation(Vec(-4.f, 0.f, 1.f)) * rotation_z(30.f * std::numbers::pi / 180.f);
 
@@ -317,12 +313,12 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
     camera = std::make_unique<PerspectiveCamera>(1.f, static_cast<float>(height) / width, obs_transformation);
   }
 
-  // 6. Render image with Montecarlo path tracing
+  // 5. Render image with Montecarlo path tracing
   auto pcg = std::make_shared<PCG>();
   //PathTracer path_tracer(world, pcg, 10, 2, 4); // tweakable: n_rays, roulette limit, max_depth
   FlatTracer flat_tracer(world, Color(1.f, 0.f, 0.f));
 
-  // 7. Trace the image
+  // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);
   ImageTracer image_tracer(std::move(image), std::move(camera));
   //image_tracer.fire_all_rays(path_tracer);

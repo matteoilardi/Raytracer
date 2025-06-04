@@ -88,7 +88,7 @@ public:
     if (!hit) {
       return background; // Return background color if no object is hit
     }
-    // Return the color of the closest object hit (if any), both the brdf pigment and the emitted radiance (see Tomasi's Pytracer)
+    // Return the color of the closest object hit (if any), both the brdf pigment and the emitted radiance 
     return (*(hit->shape->material->brdf->pigment))(hit->surface_point) +
            (*(hit->shape->material->emitted_radiance))(hit->surface_point);
   };
