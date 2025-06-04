@@ -156,6 +156,7 @@ public:
       if (pcg->random_float() > q) {
         // stop with higher probability if the hit point has low reflactance: this improves efficiency without increasing variance
         // too much Keep a finite stopping probability 0.05 even if hit_lum is close to 1
+        reflected_color = reflected_color * (1.f / (1.f - q));
       } else {
         return emitted_radiance;
       }

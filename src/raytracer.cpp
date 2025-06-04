@@ -301,7 +301,7 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   // 3. Add objects
   Transformation sky_transform = rotation_y(5.f * std::numbers::pi / 6.f)* translation(Vec(0.f, 0.f, 100.f));
   world->add_object(std::make_shared<Plane>(sky_transform, sky_material));
-  world->add_object(std::make_shared<Plane>(Transformation(), ground_material));
+  world->add_object(std::make_shared<Plane>(translation(Vec(0.f, 0.f, -2.f)), ground_material));
   world->add_object(std::make_shared<Sphere>(translation(Vec(0.f, 0.f, 1.f)), sphere_material));
 
   // 4. Add light source //NOTE off for now, it is in Tomasi, maybe turn it on later
@@ -319,12 +319,14 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
 
   // 6. Render image with Montecarlo path tracing
   auto pcg = std::make_shared<PCG>();
-  PathTracer path_tracer(world, pcg, 10, 2, 4); // tweakable: n_rays, roulette limit, max_depth
+  //PathTracer path_tracer(world, pcg, 10, 2, 4); // tweakable: n_rays, roulette limit, max_depth
+  FlatTracer flat_tracer(world, Color(1.f, 0.f, 0.f));
 
   // 7. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);
   ImageTracer image_tracer(std::move(image), std::move(camera));
-  image_tracer.fire_all_rays(path_tracer);
+  //image_tracer.fire_all_rays(path_tracer);
+  image_tracer.fire_all_rays(flat_tracer);
 
   return std::move(image_tracer.image);
 }
