@@ -13,27 +13,27 @@
 // ---- Helper functions for token assertions ------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-void assert_is_keyword(const Token &token, KeywordEnum keyword) {
+void expect_eq_keyword(const Token &token, KeywordEnum keyword) {
   EXPECT_EQ(token.type, TokenType::KEYWORD);
   EXPECT_EQ(std::get<KeywordEnum>(token.value), keyword);
 }
 
-void assert_is_identifier(const Token &token, const std::string &identifier) {
+void expect_eq_identifier(const Token &token, const std::string &identifier) {
   EXPECT_EQ(token.type, TokenType::IDENTIFIER);
   EXPECT_EQ(std::get<std::string>(token.value), identifier);
 }
 
-void assert_is_symbol(const Token &token, char symbol) {
+void expect_eq_symbol(const Token &token, char symbol) {
   EXPECT_EQ(token.type, TokenType::SYMBOL);
   EXPECT_EQ(std::get<char>(token.value), symbol);
 }
 
-void assert_is_number(const Token &token, float number) {
+void expect_eq_number(const Token &token, float number) {
   EXPECT_EQ(token.type, TokenType::LITERAL_NUMBER);
   EXPECT_FLOAT_EQ(std::get<float>(token.value), number);
 }
 
-void assert_is_string(const Token &token, const std::string &s) {
+void expect_eq_string(const Token &token, const std::string &s) {
   EXPECT_EQ(token.type, TokenType::LITERAL_STRING);
   EXPECT_EQ(std::get<std::string>(token.value), s);
 }
@@ -117,28 +117,28 @@ TEST(InputStreamTest, test_lexer) {
   // create an InputStream object with the string stream
   InputStream input_file(ss);
 
-  assert_is_keyword(input_file.read_token(), KeywordEnum::NEW);
-  assert_is_keyword(input_file.read_token(), KeywordEnum::MATERIAL);
-  assert_is_identifier(input_file.read_token(), "sky_material");
-  assert_is_symbol(input_file.read_token(), '(');
-  assert_is_keyword(input_file.read_token(), KeywordEnum::DIFFUSE);
-  assert_is_symbol(input_file.read_token(), '(');
-  assert_is_keyword(input_file.read_token(), KeywordEnum::IMAGE);
-  assert_is_symbol(input_file.read_token(), '(');
-  assert_is_string(input_file.read_token(), "my file.pfm");
-  assert_is_symbol(input_file.read_token(), ')');
-  assert_is_symbol(input_file.read_token(), ')');
-  assert_is_symbol(input_file.read_token(), ',');
+  expect_eq_keyword(input_file.read_token(), KeywordEnum::NEW);
+  expect_eq_keyword(input_file.read_token(), KeywordEnum::MATERIAL);
+  expect_eq_identifier(input_file.read_token(), "sky_material");
+  expect_eq_symbol(input_file.read_token(), '(');
+  expect_eq_keyword(input_file.read_token(), KeywordEnum::DIFFUSE);
+  expect_eq_symbol(input_file.read_token(), '(');
+  expect_eq_keyword(input_file.read_token(), KeywordEnum::IMAGE);
+  expect_eq_symbol(input_file.read_token(), '(');
+  expect_eq_string(input_file.read_token(), "my file.pfm");
+  expect_eq_symbol(input_file.read_token(), ')');
+  expect_eq_symbol(input_file.read_token(), ')');
+  expect_eq_symbol(input_file.read_token(), ',');
 
   // Check <5.0, 500.0, 300.0>
-  assert_is_symbol(input_file.read_token(), '<');
-  assert_is_number(input_file.read_token(), 1.f);
-  assert_is_symbol(input_file.read_token(), ',');
-  assert_is_number(input_file.read_token(), 0.33f);
-  assert_is_symbol(input_file.read_token(), ',');
-  assert_is_number(input_file.read_token(), 0.7f);
-  assert_is_symbol(input_file.read_token(), '>');
-  assert_is_symbol(input_file.read_token(), ')');
+  expect_eq_symbol(input_file.read_token(), '<');
+  expect_eq_number(input_file.read_token(), 1.f);
+  expect_eq_symbol(input_file.read_token(), ',');
+  expect_eq_number(input_file.read_token(), 0.33f);
+  expect_eq_symbol(input_file.read_token(), ',');
+  expect_eq_number(input_file.read_token(), 0.7f);
+  expect_eq_symbol(input_file.read_token(), '>');
+  expect_eq_symbol(input_file.read_token(), ')');
 
   // Should be at end of file since comments and whitespaces are skipped
   Token eof = input_file.read_token();

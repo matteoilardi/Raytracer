@@ -17,11 +17,11 @@
 #include <optional> // C++ library for std::optional (used for pushback character and token)
 #include <string>
 #include <unordered_map> // C++ library for unordered maps (analogous to Python dictionaries) much faster than std::map
-#include <unordered_set> // C++ library for unordered sets (needed for overriddenVariables)
+#include <unordered_set> // C++ library for unordered sets
 #include <variant>       // C++17 library for type-safe tagged union replacement (used for TokenValue)
 
 #include "cameras.hpp"
-#include "colors.hpp" // include colors.hpp for Color class
+#include "colors.hpp"
 #include "geometry.hpp"
 #include "materials.hpp"
 #include "random.hpp"
@@ -40,7 +40,6 @@ enum class KeywordEnum;                     // forward declare our keywords (see
 //----------------------------------------------------------------------------------------------------
 
 /// @brief Enum class representing the keywords used in the scene files
-// NOTE here I am just using those from Pytracer, modify as needed and modify helpers below accordingly
 enum class KeywordEnum {
   NONE = 0, // default fallback
   NEW,
@@ -143,14 +142,13 @@ std::string to_string(KeywordEnum kw) {
 
 struct SourceLocation {
   //------- Properties --------
-  std::string file; // File name (or empty string if not applicable e.g. source code was provided as a memory stream, or through a
-                    // network connection)
+  std::string file; // File name (or empty string if not applicable e.g. source code was provided as a memory stream)
   int line;         // Line number (starting from 1)
   int column;       // Column number (starting from 1)
 
   //----------- Constructors -----------
-  // Default constructor initializes to empty file and ZERO line/column
-  SourceLocation(const std::string &file = "", int line = 0, int column = 0) : file(file), line(line), column(column) {}
+  /// Default constructor initializes to empty file name, line one and column one
+  SourceLocation(const std::string &file = "", int line = 1, int column = 1) : file(file), line(line), column(column) {}
 
   //----------- Methods -----------
   ///@brief convert source location to string (for debugging)
@@ -163,7 +161,7 @@ struct SourceLocation {
 
 enum class TokenType {
   // these are the 6 types of token implemented in Pytracer
-  STOP_TOKEN,     // An (optional) token signalling the end of a file
+  STOP_TOKEN,     // A token signalling the end of a file
   KEYWORD,        // A token containing a keyword
   SYMBOL,         // A token containing a symbol
   IDENTIFIER,     // A token containing an identifier (i.e. a variable name)
@@ -173,7 +171,6 @@ enum class TokenType {
 
 // ------------ TOKEN VALUE: variant for possible token values ---------------
 using TokenValue = std::variant<std::monostate, KeywordEnum, char, std::string, float>;
-//                ^ STOP_TOKEN is now just std::monostate, not bool
 
 //------ TOKEN CLASS: product of `SourceLocation', `TokenType` and `TokenValue` (tagged union pattern in C++) ------
 class Token {
@@ -187,7 +184,7 @@ public:
   Token(const SourceLocation &loc, TokenType t) : source_location(loc), type(t), value(std::monostate{}) {
     switch (type) {
     case TokenType::STOP_TOKEN:
-      value = std::monostate{}; // No value needed for STOP_TOKEN
+      // No value needed for STOP_TOKEN
       break;
     case TokenType::KEYWORD:
       value = KeywordEnum::NONE;
@@ -202,7 +199,7 @@ public:
       value = std::string("");
       break;
     case TokenType::LITERAL_NUMBER:
-      value = 0.0f;
+      value = 0.f;
       break;
     }
   }
@@ -245,37 +242,28 @@ public:
     value = val;
   }
 
-  ///@brief print token information to the console
+  ///@brief print token information
   void print() const {
-    std::cout << "Token Type: " << static_cast<int>(type) << ", Value: ";
+    std::cout << "Token Type: " + type_to_string();
     switch (type) {
     case TokenType::STOP_TOKEN:
-      std::cout << "<STOP_TOKEN>";
       break;
     case TokenType::KEYWORD:
-      std::cout << to_string(std::get<KeywordEnum>(value)) << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value))
-                << ")";
-      break;
+      std::cout << ", Value: " << to_string(std::get<KeywordEnum>(value)) << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value))
+                << ")"; break;
     case TokenType::SYMBOL:
-      std::cout << std::get<char>(value);
-      break;
+      std::cout << ", Value: " << std::get<char>(value); break;
     case TokenType::IDENTIFIER:
-      std::cout << std::get<std::string>(value);
-      break;
+      std::cout << ", Value: " << std::get<std::string>(value); break;
     case TokenType::LITERAL_STRING:
-      std::cout << std::get<std::string>(value);
-      break;
+      std::cout << ", Value: " << std::get<std::string>(value); break;
     case TokenType::LITERAL_NUMBER:
-      std::cout << std::get<float>(value);
-      break;
-    default:
-      std::cout << "Unknown token type";
-      break;
+      std::cout << ", Value: " << std::get<float>(value); break;
     }
     std::cout << ", Source Location: " << source_location.to_string() << std::endl;
   }
 
-  ///@brief get the token value as a string (for debugging)
+  ///@brief get the token value as a string
   std::string type_to_string() const {
     switch (type) {
     case TokenType::STOP_TOKEN:
@@ -290,8 +278,6 @@ public:
       return "LITERAL_STRING";
     case TokenType::LITERAL_NUMBER:
       return "LITERAL_NUMBER";
-    default:
-      return "UNKNOWN_TOKEN_TYPE";
     }
   }
 };
@@ -335,19 +321,19 @@ public:
 class InputStream {
 public:
   //----------- Properties -----------
-  std::istream &stream;           // underlying input stream
-  SourceLocation location;        // current location in the file (filename, line, column)
-  std::optional<char> saved_char; // Character "pushback" buffer (std::optional since possibly empty)
-  SourceLocation saved_location;  // SourceLocation corresponding to the saved_char; not an std::optional: it has a very different
-                                  // role from that of saved_char
-  int tabulations;                // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 8)
-  std::shared_ptr<Token> saved_token; // Token "pushback" buffer (nullptr if unused)
+  std::istream &stream;             // underlying input stream
+  SourceLocation location;          // current location in the file (filename, line, column)
+  std::optional<char> saved_char;   // Character "pushback" buffer (std::optional since possibly empty)
+  SourceLocation saved_location;    // SourceLocation corresponding to the saved_char; not an std::optional: it has a very
+                                    // different role from that of saved_char
+  int tabulations;                  // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 8)
+  std::optional<Token> saved_token; // Token "pushback" buffer (nullptr if unused)
 
   //----------- Constructor -----------
   /// @brief deafult constructor for InputStream (does not take ownership of the stream)
-  InputStream(std::istream &stream_, const std::string &file_name = "", int tabulations_ = 8)
-      : stream(stream_), location(file_name, 1, 1), // Start at line 1, column 1
-        saved_char(std::nullopt), saved_location(file_name, 1, 1), tabulations(tabulations_), saved_token(nullptr) {}
+  InputStream(std::istream &stream, const std::string &file_name = "", int tabulations = 8)
+      : stream(stream), location(file_name), // Start at line 1, column 1
+        saved_char(std::nullopt), saved_location(file_name), tabulations(tabulations), saved_token(std::nullopt) {}
 
   //------------------------------Methods------------------------------------
 
@@ -356,7 +342,7 @@ public:
   // --- UPDATE POSITION AFTER READING A CHARACTER --------------------------------------------------------------
 
   /// @brief Update the SourceLocation after reading character ch
-  void update_pos(char ch) {
+  void _update_pos(char ch) {
     if (ch == 0 || ch == EOF) {
       // Do nothing if there is no character
       return;
@@ -382,12 +368,12 @@ public:
     } else {
       ch = static_cast<char>(stream.get());
       if (!stream) {
-        ch = 0; // End of stream
+        ch = 0; // Assign 0, i. e. '\0' if you reach end of stream (hence this is the last character to be read)
       }
     }
 
     saved_location = location;
-    update_pos(ch); // Update the source location based on the character read
+    _update_pos(ch); // Update the source location based on the character read
     return ch;
   }
 
@@ -472,24 +458,25 @@ public:
       token_str += ch; // Append character to the number string and keep looping
     }
 
-    // try converting the string to a float and creating the token
+    std::size_t processed = 0; // number of characters of the string used to form the float
+    float value;
     try {
-      // ----------- CHANGE STARTS HERE -----------
-      std::size_t processed = 0;                      // number of characters of the string used to form the float
-      float value = std::stof(token_str, &processed); // Convert the string to a float
-      if (processed != token_str.size()) {
-        // Not all characters were consumed: malformed float (e.g. "12.3.4" or "12.4ab")
-        throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
-      }
-      // ----------- CHANGE ENDS HERE -----------
-      // Create a token with the parsed number and the appropriate constructor/methods
-      Token token(token_location, TokenType::LITERAL_NUMBER);
-      token.assign_number(value);
-      return token;
-    } catch (...) { // If conversion fails, throw a GrammarError specific for floating-point numbers
+      value = std::stof(token_str, &processed);
+    } catch (...) {
+      // If string to float conversion fails, throw a GrammarError specific for floating-point numbers
       throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
     }
+    if (processed != token_str.size()) {
+      // Not all characters were consumed: malformed float (e.g. "12.3.4" or "12.4ab")
+      throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
+    }
+
+    // Create a token with the parsed number and the appropriate constructor/methods
+    Token token(token_location, TokenType::LITERAL_NUMBER);
+    token.assign_number(value);
+    return token;
   }
+
 
   // --- PARSE A KEYWORD OR IDENTIFIER --------------------------------------------------------------------------
 
@@ -501,7 +488,7 @@ public:
     while (true) {
       char ch = read_char();
 
-      if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_') { // Accept alphanumeric and '_' for CamelCase identifiers
+      if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_') { // Accept alphanumeric and '_' for snake_case identifiers
         // use std::isalnum built-in function for alphanumeric check
         unread_char(ch);
         break;
@@ -511,12 +498,11 @@ public:
 
     // Check if it is a keyword
     auto kw_it = KEYWORDS.find(token_str);
-    if (kw_it != KEYWORDS.end()) { // if it is a keyword, create a token with the appropriate constructor/methods
+    if (kw_it != KEYWORDS.end()) { // if it is a keyword, create a token accordingly
       Token token(token_location, TokenType::KEYWORD);
       token.assign_keyword(kw_it->second); // kw_it->second is the KeywordEnum value
       return token;
     } else { // If it is not a keyword, it must be an identifier
-      // Create again the appropirate token
       Token token(token_location, TokenType::IDENTIFIER);
       token.assign_identifier(token_str);
       return token;
@@ -530,9 +516,9 @@ public:
   /// @brief read a token from the input stream, skipping whitespace and comments
   /// @return token read from the stream, or a STOP_TOKEN if end of file is reached
   Token read_token() {
-    if (saved_token) {             // Use saved token if available
-      Token result = *saved_token; // Dereference the shared pointer to get the actual Token
-      saved_token = nullptr;
+    if (saved_token.has_value()) {  // Use saved token if available
+      Token result = *saved_token;  // Dereference the shared pointer to get the actual Token
+      saved_token = std::nullopt;
       return result;
     }
 
@@ -546,7 +532,6 @@ public:
 
     if (ch == 0) { // You got to the end of file: create and return a STOP_TOKEN
       Token token(token_location, TokenType::STOP_TOKEN);
-      token.assign_stop_token();
       return token;
     }
 
@@ -555,7 +540,8 @@ public:
       Token token(token_location, TokenType::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);
       return token;
-    } else if (ch == '"') { // If it starts with a double quote, parse a string token
+    } else if (ch == '"') {
+      // If it starts with a double quote, parse a string token
       return parse_string_token(token_location);
     } else if (std::isdigit(ch) || ch == '+' || ch == '-' || ch == '.') {
       // If it starts with a digit or a sign, parse a float token
@@ -573,8 +559,8 @@ public:
 
   /// @brief Push back a token into the input stream (for lookahead)
   void unread_token(const Token &token) {
-    assert(!saved_token); // Only one token of pushback at a time is supported, this should never happen
-    saved_token = std::make_shared<Token>(token);
+    assert(!saved_token.has_value()); // Only one token of lookahead is supported (LL(1) grammar), so this should never happen
+    saved_token = std::make_optional<Token>(token);
   }
 };
 
