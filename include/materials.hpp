@@ -41,6 +41,9 @@ struct Pigment {
   virtual Color operator()(Vec2d uv) const = 0;
 };
 
+//-------------------------------------------------------------------------
+//---------------------- UNIFORM PIGMENT STRUCT ------------------
+//-------------------------------------------------------------------------
 /// @brief returns constant Color
 struct UniformPigment : public Pigment {
 
@@ -58,6 +61,10 @@ struct UniformPigment : public Pigment {
   //------------Methods-----------
   virtual Color operator()(Vec2d uv) const override { return color; };
 };
+
+//-------------------------------------------------------------------------
+//---------------------- CHECKERED PIGMENT STRUCT ------------------
+//-------------------------------------------------------------------------
 
 /// @brief return checkered pattern of two Colors
 struct CheckeredPigment : public Pigment {
@@ -82,6 +89,47 @@ struct CheckeredPigment : public Pigment {
       return color2;
     }
   };
+};
+
+//-------------------------------------------------------------------------------------------------------------
+// -----------IMAGE PIGMENT ------------------
+// ------------------------------------------------------------------------------------------------------------
+/// @brief pigment obtained by wrapping an HDR image (pfm format) around the given shape
+/// @brief uv coordinates on the surface are mapped to column and row of the image and the corresponding pixel color is returned
+class ImagePigment : public Pigment {
+public:
+  // ------- Properties -------
+  HdrImage image; // HDR image used as a texture to be wrapped around the shape
+
+  // ------- Constructors -------
+  /// @brief Construct an ImagePigment from a given HdrImage object
+  /// @param image HdrImage object containing the HDR image
+  ImagePigment(const HdrImage &image) : image(image) {}
+
+  /// @brief Construct an ImagePigment from a given PFM image file
+  /// @param filename path to the pfm file containing the HDR image
+  ImagePigment(const std::string &filename) : image(filename) {}
+
+  // ------- Methods -------
+  /// @brief Given surface UV coordinates, return the corresponding Color from the texture
+  /// @param uv coordinates in [0, 1)^2 identifying a point on the surface
+  /// @return color extracted from the HDR image at that position
+  virtual Color operator()(Vec2d uv) const override {
+    // Convert UV ∈ [0,1) to pixel indices in the image (truncating to floor integer)
+    int col = static_cast<int>(uv.u * image.width);
+    int row = static_cast<int>(uv.v * image.height);
+
+    // Clamp indices to avoid potential out-of-bounds (only needed if u or v == 1.0)
+    // TODO Technically, uv should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes u
+    // or v=1 We should check if these 'if checks' slow down the code significantly, if so, we can remove them
+    if (col >= image.width)
+      col = image.width - 1;
+    if (row >= image.height)
+      row = image.height - 1;
+
+    // Return the corresponding pixel color from the image
+    return image.get_pixel(col, row);
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -115,6 +163,9 @@ public:
                           int depth) const = 0;
 };
 
+//-------------------------------------------------------------------------------------------------------------
+// -----------DIFFUSIVE BRDF  ------------------
+// ------------------------------------------------------------------------------------------------------------
 /// @brief BRDF for isotropic light diffusion
 class DiffusiveBRDF : public BRDF {
 public:
@@ -125,8 +176,7 @@ public:
   //-----------Constructor-----------
   /// @param reflectance of the object
   /// @param pigment of the object
-  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr, float reflectance = 1.f)
-      : BRDF(pigment), reflectance(reflectance) {
+  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr, float reflectance = 1.f) : BRDF(pigment), reflectance(reflectance) {
     if (!this->pigment) {
       this->pigment = std::make_shared<UniformPigment>();
     }
@@ -137,19 +187,73 @@ public:
     return (*pigment)(uv)*reflectance * (1.f / std::numbers::pi);
   }
 
-  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal,
-                  int depth) const override {
+  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
     normal = normal.normalize(); // QUESTION is it necessary?
     ONB onb{normal.to_vector()};
-    auto [theta, phi] =
-        pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to cos(theta),
-                              // hence we perform importance sampling using Phong n=1 distribution
+    auto [theta, phi] = pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to
+                                              // cos(theta), hence we perform importance sampling using Phong n=1 distribution
     Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
                      onb.e3 * std::cos(theta)};
 
     // QUESTION why should tmin be bigger than usual? see lab 11 slide 13
     return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth);
   };
+};
+
+// ------------------------------------------------------------------------------------------------------------
+// -----------SPECULAR BRDF  ------------------
+// ------------------------------------------------------------------------------------------------------------
+
+/// @brief BRDF for ideal mirror-like surfaces
+class SpecularBRDF : public BRDF {
+public:
+  //-------Properties--------
+
+  //-----------Constructor-----------
+  SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr) : BRDF(pigment) {
+    if (!this->pigment) {
+      this->pigment = std::make_shared<UniformPigment>(
+          Color(1.f, 1.f, 1.f)); // if no pigment is provided, set uniform pigment WHITE for perfect mirror
+    }
+  }
+
+  //------------Methods-----------
+
+  /// @brief Evaluate the BRDF at the given point
+  // in fact this method will not be used since BRDF simplifies in importance sampling for MC pathtracing
+  Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
+    // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
+    // pass them by const reference?
+    Normal n = normal;
+    Vec in = in_dir;
+    Vec out = out_dir;
+    n.normalize();
+    in.normalize();
+    out.normalize();
+
+    float theta_in = std::acos(n * -in);  // incidence angle
+    float theta_out = std::acos(n * out); // reflection angle
+
+    // check the reflection law (both angles equal and lie in the reflection plane)
+    if (are_close(theta_in, theta_out) && are_close((in ^ n) * out, 0) && theta_in < std::numbers::pi * 0.5f) {
+      return (*pigment)(uv); // if incidence and reflection angles agree and if ray hits the surface from outside (theta_in <
+                             // pi/2) return the color of the pigment at the given uv coordinates
+    } else {
+      return Color(0.f, 0.f, 0.f); // otherwise return black
+    }
+  }
+
+  /// @brief deterministic perfect mirror reflection
+  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
+    incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
+                              // somewhereelse
+    Vec n = normal.to_vector();
+    n.normalize();
+
+    Vec reflected = incoming_dir - n * 2.f * (n * incoming_dir);
+
+    return Ray(intersection_point, reflected, 1.e-5f, infinite, depth);
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------

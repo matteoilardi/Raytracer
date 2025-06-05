@@ -335,12 +335,13 @@ public:
 class InputStream {
 public:
   //----------- Properties -----------
-  std::istream &stream;                         // underlying input stream
-  SourceLocation location;                      // current location in the file (filename, line, column)
-  std::optional<char> saved_char;               // Character "pushback" buffer (std::optional since possibly empty)
-  SourceLocation saved_location;                // SourceLocation corresponding to the saved_char; not an std::optional: it has a very different role from that of saved_char
-  int tabulations;                              // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 8)
-  std::shared_ptr<Token> saved_token;           // Token "pushback" buffer (nullptr if unused)
+  std::istream &stream;           // underlying input stream
+  SourceLocation location;        // current location in the file (filename, line, column)
+  std::optional<char> saved_char; // Character "pushback" buffer (std::optional since possibly empty)
+  SourceLocation saved_location;  // SourceLocation corresponding to the saved_char; not an std::optional: it has a very different
+                                  // role from that of saved_char
+  int tabulations;                // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 8)
+  std::shared_ptr<Token> saved_token; // Token "pushback" buffer (nullptr if unused)
 
   //----------- Constructor -----------
   /// @brief deafult constructor for InputStream (does not take ownership of the stream)
@@ -396,7 +397,8 @@ public:
   void unread_char(char ch) {
     assert(!saved_char.has_value()); // Only one char of pushback at a time is supported, this should never happen
     saved_char = ch;
-    location = saved_location; // Saved location should always have a value here. If for some reason it hasn't, an exception should be raised
+    location = saved_location; // Saved location should always have a value here. If for some reason it hasn't, an exception
+                               // should be raised
   }
 
   // --- SKIP WHITESPACES AND COMMENTS (we start comments with # ... until end of line) -------------------------
@@ -473,10 +475,10 @@ public:
     // try converting the string to a float and creating the token
     try {
       // ----------- CHANGE STARTS HERE -----------
-      std::size_t processed = 0;
+      std::size_t processed = 0;                      // number of characters of the string used to form the float
       float value = std::stof(token_str, &processed); // Convert the string to a float
       if (processed != token_str.size()) {
-        // Not all characters were consumed: malformed float (e.g. "12.3.4")
+        // Not all characters were consumed: malformed float (e.g. "12.3.4" or "12.4ab")
         throw GrammarError(token_location, "'" + token_str + "' is an invalid floating-point number");
       }
       // ----------- CHANGE ENDS HERE -----------
@@ -580,8 +582,8 @@ public:
 // ----------------------------------- SCENE DATA STRUCTURE & PARSING METHODS ---------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-//NOTE I am implementing the parse functions as methods of the scene class, but I am not sure it is the best option
-// in the other case these methods should access the FloatVariables and overriddenVariables in scene class
+// NOTE I am implementing the parse functions as methods of the scene class, but I am not sure it is the best option
+//  in the other case these methods should access the FloatVariables and overriddenVariables in scene class
 
 class Scene {
 public:
@@ -659,7 +661,7 @@ public:
 
   //-----------------PARSER METHODS-----------------
 
-  ///@brief parse a vector from the input stream (expected format: [x, y, z])
+  ///@brief parse a vector from the input stream (expected format in our grammar: [x, y, z])
   Vec parse_vector(InputStream &inputFile) {
     expect_symbol(inputFile, '[');
     float x = expect_number(inputFile);
@@ -671,14 +673,80 @@ public:
     return Vec(x, y, z);
   }
 
-  //TODO finish parser methods for the scene file
-  // 1. Color
-  // 2. pigment
-  // 3. BRDF
-  // 4. Material
-  // 5. Transformation
-  // 6. Sphere
-  // 7. Plane
-  // 8. Camera
-  // 9. Point light
+  /// @brief parse a color from the input stream (expected format in our grammar: <r, g, b>)
+  Color parse_color(InputStream &input_file) {
+    expect_symbol(input_file, '<');
+    float red = expect_number(input_file);
+    expect_symbol(input_file, ',');
+    float green = expect_number(input_file);
+    expect_symbol(input_file, ',');
+    float blue = expect_number(input_file);
+    expect_symbol(input_file, '>');
+    return Color(red, green, blue);
+  }
+
+  ///@brief parse a pigment from the input stream according to the expected format
+  std::shared_ptr<Pigment> parse_pigment(InputStream &input_file) {
+
+    // make sure the pigment name is one of those expected (and currently implemented)
+    KeywordEnum keyword = expect_keywords(input_file, {KeywordEnum::UNIFORM, KeywordEnum::CHECKERED, KeywordEnum::IMAGE});
+    expect_symbol(input_file, '(');
+    std::shared_ptr<Pigment> result;
+
+    // loop over possible pigment and prase the expected structure depending on the type of pigment
+    if (keyword == KeywordEnum::UNIFORM) {
+      Color color = parse_color(input_file);
+      result = std::make_shared<UniformPigment>(color);
+    } else if (keyword == KeywordEnum::CHECKERED) {
+      Color color1 = parse_color(input_file);
+      expect_symbol(input_file, ',');
+      Color color2 = parse_color(input_file);
+      expect_symbol(input_file, ',');
+      int n_intervals = static_cast<int>(expect_number(input_file));
+      result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
+    } else if (keyword == KeywordEnum::IMAGE) {
+      std::string file_name = expect_string(input_file);
+      std::ifstream image_file(
+          file_name, std::ios::binary); // ios::binary is to open the file in binary mode (for non text files, like images)
+      if (!image_file) {
+        throw GrammarError(input_file.location, "could not open image file: " + file_name);
+      }
+      auto image = std::make_shared<HdrImage>(image_file);
+      result = std::make_shared<ImagePigment>(*image);
+    } else {
+      throw GrammarError(input_file.location, "Unknown pigment type.");
+    }
+    expect_symbol(input_file, ')');
+    return result;
+  }
+
+  /// @brief parse a BRDF from the input stream according to the expected format
+  std::shared_ptr<BRDF> parse_brdf(InputStream &input_file) {
+
+    // make sure the BRDF type is one of those expected (and currently implemented)
+    KeywordEnum brdf_keyword = expect_keywords(input_file, {KeywordEnum::DIFFUSE, KeywordEnum::SPECULAR});
+    expect_symbol(input_file, '(');
+    std::shared_ptr<Pigment> pigment = parse_pigment(input_file);
+    expect_symbol(input_file, ')');
+
+    // depending on the type of BRDF, create the appropriate object
+    if (brdf_keyword == KeywordEnum::DIFFUSE) {
+      return std::make_shared<DiffusiveBRDF>(pigment);
+    } else if (brdf_keyword == KeywordEnum::SPECULAR) {
+      return std::make_shared<SpecularBRDF>(pigment);
+    } else {
+      throw GrammarError(input_file.location, "Unknown BRDF type.");
+    }
+  }
+
+  // TODO finish parser methods for the scene file
+  //  1. Color
+  //  2. pigment
+  //  3. BRDF
+  //  4. Material
+  //  5. Transformation
+  //  6. Sphere
+  //  7. Plane
+  //  8. Camera
+  //  9. Point light
 };
