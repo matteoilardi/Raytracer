@@ -17,7 +17,7 @@
 #include <optional> // C++ library for std::optional (used for pushback character and token)
 #include <string>
 #include <unordered_map> // C++ library for unordered maps (analogous to Python dictionaries) much faster than std::map
-#include <unordered_set> // C++ library for unordered sets
+#include <unordered_set> // C++ library for unordered sets (necessary for command line overwriting of variables)
 #include <variant>       // C++17 library for type-safe tagged union replacement (used for TokenValue)
 
 #include "cameras.hpp"
@@ -568,11 +568,11 @@ public:
 class Scene {
 public:
   // ---- properties ----
-  std::unordered_map<std::string, Material> materials; // map of material names to Material objects
-  std::shared_ptr<World> world;
-  std::shared_ptr<Camera> camera = nullptr;
-  std::unordered_map<std::string, float> floatVariables;
-  std::unordered_set<std::string> overriddenVariables;
+  std::unordered_map<std::string, Material> materials;    // map of material names to Material objects
+  std::shared_ptr<World> world;                           // world object top render
+  std::shared_ptr<Camera> camera = nullptr;               // camera used for firing rays
+  std::unordered_map<std::string, float> float_variables; // float identifiers table
+  std::unordered_set<std::string> overridden_variables;   // set of float identifiers that can be overwritten from command line
 
   // -------- constructors --------
   Scene() : world(std::make_shared<World>()) {}
@@ -582,8 +582,8 @@ public:
   // -------- parsing helpers: EXPECT_* --------
 
   /// @brief Read a token and check that it matches the symbol expected from our grammar.
-  void expect_symbol(InputStream &inputFile, char symbol) {
-    Token token = inputFile.read_token();
+  void expect_symbol(InputStream &input_stream, char symbol) {
+    Token token = input_stream.read_token();
     if (token.type != TokenType::SYMBOL || std::get<char>(token.value) != symbol) {
       throw GrammarError(token.source_location,
                          "got '" + std::string(1, std::get<char>(token.value)) + "' instead of '" + symbol + "'");
@@ -591,50 +591,50 @@ public:
   }
 
   /// @brief Read a token and check it is one of the keywords your grammar allow in that position. Return the keyword.
-  KeywordEnum expect_keywords(InputStream &inputFile, const std::vector<KeywordEnum> &keywords) {
+  KeywordEnum expect_keywords(InputStream &input_stream, const std::vector<KeywordEnum> &keywords) {
     // second argument is a {...} list of keywords from KeywordEnum class
-    Token token = inputFile.read_token();
+    Token token = input_stream.read_token();
     if (token.type != TokenType::KEYWORD) {
-      throw GrammarError(token.source_location, "expected a keyword instead of '" + token.type_to_string() + "'");
+      throw GrammarError(token.source_location, "expected KEYWORD instead of '" + token.type_to_string() + "'");
     }
     KeywordEnum kw = std::get<KeywordEnum>(token.value);
     for (const auto &x : keywords) { // check if the keyword is one of the expected ones
       if (kw == x)
         return kw;
     }
-    throw GrammarError(token.source_location, "unexpected keyword");
+    throw GrammarError(token.source_location, "unexpected KEYWORD");
   }
 
   /// @brief Read a token and check that it is either a literal number or a float variable defined in scene
-  float expect_number(InputStream &inputFile) {
-    Token token = inputFile.read_token();
+  float expect_number(InputStream &input_stream) {
+    Token token = input_stream.read_token();
     if (token.type == TokenType::LITERAL_NUMBER) {
       return std::get<float>(token.value);
     } else if (token.type == TokenType::IDENTIFIER) {
-      const std::string &variableName = std::get<std::string>(token.value);
-      auto map_entry = floatVariables.find(variableName); // look for the `dictionary` entry with the variable name
-      if (map_entry == floatVariables.end()) {            // if not found, throw an error
-        throw GrammarError(token.source_location, "unknown variable '" + variableName + "'");
+      const std::string &variable_name = std::get<std::string>(token.value);
+      auto map_it = float_variables.find(variable_name); // Look for the map entry with the variable name
+      if (map_it == float_variables.end()) {            // If not found, throw an error
+        throw GrammarError(token.source_location, "unknown variable \"" + variable_name + "\"");
       }
-      return map_entry->second; // otherwise return the value of the variable stored in the `dictionary'
+      return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
     }
-    throw GrammarError(token.source_location, "got wrong token type instead of a number");
+    throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of \"" + token.type_to_string() + "\"");
   }
 
   /// @brief Read a token and check that it is a literal string
-  std::string expect_string(InputStream &inputFile) {
-    Token token = inputFile.read_token();
+  std::string expect_string(InputStream &input_stream) {
+    Token token = input_stream.read_token();
     if (token.type != TokenType::LITERAL_STRING) {
-      throw GrammarError(token.source_location, "got wrong token type instead of a literal string");
+      throw GrammarError(token.source_location, "expected LITERAL_STRING instead of \"" + token.type_to_string() + "\"");
     }
     return std::get<std::string>(token.value);
   }
 
   /// @brief Read a token and check that it is an identifier
-  std::string expect_identifier(InputStream &inputFile) {
-    Token token = inputFile.read_token();
+  std::string expect_identifier(InputStream &input_stream) {
+    Token token = input_stream.read_token();
     if (token.type != TokenType::IDENTIFIER) {
-      throw GrammarError(token.source_location, "got wrong token type instead of an identifier");
+      throw GrammarError(token.source_location, "expected IDENTIFIER instead of \"" + token.type_to_string() + "\"");
     }
     return std::get<std::string>(token.value);
   }
@@ -642,88 +642,108 @@ public:
   //-----------------PARSER METHODS-----------------
 
   ///@brief parse a vector from the input stream (expected format in our grammar: [x, y, z])
-  Vec parse_vector(InputStream &inputFile) {
-    expect_symbol(inputFile, '[');
-    float x = expect_number(inputFile);
-    expect_symbol(inputFile, ',');
-    float y = expect_number(inputFile);
-    expect_symbol(inputFile, ',');
-    float z = expect_number(inputFile);
-    expect_symbol(inputFile, ']');
+  Vec parse_vector(InputStream &input_stream) {
+    expect_symbol(input_stream, '[');
+    float x = expect_number(input_stream);
+    expect_symbol(input_stream, ',');
+    float y = expect_number(input_stream);
+    expect_symbol(input_stream, ',');
+    float z = expect_number(input_stream);
+    expect_symbol(input_stream, ']');
     return Vec(x, y, z);
   }
 
   /// @brief parse a color from the input stream (expected format in our grammar: <r, g, b>)
-  Color parse_color(InputStream &input_file) {
-    expect_symbol(input_file, '<');
-    float red = expect_number(input_file);
-    expect_symbol(input_file, ',');
-    float green = expect_number(input_file);
-    expect_symbol(input_file, ',');
-    float blue = expect_number(input_file);
-    expect_symbol(input_file, '>');
+  Color parse_color(InputStream &input_stream) {
+    expect_symbol(input_stream, '<');
+    float red = expect_number(input_stream);
+    expect_symbol(input_stream, ',');
+    float green = expect_number(input_stream);
+    expect_symbol(input_stream, ',');
+    float blue = expect_number(input_stream);
+    expect_symbol(input_stream, '>');
     return Color(red, green, blue);
   }
 
   ///@brief parse a pigment from the input stream according to the expected format
   std::shared_ptr<Pigment> parse_pigment(InputStream &input_file) {
-
-    // make sure the pigment name is one of those expected (and currently implemented)
-    KeywordEnum keyword = expect_keywords(input_file, {KeywordEnum::UNIFORM, KeywordEnum::CHECKERED, KeywordEnum::IMAGE});
-    expect_symbol(input_file, '(');
     std::shared_ptr<Pigment> result;
 
-    // loop over possible pigment and prase the expected structure depending on the type of pigment
-    if (keyword == KeywordEnum::UNIFORM) {
-      Color color = parse_color(input_file);
-      result = std::make_shared<UniformPigment>(color);
-    } else if (keyword == KeywordEnum::CHECKERED) {
-      Color color1 = parse_color(input_file);
-      expect_symbol(input_file, ',');
-      Color color2 = parse_color(input_file);
-      expect_symbol(input_file, ',');
-      int n_intervals = static_cast<int>(expect_number(input_file));
-      result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
-    } else if (keyword == KeywordEnum::IMAGE) {
-      std::string file_name = expect_string(input_file);
-      std::ifstream image_file(
-          file_name, std::ios::binary); // ios::binary is to open the file in binary mode (for non text files, like images)
-      if (!image_file) {
-        throw GrammarError(input_file.location, "could not open image file: " + file_name);
+    // Make sure the pigment name is one of those expected (and currently implemented)
+    KeywordEnum pigment_keyword = expect_keywords(input_file, {KeywordEnum::UNIFORM, KeywordEnum::CHECKERED, KeywordEnum::IMAGE});
+
+    expect_symbol(input_file, '(');
+
+    // Parse the expected structure depending on the type of the pigment
+    switch (pigment_keyword) {
+      case KeywordEnum::UNIFORM: {
+        Color color = parse_color(input_file);
+        result = std::make_shared<UniformPigment>(color);
+        break;
+        }
+      case KeywordEnum::CHECKERED: {
+        Color color1 = parse_color(input_file);
+        expect_symbol(input_file, ',');
+        Color color2 = parse_color(input_file);
+        expect_symbol(input_file, ',');
+        int n_intervals = static_cast<int>(expect_number(input_file));
+        result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
+        break;
+        }
+      case KeywordEnum::IMAGE: {
+        std::string file_name = expect_string(input_file);
+        std::ifstream image_file(
+            file_name, std::ios::binary); // ios::binary is to open the file in binary mode (for non text files, like images)
+        if (!image_file) {
+          throw GrammarError(input_file.location, "could not open image file: " + file_name);
+        }
+        auto image = std::make_shared<HdrImage>(image_file);
+        result = std::make_shared<ImagePigment>(*image);
+        break;
       }
-      auto image = std::make_shared<HdrImage>(image_file);
-      result = std::make_shared<ImagePigment>(*image);
-    } else {
-      throw GrammarError(input_file.location, "Unknown pigment type.");
+      default:
+        throw GrammarError(input_file.location, "unknown pigment type");
     }
+
     expect_symbol(input_file, ')');
     return result;
   }
+  // TODO 1) throw different exception if !file, 2) does it work for images?, 3) check that number is indeed an integer, 4) even the default case of the switch should not throw a GrammarError to be fair
 
   /// @brief parse a BRDF from the input stream according to the expected format
-  std::shared_ptr<BRDF> parse_brdf(InputStream &input_file) {
+  std::shared_ptr<BRDF> parse_brdf(InputStream &input_stream) {
 
-    // make sure the BRDF type is one of those expected (and currently implemented)
-    KeywordEnum brdf_keyword = expect_keywords(input_file, {KeywordEnum::DIFFUSE, KeywordEnum::SPECULAR});
-    expect_symbol(input_file, '(');
-    std::shared_ptr<Pigment> pigment = parse_pigment(input_file);
-    expect_symbol(input_file, ')');
+    // Make sure the BRDF type is one of those expected (and currently implemented)
+    KeywordEnum brdf_keyword = expect_keywords(input_stream, {KeywordEnum::DIFFUSE, KeywordEnum::SPECULAR});
+    expect_symbol(input_stream, '(');
+    std::shared_ptr<Pigment> pigment = parse_pigment(input_stream);
+    expect_symbol(input_stream, ')');
 
-    // depending on the type of BRDF, create the appropriate object
-    if (brdf_keyword == KeywordEnum::DIFFUSE) {
-      return std::make_shared<DiffusiveBRDF>(pigment);
-    } else if (brdf_keyword == KeywordEnum::SPECULAR) {
-      return std::make_shared<SpecularBRDF>(pigment);
-    } else {
-      throw GrammarError(input_file.location, "Unknown BRDF type.");
+    // Depending on the type of BRDF, create the appropriate object
+    switch (brdf_keyword) {
+      case KeywordEnum::DIFFUSE:
+        return std::make_shared<DiffusiveBRDF>(pigment);
+      case KeywordEnum::SPECULAR:
+        return std::make_shared<SpecularBRDF>(pigment);
+      default:
+        throw GrammarError(input_stream.location, "unknown BRDF type");
     }
   }
+  // TODO as in parse_pigment, the last one should not raise a GrammarError
+
+  /// @brief parse a Material from the input stream according to the expected format
+  std::shared_ptr<Material> parse_material(InputStream &input_stream) {
+    expect_symbol(input_stream, '(');
+    auto brdf = parse_brdf(input_stream);
+    expect_symbol(input_stream, ',');
+    auto emitted_radiance = parse_pigment(input_stream);
+    expect_symbol(input_stream, ')');
+
+    return std::make_shared<Material>(brdf, emitted_radiance);
+  }
+
 
   // TODO finish parser methods for the scene file
-  //  1. Color
-  //  2. pigment
-  //  3. BRDF
-  //  4. Material
   //  5. Transformation
   //  6. Sphere
   //  7. Plane
