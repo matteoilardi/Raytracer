@@ -166,8 +166,8 @@ TEST(InputStreamTest, test_GrammarError) {
 
       // Check that the error is reported on line 1, column 1
       // (in IputStream code is arranged so that error are reported from the start of the token)
-      EXPECT_EQ(err.get_location().line, 1);
-      EXPECT_EQ(err.get_location().column, 1);
+      EXPECT_EQ(err.location.line, 1);
+      EXPECT_EQ(err.location.column, 1);
 
     } catch (...) {
       // If an unexpected exception type is thrown, mark the test as failed
@@ -193,8 +193,8 @@ TEST(InputStreamTest, test_GrammarError) {
 
       // Check the error is on line 1, column 1 (where the "@" appears)
       // (in IputStream code is arranged so that error are reported from the start of the token)
-      EXPECT_EQ(err.get_location().line, 1);
-      EXPECT_EQ(err.get_location().column, 1);
+      EXPECT_EQ(err.location.line, 1);
+      EXPECT_EQ(err.location.column, 1);
     } catch (...) {
       // If a different exception is thrown, mark the test as failed
       FAIL() << "Expected GrammarError, got different exception";

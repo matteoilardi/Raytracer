@@ -292,12 +292,12 @@ public:
 /// - `location`: the source location where the error was discovered
 /// - `message`: a user-friendly error message
 class GrammarError : public std::exception {
+public:
   //----------- Properties -----------
   SourceLocation location;  // Location in the source file
   std::string message;      // Human-readable error message (explanation)
   std::string full_message; // Cached full message (location and explanation) for what()
 
-public:
   //----------- Constructors -----------
   GrammarError(const SourceLocation &loc, const std::string &msg) : location(loc), message(msg) {
     full_message = "GrammarError at " + location.to_string() + ": " + message;
@@ -306,12 +306,6 @@ public:
   //----------- Methods -----------
   ///@brief Retrieve the error message as a C-style string (for use with std::exception)
   const char *what() const noexcept override { return full_message.c_str(); }
-
-  ///@brief Access the original SourceLocation of the error
-  const SourceLocation &get_location() const { return location; }
-
-  ///@brief Access the user message
-  const std::string &get_message() const { return message; }
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -343,8 +337,8 @@ public:
 
   /// @brief Update the SourceLocation after reading character ch
   void _update_pos(char ch) {
-    if (ch == 0 || ch == EOF) {
-      // Do nothing if there is no character
+    if (ch == 0) {
+      // Do nothing if you reach end of the stream (read_char() returns '\0' in this case)
       return;
     } else if (ch == '\n') { // new line: increment line number and reset column
       location.line += 1;
