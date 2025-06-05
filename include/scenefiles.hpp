@@ -338,7 +338,7 @@ public:
   std::istream &stream;                         // underlying input stream
   SourceLocation location;                      // current location in the file (filename, line, column)
   std::optional<char> saved_char;               // Character "pushback" buffer (std::optional since possibly empty)
-  std::optional<SourceLocation> saved_location; // SourceLocation corresponding to the saved_char (again std::optional)
+  SourceLocation saved_location;                // SourceLocation corresponding to the saved_char; not an std::optional: it has a very different role from that of saved_char
   int tabulations;                              // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 8)
   std::shared_ptr<Token> saved_token;           // Token "pushback" buffer (nullptr if unused)
 
@@ -346,7 +346,7 @@ public:
   /// @brief deafult constructor for InputStream (does not take ownership of the stream)
   InputStream(std::istream &stream_, const std::string &file_name = "", int tabulations_ = 8)
       : stream(stream_), location(file_name, 1, 1), // Start at line 1, column 1
-        saved_char(std::nullopt), saved_location(std::nullopt), tabulations(tabulations_), saved_token(nullptr) {}
+        saved_char(std::nullopt), saved_location(file_name, 1, 1), tabulations(tabulations_), saved_token(nullptr) {}
 
   //------------------------------Methods------------------------------------
 
@@ -375,24 +375,18 @@ public:
   char read_char() {
     char ch;
 
-    if (saved_char.has_value()) { // If a character was pushed back, use it first
+    if (saved_char.has_value()) {
       ch = saved_char.value();
       saved_char = std::nullopt;
-      // Restore saved location before consuming the char
-      if (saved_location.has_value()) {
-        location = saved_location.value();
-        saved_location = std::nullopt;
-      }
-      update_pos(ch); // <<---- NEW: Always update the location, even for pushback
     } else {
-      saved_location = location; // Save current location so we can restore it in unread_char
       ch = static_cast<char>(stream.get());
       if (!stream) {
         ch = 0; // End of stream
       }
-      update_pos(ch); // Update the source location based on the character read
     }
 
+    saved_location = location;
+    update_pos(ch); // Update the source location based on the character read
     return ch;
   }
 
@@ -402,10 +396,7 @@ public:
   void unread_char(char ch) {
     assert(!saved_char.has_value()); // Only one char of pushback at a time is supported, this should never happen
     saved_char = ch;
-    // Restore previous location to match what it was before reading the character
-    if (saved_location.has_value()) {
-      location = saved_location.value();
-    }
+    location = saved_location; // Saved location should always have a value here. If for some reason it hasn't, an exception should be raised
   }
 
   // --- SKIP WHITESPACES AND COMMENTS (we start comments with # ... until end of line) -------------------------
@@ -482,7 +473,7 @@ public:
     // try converting the string to a float and creating the token
     try {
       // ----------- CHANGE STARTS HERE -----------
-      size_t processed = 0;
+      std::size_t processed = 0;
       float value = std::stof(token_str, &processed); // Convert the string to a float
       if (processed != token_str.size()) {
         // Not all characters were consumed: malformed float (e.g. "12.3.4")
@@ -572,7 +563,7 @@ public:
       return parse_keyword_or_identifier_token(ch, token_location);
     } else {
       // If it is an invalid character (all valid cases are ruled out already), throw a GrammarError
-      throw GrammarError(token_location, std::string("Invalid character: '") + ch + "'");
+      throw GrammarError(token_location, std::string("invalid character: '") + ch + "'");
     }
   }
 

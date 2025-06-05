@@ -82,7 +82,7 @@ add_gtest(scenefilesTest test/scenefiles_Gtest.cpp)
 # -------------------------------
 
 
-foreach(tgt raytracer colorTest geometryTest camerasTest shapesTest randomTest materialsTest renderersTest)
+foreach(tgt raytracer colorTest geometryTest camerasTest shapesTest randomTest materialsTest renderersTest scenefilesTest)
     if(MSVC)
         target_compile_options(${tgt} PRIVATE /wd4996)
     else()

@@ -7,6 +7,7 @@
 #include "scenefiles.hpp"
 #include <gtest/gtest.h>
 #include <sstream>
+#include <iostream>
 
 // ------------------------------------------------------------------------------------------------------------
 // ---- Helper functions for token assertions ------------------------------------------------------------------
@@ -110,7 +111,7 @@ TEST(InputStreamTest, test_lexer) {
         # This is another comment
         new material sky_material(
             diffuse(image("my file.pfm")),
-            <5.0, 500.0, 300.0>
+            <1.0, .33, 0.7>
         ) # Comment at the end of the line
     )");
   // create an InputStream object with the string stream
@@ -131,11 +132,11 @@ TEST(InputStreamTest, test_lexer) {
 
   // Check <5.0, 500.0, 300.0>
   assert_is_symbol(input_file.read_token(), '<');
-  assert_is_number(input_file.read_token(), 5.0f);
+  assert_is_number(input_file.read_token(), 1.f);
   assert_is_symbol(input_file.read_token(), ',');
-  assert_is_number(input_file.read_token(), 500.0f);
+  assert_is_number(input_file.read_token(), 0.33f);
   assert_is_symbol(input_file.read_token(), ',');
-  assert_is_number(input_file.read_token(), 300.0f);
+  assert_is_number(input_file.read_token(), 0.7f);
   assert_is_symbol(input_file.read_token(), '>');
   assert_is_symbol(input_file.read_token(), ')');
 
@@ -188,7 +189,7 @@ TEST(InputStreamTest, test_GrammarError) {
       // If a GrammarError is thrown, control jumps here and the following assertions run
 
       // Check that the error message says 'Invalid character'
-      EXPECT_NE(std::string(err.what()).find("Invalid character"), std::string::npos);
+      EXPECT_NE(std::string(err.what()).find("invalid character"), std::string::npos);
 
       // Check the error is on line 1, column 1 (where the "@" appears)
       // (in IputStream code is arranged so that error are reported from the start of the token)
