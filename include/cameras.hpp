@@ -101,8 +101,7 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  OrthogonalCamera(float asp_ratio = 1.f, Transformation transformation = Transformation())
-      : Camera(asp_ratio, transformation) {}
+  OrthogonalCamera(float asp_ratio = 1.f, Transformation transformation = Transformation()) : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
@@ -130,8 +129,7 @@ public:
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
     Point origin = Point(-distance, 0.f, 0.f);
-    Vec direction =
-        Vec(distance, (1.f - 2.f * u) * asp_ratio, -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
+    Vec direction = Vec(distance, (1.f - 2.f * u) * asp_ratio, -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
     return Ray(origin, direction).transform(transformation);
   };
 };
