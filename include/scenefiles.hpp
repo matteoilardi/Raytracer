@@ -65,8 +65,7 @@ enum class KeywordEnum {
 };
 
 /// @brief map of keywords to their enum values (analogue of Python dictionaries)
-const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"new", KeywordEnum::NEW},
-                                                               {"material", KeywordEnum::MATERIAL},
+const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", KeywordEnum::MATERIAL},
                                                                {"plane", KeywordEnum::PLANE},
                                                                {"sphere", KeywordEnum::SPHERE},
                                                                {"diffuse", KeywordEnum::DIFFUSE},
@@ -89,8 +88,6 @@ const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"new", KeywordEn
 /// @brief convert a keyword enum to its string representation (for debugging and printing)
 std::string to_string(KeywordEnum kw) {
   switch (kw) {
-  case KeywordEnum::NEW:
-    return "new";
   case KeywordEnum::MATERIAL:
     return "material";
   case KeywordEnum::PLANE:
@@ -916,7 +913,7 @@ public:
 
         // Throw if a variable with the same name has already been defined but is not among the overwritten ones
         if (float_variables.count(float_name) && !overwritten_variables.count(float_name)) {
-          throw GrammarError(source_location, "float variable \"" + float_name + "\" already declared and overwriting not allowed");
+          throw GrammarError(source_location, "float variable \"" + float_name + "\" already declared elsewhere in the file");
         }
         expect_symbol(input_stream, '(');
         float float_value = expect_number(input_stream);
@@ -972,4 +969,6 @@ public:
       }
     }
   }
+
+  // TODO implement overwrite_from_CL()
 };

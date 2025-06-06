@@ -109,7 +109,7 @@ TEST(InputStreamTest, test_lexer) {
   std::istringstream ss(R"(
         # This is a comment
         # This is another comment
-        new material sky_material(
+        material sky_material(
             diffuse(image("my file.pfm")),
             <1.0, .33, 0.7>
         ) # Comment at the end of the line
@@ -117,7 +117,6 @@ TEST(InputStreamTest, test_lexer) {
   // create an InputStream object with the string stream
   InputStream input_file(ss);
 
-  expect_eq_keyword(input_file.read_token(), KeywordEnum::NEW);
   expect_eq_keyword(input_file.read_token(), KeywordEnum::MATERIAL);
   expect_eq_identifier(input_file.read_token(), "sky_material");
   expect_eq_symbol(input_file.read_token(), '(');
