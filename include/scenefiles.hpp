@@ -568,11 +568,11 @@ public:
 class Scene {
 public:
   // ---- properties ----
-  std::unordered_map<std::string, Material> materials;    // map of material names to Material objects
+  std::unordered_map<std::string, std::shared_ptr<Material>> materials;    // map of material names to Material objects
   std::shared_ptr<World> world;                           // world object top render
   std::shared_ptr<Camera> camera = nullptr;               // camera used for firing rays
   std::unordered_map<std::string, float> float_variables; // float identifiers table
-  std::unordered_set<std::string> overridden_variables;   // set of float identifiers that can be overwritten from command line
+  std::unordered_set<std::string> overwritten_variables;   // set of float identifiers that can be overwritten from command line
 
   // -------- constructors --------
   Scene() : world(std::make_shared<World>()) {}
@@ -617,9 +617,10 @@ public:
         throw GrammarError(token.source_location, "unknown variable \"" + variable_name + "\"");
       }
       return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
+    } else {
+      throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of \"" + token.type_to_string() + "\"");
     }
-    throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of \"" + token.type_to_string() + "\"");
-  }
+    }
 
   /// @brief Read a token and check that it is a literal string
   std::string expect_string(InputStream &input_stream) {
@@ -708,7 +709,7 @@ public:
     expect_symbol(input_file, ')');
     return result;
   }
-  // TODO 1) throw different exception if !file, 2) does it work for images?, 3) check that number is indeed an integer, 4) even the default case of the switch should not throw a GrammarError to be fair
+  // TODO 1) throw different exception if !file, 2) does it work for images?, 3) check that number is indeed an integer, 4) even the default case of the switch should not throw a GrammarError to be fair (same problem in parse brdf and parse transformation)
 
   /// @brief parse a BRDF from the input stream according to the expected format
   std::shared_ptr<BRDF> parse_brdf(InputStream &input_stream) {
@@ -729,7 +730,6 @@ public:
         throw GrammarError(input_stream.location, "unknown BRDF type");
     }
   }
-  // TODO as in parse_pigment, the last one should not raise a GrammarError
 
   /// @brief parse a Material from the input stream according to the expected format
   std::shared_ptr<Material> parse_material(InputStream &input_stream) {
@@ -742,11 +742,145 @@ public:
     return std::make_shared<Material>(brdf, emitted_radiance);
   }
 
+  /// @brief parse a Transformation from the input stream: lookahead of one token required
+  Transformation parse_transformation(InputStream &input_stream) {
+    Transformation result{};
 
-  // TODO finish parser methods for the scene file
-  //  5. Transformation
-  //  6. Sphere
-  //  7. Plane
-  //  8. Camera
-  //  9. Point light
+    while (true) {
+      KeywordEnum transformation_keyword = expect_keywords(input_stream, {KeywordEnum::IDENTITY, KeywordEnum::TRANSLATION, KeywordEnum::ROTATION_X, KeywordEnum::ROTATION_Y, KeywordEnum::ROTATION_Z, KeywordEnum::SCALING});
+      expect_symbol(input_stream, '(');
+      switch (transformation_keyword) {
+        case KeywordEnum::IDENTITY: {}
+        case KeywordEnum::TRANSLATION: {
+          expect_symbol(input_stream, '(');
+          result = result * translation(parse_vector(input_stream));
+          expect_symbol(input_stream, ')');
+          break;
+        }
+        case KeywordEnum::ROTATION_X: {
+          expect_symbol(input_stream, '(');
+          result = result * rotation_x(expect_number(input_stream));
+          expect_symbol(input_stream, ')');
+          break;
+        }
+        case KeywordEnum::ROTATION_Y: {
+          expect_symbol(input_stream, '(');
+          result = result * rotation_y(expect_number(input_stream));
+          expect_symbol(input_stream, ')');
+          break;
+        }
+        case KeywordEnum::ROTATION_Z: {
+          expect_symbol(input_stream, '(');
+          result = result * rotation_z(expect_number(input_stream));
+          expect_symbol(input_stream, ')');
+          break;
+        }
+        case KeywordEnum::SCALING: {
+          expect_symbol(input_stream, '(');
+          Vec scaling_vec = parse_vector(input_stream);
+          result = result * scaling({scaling_vec.x, scaling_vec.y, scaling_vec.z});
+          expect_symbol(input_stream, ')');
+          break;
+        }
+        default:
+          throw GrammarError(input_stream.location, "unknown transformation type");
+      }
+      expect_symbol(input_stream, ')');
+
+      Token next_token = input_stream.read_token();
+      if (next_token.type != TokenType::SYMBOL || std::get<char>(next_token.value) != '*') {
+        input_stream.unread_token(next_token);
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  /// @brief parse the description of a Sphere from the input stream
+  std::shared_ptr<Sphere> parse_sphere(InputStream &input_stream) {
+    // Parse transformation
+    expect_symbol(input_stream, '(');
+    Transformation sphere_transformation = parse_transformation(input_stream);
+    expect_symbol(input_stream, ',');
+
+    // Parse material identifier
+    SourceLocation source_location = input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
+    std::string material_identifier = expect_identifier(input_stream);
+    auto materials_it = materials.find(material_identifier);   // Look for the material in the material map
+    if (materials_it == materials.end()) {                     // If not found, throw an error
+      throw GrammarError(source_location, "unknown material \"" + material_identifier + "\"");
+    }
+
+    expect_symbol(input_stream, ')');
+    return std::make_shared<Sphere>(sphere_transformation, materials_it->second);
+  }
+
+  /// @brief parse the description of a Plane from the input stream
+  std::shared_ptr<Sphere> parse_plane(InputStream &input_stream) {
+    // Parse transformation
+    expect_symbol(input_stream, '(');
+    Transformation plane_transformation = parse_transformation(input_stream);
+    expect_symbol(input_stream, ',');
+
+    // Parse material identifier
+    SourceLocation source_location = input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
+    std::string material_identifier = expect_identifier(input_stream);
+    auto materials_it = materials.find(material_identifier);   // Look for the material in the material map
+    if (materials_it == materials.end()) {                     // If not found, throw an error
+      throw GrammarError(source_location, "unknown material \"" + material_identifier + "\"");
+    }
+
+    expect_symbol(input_stream, ')');
+    return std::make_shared<Sphere>(plane_transformation, materials_it->second);
+  }
+
+  /// @brief parse the description of a Camera from the input stream
+  std::unique_ptr<Camera> parse_camera(InputStream& input_stream) {
+    expect_symbol(input_stream, '(');
+
+    // Parse Camera type
+    KeywordEnum camera_type = expect_keywords(input_stream, {KeywordEnum::PERSPECTIVE, KeywordEnum::ORTHOGONAL});
+
+    // Parse Transformation
+    expect_symbol(input_stream, ',');
+    Transformation transformation = parse_transformation(input_stream);
+
+    // Parse aspect ratio
+    expect_symbol(input_stream, ',');
+    float asp_ratio = expect_number(input_stream);
+
+    // Parse screen-observer distance (only in case of a PerspectiveCamera)
+    float distance;
+    if (camera_type == KeywordEnum::PERSPECTIVE) {
+      expect_symbol(input_stream, ',');
+      distance = expect_number(input_stream);
+    }
+
+    expect_symbol(input_stream, ')');
+    if (camera_type == KeywordEnum::PERSPECTIVE) {
+      return std::make_unique<PerspectiveCamera>(distance, asp_ratio, transformation);
+    } else { // Only other case: KeywordEnum::ORTHOGONAL
+      return std::make_unique<OrthogonalCamera>(asp_ratio, transformation);
+    }
+  }
+
+  /// @brief parse the description of a PointLightSource from the input stream
+  std::shared_ptr<PointLightSource> parse_point_light(InputStream& input_stream) {
+    expect_symbol(input_stream, '(');
+
+    // Parse position
+    Vec position = parse_vector(input_stream);
+
+    // Parse emitted radiance
+    expect_symbol(input_stream, ',');
+    Color emitted_radiance = parse_color(input_stream);
+
+    // Parse emission radius
+    expect_symbol(input_stream, ',');
+    float emission_radius = expect_number(input_stream);
+
+    return std::make_shared<PointLightSource>(position.to_point(), emitted_radiance, emission_radius);
+  }
+  // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
 };
