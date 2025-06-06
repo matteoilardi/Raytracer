@@ -896,6 +896,8 @@ public:
   }
   // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
 
+  /// @brief Parse a scene from a stream
+  /// @details It is meant to be called after overwrite_from_CL() if you want to overwrite float vars from command line
   void parse_scene(InputStream &input_stream) {
     while (true) {
       Token new_token = input_stream.read_token();
@@ -911,44 +913,45 @@ public:
       switch (keyword) {
       case KeywordEnum::FLOAT: {
         std::string float_name = expect_identifier(input_stream);
-        // See if a variable with the same name has already been defined
-        auto map_it = float_variables.find(float_name);
-        if (map_it != float_variables.end()) {
-          // If so, see if it is a variable for which overwriting is allowed
-          auto set_it = overwritten_variables.find(float_name);
-          if (set_it == overwritten_variables.end()) {
-            throw GrammarError(source_location,
-                               "float variable \"" + float_name + "\" already declared and overwriting not allowed");
-          }
-        } else {
-          // If the variable can be defined or overwritten add map entry
-          expect_symbol(input_stream, '(');
-          float_variables[float_name] = expect_number(input_stream);
-          expect_symbol(input_stream, ')');
+
+        // Throw if a variable with the same name has already been defined but is not among the overwritten ones
+        if (float_variables.count(float_name) && !overwritten_variables.count(float_name)) {
+          throw GrammarError(source_location, "float variable \"" + float_name + "\" already declared and overwriting not allowed");
+        }
+        expect_symbol(input_stream, '(');
+        float float_value = expect_number(input_stream);
+        expect_symbol(input_stream, ')');
+
+        // Assign value only if float_name is not among the overwritten variables
+        if (!overwritten_variables.count(float_name)) {
+          float_variables[float_name] = float_value;
         }
         break;
       }
+
       case KeywordEnum::MATERIAL: {
         std::string material_name = expect_identifier(input_stream);
-        // See if a variable with the same name has already been defined, throw in this case
-        auto map_it = materials.find(material_name);
-        if (map_it != materials.end()) {
-          throw GrammarError(source_location, "float variable \"" + material_name + "\" already declared");
+        // Check if a variable with the same name has already been defined, throw exception in case it has
+        if (materials.count(material_name)) {
+          throw GrammarError(source_location, "material variable \"" + material_name + "\" already declared");
         }
         // Parse material definition and add map entry
         materials[material_name] = parse_material(input_stream);
         break;
       }
+
       case KeywordEnum::SPHERE: {
         // Add Sphere to World
         world->add_object(parse_sphere(input_stream));
         break;
       }
+
       case KeywordEnum::PLANE: {
         // Add Plane to World
         world->add_object(parse_plane(input_stream));
         break;
       }
+
       case KeywordEnum::CAMERA: {
         // Throw if a Camera was already defined
         if (camera) {
@@ -958,10 +961,12 @@ public:
         camera = parse_camera(input_stream);
         break;
       }
+
       case KeywordEnum::POINT_LIGHT: {
         // Add Point Light to World
         world->add_light_source(parse_point_light(input_stream));
       }
+
       default:
         throw GrammarError(source_location, "definition of \"" + to_string(keyword) + "\" not allowed");
       }

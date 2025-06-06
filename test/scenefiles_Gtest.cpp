@@ -78,7 +78,7 @@ TEST(InputStreamTest, test_input_file) {
   EXPECT_EQ(stream.location.column, 4);
 
   // skip whitespaces and comments and check if reading continues correctly
-  stream.skip_whitespaces_and_comments();
+  stream._skip_whitespaces_and_comments();
   EXPECT_EQ(stream.read_char(), 'd');
   EXPECT_EQ(stream.location.line, 2);
   EXPECT_EQ(stream.location.column, 2);
