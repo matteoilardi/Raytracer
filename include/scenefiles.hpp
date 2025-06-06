@@ -249,16 +249,21 @@ public:
     case TokenType::STOP_TOKEN:
       break;
     case TokenType::KEYWORD:
-      std::cout << ", Value: " << to_string(std::get<KeywordEnum>(value)) << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value))
-                << ")"; break;
+      std::cout << ", Value: " << to_string(std::get<KeywordEnum>(value))
+                << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value)) << ")";
+      break;
     case TokenType::SYMBOL:
-      std::cout << ", Value: " << std::get<char>(value); break;
+      std::cout << ", Value: " << std::get<char>(value);
+      break;
     case TokenType::IDENTIFIER:
-      std::cout << ", Value: " << std::get<std::string>(value); break;
+      std::cout << ", Value: " << std::get<std::string>(value);
+      break;
     case TokenType::LITERAL_STRING:
-      std::cout << ", Value: " << std::get<std::string>(value); break;
+      std::cout << ", Value: " << std::get<std::string>(value);
+      break;
     case TokenType::LITERAL_NUMBER:
-      std::cout << ", Value: " << std::get<float>(value); break;
+      std::cout << ", Value: " << std::get<float>(value);
+      break;
     }
     std::cout << ", Source Location: " << source_location.to_string() << std::endl;
   }
@@ -471,7 +476,6 @@ public:
     return token;
   }
 
-
   // --- PARSE A KEYWORD OR IDENTIFIER --------------------------------------------------------------------------
 
   /// @brief Parse a keyword or identifier token from the input stream
@@ -510,8 +514,8 @@ public:
   /// @brief read a token from the input stream, skipping whitespace and comments
   /// @return token read from the stream, or a STOP_TOKEN if end of file is reached
   Token read_token() {
-    if (saved_token.has_value()) {  // Use saved token if available
-      Token result = *saved_token;  // Dereference the shared pointer to get the actual Token
+    if (saved_token.has_value()) { // Use saved token if available
+      Token result = *saved_token; // Dereference the shared pointer to get the actual Token
       saved_token = std::nullopt;
       return result;
     }
@@ -568,11 +572,11 @@ public:
 class Scene {
 public:
   // ---- properties ----
-  std::unordered_map<std::string, std::shared_ptr<Material>> materials;    // map of material names to Material objects
-  std::shared_ptr<World> world;                           // world object top render
-  std::shared_ptr<Camera> camera = nullptr;               // camera used for firing rays
-  std::unordered_map<std::string, float> float_variables; // float identifiers table
-  std::unordered_set<std::string> overwritten_variables;   // set of float identifiers that can be overwritten from command line
+  std::unordered_map<std::string, std::shared_ptr<Material>> materials; // map of material names to Material objects
+  std::shared_ptr<World> world;                                         // world object top render
+  std::shared_ptr<Camera> camera = nullptr;                             // camera used for firing rays
+  std::unordered_map<std::string, float> float_variables;               // float identifiers table
+  std::unordered_set<std::string> overwritten_variables; // set of float identifiers that can be overwritten from command line
 
   // -------- constructors --------
   Scene() : world(std::make_shared<World>()) {}
@@ -613,14 +617,15 @@ public:
     } else if (token.type == TokenType::IDENTIFIER) {
       const std::string &variable_name = std::get<std::string>(token.value);
       auto map_it = float_variables.find(variable_name); // Look for the map entry with the variable name
-      if (map_it == float_variables.end()) {            // If not found, throw an error
+      if (map_it == float_variables.end()) {             // If not found, throw an error
         throw GrammarError(token.source_location, "unknown variable \"" + variable_name + "\"");
       }
       return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
     } else {
-      throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of \"" + token.type_to_string() + "\"");
+      throw GrammarError(token.source_location,
+                         "expected LITERAL_NUMBER or IDENTIFIER instead of \"" + token.type_to_string() + "\"");
     }
-    }
+  }
 
   /// @brief Read a token and check that it is a literal string
   std::string expect_string(InputStream &input_stream) {
@@ -677,39 +682,41 @@ public:
 
     // Parse the expected structure depending on the type of the pigment
     switch (pigment_keyword) {
-      case KeywordEnum::UNIFORM: {
-        Color color = parse_color(input_file);
-        result = std::make_shared<UniformPigment>(color);
-        break;
-        }
-      case KeywordEnum::CHECKERED: {
-        Color color1 = parse_color(input_file);
-        expect_symbol(input_file, ',');
-        Color color2 = parse_color(input_file);
-        expect_symbol(input_file, ',');
-        int n_intervals = static_cast<int>(expect_number(input_file));
-        result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
-        break;
-        }
-      case KeywordEnum::IMAGE: {
-        std::string file_name = expect_string(input_file);
-        std::ifstream image_file(
-            file_name, std::ios::binary); // ios::binary is to open the file in binary mode (for non text files, like images)
-        if (!image_file) {
-          throw GrammarError(input_file.location, "could not open image file: " + file_name);
-        }
-        auto image = std::make_shared<HdrImage>(image_file);
-        result = std::make_shared<ImagePigment>(*image);
-        break;
+    case KeywordEnum::UNIFORM: {
+      Color color = parse_color(input_file);
+      result = std::make_shared<UniformPigment>(color);
+      break;
+    }
+    case KeywordEnum::CHECKERED: {
+      Color color1 = parse_color(input_file);
+      expect_symbol(input_file, ',');
+      Color color2 = parse_color(input_file);
+      expect_symbol(input_file, ',');
+      int n_intervals = static_cast<int>(expect_number(input_file));
+      result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
+      break;
+    }
+    case KeywordEnum::IMAGE: {
+      std::string file_name = expect_string(input_file);
+      std::ifstream image_file(
+          file_name, std::ios::binary); // ios::binary is to open the file in binary mode (for non text files, like images)
+      if (!image_file) {
+        throw GrammarError(input_file.location, "could not open image file: " + file_name);
       }
-      default:
-        throw GrammarError(input_file.location, "unknown pigment type");
+      auto image = std::make_shared<HdrImage>(image_file);
+      result = std::make_shared<ImagePigment>(*image);
+      break;
+    }
+    default:
+      throw GrammarError(input_file.location, "unknown pigment type");
     }
 
     expect_symbol(input_file, ')');
     return result;
   }
-  // TODO 1) throw different exception if !file, 2) does it work for images?, 3) check that number is indeed an integer, 4) even the default case of the switch should not throw a GrammarError to be fair (same problem in parse brdf and parse transformation)
+  // TODO 1) throw different exception if !file, 2) does it work for images?, 3) check that number is indeed an integer, 4) even
+  // the default case of the switch should not throw a GrammarError to be fair (same problem in parse brdf and parse
+  // transformation)
 
   /// @brief parse a BRDF from the input stream according to the expected format
   std::shared_ptr<BRDF> parse_brdf(InputStream &input_stream) {
@@ -722,12 +729,12 @@ public:
 
     // Depending on the type of BRDF, create the appropriate object
     switch (brdf_keyword) {
-      case KeywordEnum::DIFFUSE:
-        return std::make_shared<DiffusiveBRDF>(pigment);
-      case KeywordEnum::SPECULAR:
-        return std::make_shared<SpecularBRDF>(pigment);
-      default:
-        throw GrammarError(input_stream.location, "unknown BRDF type");
+    case KeywordEnum::DIFFUSE:
+      return std::make_shared<DiffusiveBRDF>(pigment);
+    case KeywordEnum::SPECULAR:
+      return std::make_shared<SpecularBRDF>(pigment);
+    default:
+      throw GrammarError(input_stream.location, "unknown BRDF type");
     }
   }
 
@@ -747,43 +754,46 @@ public:
     Transformation result{};
 
     while (true) {
-      KeywordEnum transformation_keyword = expect_keywords(input_stream, {KeywordEnum::IDENTITY, KeywordEnum::TRANSLATION, KeywordEnum::ROTATION_X, KeywordEnum::ROTATION_Y, KeywordEnum::ROTATION_Z, KeywordEnum::SCALING});
+      KeywordEnum transformation_keyword =
+          expect_keywords(input_stream, {KeywordEnum::IDENTITY, KeywordEnum::TRANSLATION, KeywordEnum::ROTATION_X,
+                                         KeywordEnum::ROTATION_Y, KeywordEnum::ROTATION_Z, KeywordEnum::SCALING});
       expect_symbol(input_stream, '(');
       switch (transformation_keyword) {
-        case KeywordEnum::IDENTITY: {}
-        case KeywordEnum::TRANSLATION: {
-          expect_symbol(input_stream, '(');
-          result = result * translation(parse_vector(input_stream));
-          expect_symbol(input_stream, ')');
-          break;
-        }
-        case KeywordEnum::ROTATION_X: {
-          expect_symbol(input_stream, '(');
-          result = result * rotation_x(expect_number(input_stream));
-          expect_symbol(input_stream, ')');
-          break;
-        }
-        case KeywordEnum::ROTATION_Y: {
-          expect_symbol(input_stream, '(');
-          result = result * rotation_y(expect_number(input_stream));
-          expect_symbol(input_stream, ')');
-          break;
-        }
-        case KeywordEnum::ROTATION_Z: {
-          expect_symbol(input_stream, '(');
-          result = result * rotation_z(expect_number(input_stream));
-          expect_symbol(input_stream, ')');
-          break;
-        }
-        case KeywordEnum::SCALING: {
-          expect_symbol(input_stream, '(');
-          Vec scaling_vec = parse_vector(input_stream);
-          result = result * scaling({scaling_vec.x, scaling_vec.y, scaling_vec.z});
-          expect_symbol(input_stream, ')');
-          break;
-        }
-        default:
-          throw GrammarError(input_stream.location, "unknown transformation type");
+      case KeywordEnum::IDENTITY: {
+      }
+      case KeywordEnum::TRANSLATION: {
+        expect_symbol(input_stream, '(');
+        result = result * translation(parse_vector(input_stream));
+        expect_symbol(input_stream, ')');
+        break;
+      }
+      case KeywordEnum::ROTATION_X: {
+        expect_symbol(input_stream, '(');
+        result = result * rotation_x(expect_number(input_stream));
+        expect_symbol(input_stream, ')');
+        break;
+      }
+      case KeywordEnum::ROTATION_Y: {
+        expect_symbol(input_stream, '(');
+        result = result * rotation_y(expect_number(input_stream));
+        expect_symbol(input_stream, ')');
+        break;
+      }
+      case KeywordEnum::ROTATION_Z: {
+        expect_symbol(input_stream, '(');
+        result = result * rotation_z(expect_number(input_stream));
+        expect_symbol(input_stream, ')');
+        break;
+      }
+      case KeywordEnum::SCALING: {
+        expect_symbol(input_stream, '(');
+        Vec scaling_vec = parse_vector(input_stream);
+        result = result * scaling({scaling_vec.x, scaling_vec.y, scaling_vec.z});
+        expect_symbol(input_stream, ')');
+        break;
+      }
+      default:
+        throw GrammarError(input_stream.location, "unknown transformation type");
       }
       expect_symbol(input_stream, ')');
 
@@ -805,10 +815,11 @@ public:
     expect_symbol(input_stream, ',');
 
     // Parse material identifier
-    SourceLocation source_location = input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
+    SourceLocation source_location =
+        input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
     std::string material_identifier = expect_identifier(input_stream);
-    auto materials_it = materials.find(material_identifier);   // Look for the material in the material map
-    if (materials_it == materials.end()) {                     // If not found, throw an error
+    auto materials_it = materials.find(material_identifier); // Look for the material in the material map
+    if (materials_it == materials.end()) {                   // If not found, throw an error
       throw GrammarError(source_location, "unknown material \"" + material_identifier + "\"");
     }
 
@@ -824,10 +835,11 @@ public:
     expect_symbol(input_stream, ',');
 
     // Parse material identifier
-    SourceLocation source_location = input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
+    SourceLocation source_location =
+        input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
     std::string material_identifier = expect_identifier(input_stream);
-    auto materials_it = materials.find(material_identifier);   // Look for the material in the material map
-    if (materials_it == materials.end()) {                     // If not found, throw an error
+    auto materials_it = materials.find(material_identifier); // Look for the material in the material map
+    if (materials_it == materials.end()) {                   // If not found, throw an error
       throw GrammarError(source_location, "unknown material \"" + material_identifier + "\"");
     }
 
@@ -836,7 +848,7 @@ public:
   }
 
   /// @brief parse the description of a Camera from the input stream
-  std::unique_ptr<Camera> parse_camera(InputStream& input_stream) {
+  std::unique_ptr<Camera> parse_camera(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
 
     // Parse Camera type
@@ -866,7 +878,8 @@ public:
   }
 
   /// @brief parse the description of a PointLightSource from the input stream
-  std::shared_ptr<PointLightSource> parse_point_light(InputStream& input_stream) {
+  std::shared_ptr<PointLightSource> parse_point_light(InputStream &input_stream) {
+    // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
     expect_symbol(input_stream, '(');
 
     // Parse position
@@ -882,5 +895,116 @@ public:
 
     return std::make_shared<PointLightSource>(position.to_point(), emitted_radiance, emission_radius);
   }
-  // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
+
+  //---------------------------------------------------------------------------------------
+
+  /// @brief parse a scene from a text
+  Scene parse_scene(InputStream &input_file, const std::unordered_map<std::string, float> &variables) {
+    Scene scene; // Create an empty Scene object
+
+    // 1. Initialize all float variables and keep track of which were set externally (e.g., via command line)
+
+    scene.float_variables = variables; // Copy user-supplied variables (may be used as constants in the scene)
+    for (const auto &pair : variables) {
+      // Each variable supplied is considered 'overwritten' externally and can't be changed by the scene file
+      scene.overwritten_variables.insert(pair.first); // pair.first is the variable name, pair.second is the value
+    }
+
+    scene.world = std::make_shared<World>(); // Create an empty world to hold objects and lights
+
+    // 3. Start the main parsing loop: read all top-level objects in the scene file
+    while (true) {
+      // Read the next token (keyword, symbol, etc.)
+      Token token = input_file.read_token();
+
+      // If we reach end-of-file (STOP_TOKEN), parsing is done
+      if (token.type == TokenType::STOP_TOKEN) {
+        break;
+      }
+
+      // Top-level items in the scene must start with a keyword (e.g., 'sphere', 'material', 'float', etc.)
+      if (token.type != TokenType::KEYWORD) {
+        throw GrammarError(token.source_location, "expected a keyword instead of '" + token.type_to_string() + "'");
+      }
+
+      // Determine such a top level keyword
+      KeywordEnum keyword = std::get<KeywordEnum>(token.value);
+
+      // 4. Handle the different possible top-level objects in a scene file
+      switch (keyword) {
+
+      // Handle variable definition
+      case KeywordEnum::FLOAT: {
+        std::string variable_name = scene.expect_identifier(input_file); // get variable name
+        SourceLocation variable_loc = input_file.location;               // track where for error reporting
+
+        // according to our grammar, the variable definition must be in the form: float variable_name(value)
+        scene.expect_symbol(input_file, '(');                   // must be '('
+        float variable_value = scene.expect_number(input_file); // parse value (can be literal or another variable)
+        scene.expect_symbol(input_file, ')');                   // must be ')'
+
+        // .count(x) on unordered_map or unordered_set checks if x is present
+        if (scene.float_variables.count(variable_name) && !scene.overwritten_variables.count(variable_name)) {
+          throw GrammarError(variable_loc, "variable «" + variable_name + "» cannot be redefined");
+        }
+
+        // If the variable is not already defined or is allowed to be overwritten, set it
+        if (!scene.overwritten_variables.count(variable_name)) {
+
+          scene.float_variables[variable_name] = variable_value; // unordered_map [] operator inserts or updates an entry
+        }
+        break;
+      }
+
+      // Handle sphere objects
+      case KeywordEnum::SPHERE: {
+        scene.world->add_object(scene.parse_sphere(input_file));
+        break;
+      }
+
+      // Handle plane objects
+      case KeywordEnum::PLANE: {
+        scene.world->add_object(scene.parse_plane(input_file));
+        break;
+      }
+
+      //  Handle camera
+      case KeywordEnum::CAMERA: {
+        // Only one camera is allowed
+        if (scene.camera) {
+          throw GrammarError(token.source_location, "You cannot define more than one camera");
+        }
+        // Parse the camera and set it
+        scene.camera = scene.parse_camera(input_file);
+        break;
+      }
+
+      //  Handle materials
+      case KeywordEnum::MATERIAL: {
+        std::string name = scene.expect_identifier(input_file);
+        // Parse the material and add it to the materials map
+        auto material = scene.parse_material(input_file);
+        scene.materials[name] = material; // unordered_map's [] creates or updates the entry
+        break;
+      }
+
+      // Handle point lights
+      case KeywordEnum::POINT_LIGHT: {
+        // Syntax: point_light(...)
+        // Parse and add the point light to the world
+        auto point_light = scene.parse_point_light(input_file);
+        scene.world->add_light_source(point_light);
+        break;
+      }
+
+      // ----------- Any other keyword is an error -------------
+      default:
+        // Error: unknown or misplaced keyword
+        throw GrammarError(token.source_location, "Unexpected token " + to_string(keyword));
+      }
+    }
+
+    // 5. Return the fully constructed scene
+    return scene;
+  }
 };
