@@ -405,8 +405,7 @@ public:
     unread_char(ch);
   }
 
-  // ----- CHECK FOR WHITESPACE (further helper function)
-  // ---------------------------------------------------------------------------
+  // ----- CHECK FOR WHITESPACE (further helper function)--------------------------------------------------------
 
   /// @brief Check if a character is a whitespace character (space, tab, newline, carriage return)
   static bool _is_whitespace(char ch) {
@@ -565,6 +564,7 @@ public:
 
 // NOTE I am implementing the parse functions as methods of the scene class, but I am not sure it is the best option
 //  in the other case these methods should access the FloatVariables and overriddenVariables in scene class
+//REMOVE_TAG when you read (we already agreed on keeping everything inside the scene class)
 
 class Scene {
 public:

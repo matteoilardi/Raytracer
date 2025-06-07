@@ -1,13 +1,13 @@
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
-// TESTS FOR INPUT STREAM and its LEXER METHODS
+// TESTS FOR SCENE_FILES (Token, InputStream, Scene, GrammarErrro, Lexer and Parser)
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
 #include "scenefiles.hpp"
 #include <gtest/gtest.h>
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
 // ------------------------------------------------------------------------------------------------------------
 // ---- Helper functions for token assertions ------------------------------------------------------------------
@@ -202,9 +202,10 @@ TEST(InputStreamTest, test_GrammarError) {
 }
 
 // -------------- Test parser (implemented in Scene) ----------------
-// TODO angles: degrees or rads????
+// TODO angles: degrees or rads???? //QUESTION Are you asking if we want to switch to radians?
 // TODO perhaps change name of parse_scene?
 TEST(SceneTest, test_parser) {
+  // create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
   std::istringstream ss(R"(
 		float clock(150)
 
@@ -249,15 +250,20 @@ TEST(SceneTest, test_parser) {
   EXPECT_EQ(scene.materials.count("sky_material"), 1);
   EXPECT_EQ(scene.materials.count("ground_material"), 1);
 
+  // retrieve the pointers to the materials and the BRDFs
   auto sphere_material = scene.materials["sphere_material"];
   auto sky_material = scene.materials["sky_material"];
   auto ground_material = scene.materials["ground_material"];
 
-  auto sky_brdf = dynamic_pointer_cast<DiffusiveBRDF>(sky_material->brdf); // dynamic_cast is trying to convert a smart pointer to the base class into a smart pointer to a specific derived class: this fails unless the object it is pointing to is actually an instance of the derived class
+  auto sky_brdf = dynamic_pointer_cast<DiffusiveBRDF>(sky_material->brdf);
   auto sky_brdf_pigment = dynamic_pointer_cast<UniformPigment>(sky_material->brdf->pigment);
+  // dynamic_pointer_cast converts a smart pointer to the base class into a smart pointer to a specific derived class
+  //it fails (returns nullptr) if the object pointed at is NOT an instance of the derived class
+
   EXPECT_TRUE(sky_brdf);
   EXPECT_TRUE(sky_brdf_pigment);
-  EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // color is a member of UniformPigment only, not of the base class so dynamic_pointer_cast is required for this line to compile
+  EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // color is a member of UniformPigment only, not of the base class so
+                                                          // dynamic_pointer_cast is required for this line to compile
 
   auto ground_brdf = dynamic_pointer_cast<DiffusiveBRDF>(ground_material->brdf);
   auto ground_brdf_pigment = dynamic_pointer_cast<CheckeredPigment>(ground_material->brdf->pigment);
