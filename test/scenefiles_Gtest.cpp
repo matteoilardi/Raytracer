@@ -200,3 +200,102 @@ TEST(InputStreamTest, test_GrammarError) {
     }
   }
 }
+
+// -------------- Test parser (implemented in Scene) ----------------
+// TODO angles: degrees or rads????
+// TODO perhaps change name of parse_scene?
+TEST(SceneTest, test_parser) {
+  std::istringstream ss(R"(
+		float clock(150)
+
+        material sky_material(
+            diffuse(uniform(<0, 0, 0>)),
+            uniform(<0.7, 0.5, 1>)
+        )
+
+        # Here is a comment
+
+        material ground_material(
+            diffuse(checkered(<0.3, 0.5, 0.1>,
+                              <0.1, 0.2, 0.5>, 4)),
+            uniform(<0, 0, 0>)
+        )
+
+        material sphere_material(
+            specular(uniform(<0.5, 0.5, 0.5>)),
+            uniform(<0, 0, 0>)
+        )
+
+        plane (translation([0, 0, 100]) * rotation_y(clock), sky_material)
+        plane(identity, ground_material)
+
+        sphere(translation([0, 0, 1]), sphere_material)
+
+        camera(perspective, rotation_z(30) * translation([-4, 0, 1]), 1.0, 2.0)
+        )");
+
+  InputStream input_stream(ss);
+  Scene scene;
+  scene.parse_scene(input_stream);
+
+  // Check defined float variables
+  EXPECT_EQ(scene.float_variables.size(), 1);
+  EXPECT_EQ(scene.float_variables.count("clock"), 1);
+  EXPECT_EQ(scene.float_variables["clock"], 150.f);
+
+  // Check defined Materials
+  EXPECT_EQ(scene.materials.size(), 3);
+  EXPECT_EQ(scene.materials.count("sphere_material"), 1);
+  EXPECT_EQ(scene.materials.count("sky_material"), 1);
+  EXPECT_EQ(scene.materials.count("ground_material"), 1);
+
+  auto sphere_material = scene.materials["sphere_material"];
+  auto sky_material = scene.materials["sky_material"];
+  auto ground_material = scene.materials["ground_material"];
+
+  auto sky_brdf = dynamic_pointer_cast<DiffusiveBRDF>(sky_material->brdf); // dynamic_cast is trying to convert a smart pointer to the base class into a smart pointer to a specific derived class: this fails unless the object it is pointing to is actually an instance of the derived class
+  auto sky_brdf_pigment = dynamic_pointer_cast<UniformPigment>(sky_material->brdf->pigment);
+  EXPECT_TRUE(sky_brdf);
+  EXPECT_TRUE(sky_brdf_pigment);
+  EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // color is a member of UniformPigment only, not of the base class so dynamic_pointer_cast is required for this line to compile
+
+  auto ground_brdf = dynamic_pointer_cast<DiffusiveBRDF>(ground_material->brdf);
+  auto ground_brdf_pigment = dynamic_pointer_cast<CheckeredPigment>(ground_material->brdf->pigment);
+  EXPECT_TRUE(ground_brdf);
+  EXPECT_TRUE(ground_brdf_pigment);
+  EXPECT_TRUE(ground_brdf_pigment->color1.is_close(Color(0.3f, 0.5f, 0.1f)));
+  EXPECT_TRUE(ground_brdf_pigment->color2.is_close(Color(0.1f, 0.2f, 0.5f)));
+  EXPECT_EQ(ground_brdf_pigment->n_intervals, 4);
+
+  auto sphere_brdf = dynamic_pointer_cast<SpecularBRDF>(sphere_material->brdf);
+  auto sphere_brdf_pigment = dynamic_pointer_cast<UniformPigment>(sphere_material->brdf->pigment);
+  EXPECT_TRUE(sphere_brdf);
+  EXPECT_TRUE(sphere_brdf_pigment);
+  EXPECT_TRUE(sphere_brdf_pigment->color.is_close(Color(0.5f, 0.5f, 0.5f)));
+
+  auto sky_emitted_radiance = dynamic_pointer_cast<UniformPigment>(sky_material->emitted_radiance);
+  auto ground_emitted_radiance = dynamic_pointer_cast<UniformPigment>(ground_material->emitted_radiance);
+  auto sphere_emitted_radiance = dynamic_pointer_cast<UniformPigment>(sphere_material->emitted_radiance);
+  EXPECT_TRUE(sky_emitted_radiance);
+  EXPECT_TRUE(sky_emitted_radiance->color.is_close(Color(0.7f, 0.5f, 1.f)));
+  EXPECT_TRUE(ground_emitted_radiance);
+  EXPECT_TRUE(ground_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
+  EXPECT_TRUE(sphere_emitted_radiance);
+  EXPECT_TRUE(sphere_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
+
+  // Check defined Shapes
+  EXPECT_EQ(scene.world->objects.size(), 3);
+  EXPECT_TRUE(dynamic_pointer_cast<Plane>(scene.world->objects[0]));
+  EXPECT_TRUE(scene.world->objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(150.f)));
+  EXPECT_TRUE(dynamic_pointer_cast<Plane>(scene.world->objects[1]));
+  EXPECT_TRUE(scene.world->objects[1]->transformation.is_close(Transformation()));
+  EXPECT_TRUE(dynamic_pointer_cast<Sphere>(scene.world->objects[2]));
+  EXPECT_TRUE(scene.world->objects[2]->transformation.is_close(translation(Vec(0.f, 0.f, 1.f))));
+
+  // Check defined Camera
+  auto cam = dynamic_pointer_cast<PerspectiveCamera>(scene.camera);
+  EXPECT_TRUE(cam);
+  EXPECT_TRUE(cam->transformation.is_close(rotation_z(30.f) * translation(Vec(-4.f, 0.f, 1.f))));
+  EXPECT_TRUE(are_close(cam->asp_ratio, 1.f));
+  EXPECT_TRUE(are_close(cam->distance, 2.f));
+}

@@ -32,7 +32,7 @@
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
 // ----------------------------------------------------------------------------------------
 
-const std::string SYMBOLS = "(){},[]:;=<>"; // declare our symbols // NOTE adjust as needed
+const std::string SYMBOLS = "()[]<>,*"; // declare our symbols // NOTE adjust as needed
 enum class KeywordEnum;                     // forward declare our keywords (see section below)
 
 //----------------------------------------------------------------------------------------------------
@@ -327,7 +327,7 @@ public:
 
   //----------- Constructor -----------
   /// @brief deafult constructor for InputStream (does not take ownership of the stream)
-  InputStream(std::istream &stream, const std::string &file_name = "", int tabulations = 8)
+  InputStream(std::istream &stream, const std::string &file_name = "", int tabulations = 4)
       : stream(stream), location(file_name), // Start at line 1, column 1
         saved_char(std::nullopt), saved_location(file_name), tabulations(tabulations), saved_token(std::nullopt) {}
 
@@ -754,9 +754,9 @@ public:
       KeywordEnum transformation_keyword =
           expect_keywords(input_stream, {KeywordEnum::IDENTITY, KeywordEnum::TRANSLATION, KeywordEnum::ROTATION_X,
                                          KeywordEnum::ROTATION_Y, KeywordEnum::ROTATION_Z, KeywordEnum::SCALING});
-      expect_symbol(input_stream, '(');
       switch (transformation_keyword) {
       case KeywordEnum::IDENTITY: {
+        break;
       }
       case KeywordEnum::TRANSLATION: {
         expect_symbol(input_stream, '(');
@@ -792,7 +792,6 @@ public:
       default:
         throw GrammarError(input_stream.location, "unknown transformation type");
       }
-      expect_symbol(input_stream, ')');
 
       Token next_token = input_stream.read_token();
       if (next_token.type != TokenType::SYMBOL || std::get<char>(next_token.value) != '*') {
@@ -825,7 +824,7 @@ public:
   }
 
   /// @brief parse the description of a Plane from the input stream
-  std::shared_ptr<Sphere> parse_plane(InputStream &input_stream) {
+  std::shared_ptr<Plane> parse_plane(InputStream &input_stream) {
     // Parse transformation
     expect_symbol(input_stream, '(');
     Transformation plane_transformation = parse_transformation(input_stream);
@@ -841,7 +840,7 @@ public:
     }
 
     expect_symbol(input_stream, ')');
-    return std::make_shared<Sphere>(plane_transformation, materials_it->second);
+    return std::make_shared<Plane>(plane_transformation, materials_it->second);
   }
 
   /// @brief parse the description of a Camera from the input stream
@@ -868,7 +867,9 @@ public:
 
     expect_symbol(input_stream, ')');
     if (camera_type == KeywordEnum::PERSPECTIVE) {
-      return std::make_shared<PerspectiveCamera>(distance, asp_ratio, transformation);
+      auto cam =  std::make_shared<PerspectiveCamera>(distance, asp_ratio, transformation);
+      std::cout << cam->distance << std::endl;
+      return cam;
     } else { // Only other case: KeywordEnum::ORTHOGONAL
       return std::make_shared<OrthogonalCamera>(asp_ratio, transformation);
     }
