@@ -57,8 +57,7 @@ TEST(SphereTest, test_translation) {
 
   Ray ray2 = Ray(Point(13.f, 0.f, 0.f), -VEC_X);
   std::optional<HitRecord> hit2 = translated_sphere->ray_intersection(ray2);
-  HitRecord expected2 =
-      HitRecord(translated_sphere, Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
+  HitRecord expected2 = HitRecord(translated_sphere, Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
   ASSERT_TRUE(hit2);
   EXPECT_TRUE(hit2.value().is_close(expected2));
 

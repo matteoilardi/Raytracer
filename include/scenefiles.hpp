@@ -33,7 +33,7 @@
 // ----------------------------------------------------------------------------------------
 
 const std::string SYMBOLS = "()[]<>,*"; // declare our symbols // NOTE adjust as needed
-enum class KeywordEnum;                     // forward declare our keywords (see section below)
+enum class KeywordEnum;                 // forward declare our keywords (see section below)
 
 //----------------------------------------------------------------------------------------------------
 //------------------- KEYWORDS and related HELPERS -------------------------
@@ -65,25 +65,17 @@ enum class KeywordEnum {
 };
 
 /// @brief map of keywords to their enum values (analogue of Python dictionaries)
-const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", KeywordEnum::MATERIAL},
-                                                               {"plane", KeywordEnum::PLANE},
-                                                               {"sphere", KeywordEnum::SPHERE},
-                                                               {"diffuse", KeywordEnum::DIFFUSE},
-                                                               {"specular", KeywordEnum::SPECULAR},
-                                                               {"uniform", KeywordEnum::UNIFORM},
-                                                               {"checkered", KeywordEnum::CHECKERED},
-                                                               {"image", KeywordEnum::IMAGE},
-                                                               {"identity", KeywordEnum::IDENTITY},
-                                                               {"translation", KeywordEnum::TRANSLATION},
-                                                               {"rotation_x", KeywordEnum::ROTATION_X},
-                                                               {"rotation_y", KeywordEnum::ROTATION_Y},
-                                                               {"rotation_z", KeywordEnum::ROTATION_Z},
-                                                               {"scaling", KeywordEnum::SCALING},
-                                                               {"camera", KeywordEnum::CAMERA},
-                                                               {"orthogonal", KeywordEnum::ORTHOGONAL},
-                                                               {"perspective", KeywordEnum::PERSPECTIVE},
-                                                               {"float", KeywordEnum::FLOAT},
-                                                               {"point_light", KeywordEnum::POINT_LIGHT}};
+const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {
+    {"material", KeywordEnum::MATERIAL},       {"plane", KeywordEnum::PLANE},
+    {"sphere", KeywordEnum::SPHERE},           {"diffuse", KeywordEnum::DIFFUSE},
+    {"specular", KeywordEnum::SPECULAR},       {"uniform", KeywordEnum::UNIFORM},
+    {"checkered", KeywordEnum::CHECKERED},     {"image", KeywordEnum::IMAGE},
+    {"identity", KeywordEnum::IDENTITY},       {"translation", KeywordEnum::TRANSLATION},
+    {"rotation_x", KeywordEnum::ROTATION_X},   {"rotation_y", KeywordEnum::ROTATION_Y},
+    {"rotation_z", KeywordEnum::ROTATION_Z},   {"scaling", KeywordEnum::SCALING},
+    {"camera", KeywordEnum::CAMERA},           {"orthogonal", KeywordEnum::ORTHOGONAL},
+    {"perspective", KeywordEnum::PERSPECTIVE}, {"float", KeywordEnum::FLOAT},
+    {"point_light", KeywordEnum::POINT_LIGHT}};
 
 /// @brief convert a keyword enum to its string representation (for debugging and printing)
 std::string to_string(KeywordEnum kw) {
@@ -317,13 +309,14 @@ public:
 class InputStream {
 public:
   //----------- Properties -----------
-  std::istream &stream;             // underlying input stream
-  SourceLocation location;          // current location in the file (filename, line, column)
-  std::optional<char> saved_char;   // Character "pushback" buffer (std::optional since possibly empty)
-  SourceLocation saved_location;    // SourceLocation corresponding to the saved_char; not an std::optional: it has a very
-                                    // different role from that of saved_char
-  int tabulations;                  // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 8)
-  std::optional<Token> saved_token; // Token "pushback" buffer (nullptr if unused)
+  std::istream &stream;                   // underlying input stream
+  SourceLocation location;                // current location in the file (filename, line, column)
+  std::optional<char> saved_char;         // Character "pushback" buffer (std::optional since possibly empty)
+  SourceLocation saved_location;          // SourceLocation corresponding to the saved_char; not an std::optional: it has a very
+                                          // different role from that of saved_char
+  int tabulations;                        // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 4)
+  std::optional<Token> saved_token;       // Token "pushback" buffer (nullptr if unused)
+  SourceLocation last_on_stream_location; // ......
 
   //----------- Constructor -----------
   /// @brief deafult constructor for InputStream (does not take ownership of the stream)
@@ -511,8 +504,9 @@ public:
   /// @return token read from the stream, or a STOP_TOKEN if end of file is reached
   Token read_token() {
     if (saved_token.has_value()) { // Use saved token if available
-      Token result = *saved_token; // Dereference the shared pointer to get the actual Token
+      Token result = *saved_token;
       saved_token = std::nullopt;
+      location = last_on_stream_location;
       return result;
     }
 
@@ -533,16 +527,23 @@ public:
     if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
       Token token(token_location, TokenType::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);
+      _skip_whitespaces_and_comments(); // NOT SURE!
       return token;
     } else if (ch == '"') {
       // If it starts with a double quote, parse a string token
-      return parse_string_token(token_location);
+      Token token = parse_string_token(token_location);
+      _skip_whitespaces_and_comments(); // NOT SURE!
+      return token;
     } else if (std::isdigit(ch) || ch == '+' || ch == '-' || ch == '.') {
       // If it starts with a digit or a sign, parse a float token
-      return parse_float_token(ch, token_location);
+      Token token = parse_float_token(ch, token_location);
+      _skip_whitespaces_and_comments(); // NOT SURE!
+      return token;
     } else if (std::isalpha(static_cast<unsigned char>(ch)) || ch == '_') {
       // If it starts with an alphabetic character or '_', parse a keyword or identifier token
-      return parse_keyword_or_identifier_token(ch, token_location);
+      Token token = parse_keyword_or_identifier_token(ch, token_location);
+      _skip_whitespaces_and_comments(); // NOT SURE!
+      return token;
     } else {
       // If it is an invalid character (all valid cases are ruled out already), throw a GrammarError
       throw GrammarError(token_location, std::string("invalid character: '") + ch + "'");
@@ -555,6 +556,8 @@ public:
   void unread_token(const Token &token) {
     assert(!saved_token.has_value()); // Only one token of lookahead is supported (LL(1) grammar), so this should never happen
     saved_token = std::make_optional<Token>(token);
+    last_on_stream_location = location;
+    location = token.source_location;
   }
 };
 
@@ -596,7 +599,7 @@ public:
     // second argument is a {...} list of keywords from KeywordEnum class
     Token token = input_stream.read_token();
     if (token.type != TokenType::KEYWORD) {
-      throw GrammarError(token.source_location, "expected KEYWORD instead of '" + token.type_to_string() + "'");
+      throw GrammarError(token.source_location, "expected KEYWORD instead of " + token.type_to_string());
     }
     KeywordEnum kw = std::get<KeywordEnum>(token.value);
     for (const auto &x : keywords) { // check if the keyword is one of the expected ones
@@ -748,7 +751,7 @@ public:
 
   /// @brief parse a Transformation from the input stream: lookahead of one token required
   Transformation parse_transformation(InputStream &input_stream) {
-    Transformation result{};
+    Transformation result{}; // Initialize with identity
 
     while (true) {
       KeywordEnum transformation_keyword =
@@ -867,8 +870,7 @@ public:
 
     expect_symbol(input_stream, ')');
     if (camera_type == KeywordEnum::PERSPECTIVE) {
-      auto cam =  std::make_shared<PerspectiveCamera>(distance, asp_ratio, transformation);
-      std::cout << cam->distance << std::endl;
+      auto cam = std::make_shared<PerspectiveCamera>(distance, asp_ratio, transformation);
       return cam;
     } else { // Only other case: KeywordEnum::ORTHOGONAL
       return std::make_shared<OrthogonalCamera>(asp_ratio, transformation);
@@ -953,7 +955,7 @@ public:
       case KeywordEnum::CAMERA: {
         // Throw if a Camera was already defined
         if (camera) {
-          throw GrammarError(source_location, "a camera was already defined");
+          throw GrammarError(source_location, "camera already defined");
         }
         // Parse Camera and assign to Scene data member
         camera = parse_camera(input_stream);
@@ -970,6 +972,5 @@ public:
       }
     }
   }
-
   // TODO implement overwrite_from_CL()
 };

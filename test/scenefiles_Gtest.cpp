@@ -204,8 +204,9 @@ TEST(InputStreamTest, test_GrammarError) {
 // -------------- Test parser (implemented in Scene) ----------------
 // TODO angles: degrees or rads???? //QUESTION Are you asking if we want to switch to radians?
 // TODO perhaps change name of parse_scene?
-TEST(SceneTest, test_parser) {
-  // create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
+
+// create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
+TEST(SceneTest, test_parse_scene) {
   std::istringstream ss(R"(
 		float clock(150)
 
@@ -304,4 +305,50 @@ TEST(SceneTest, test_parser) {
   EXPECT_TRUE(cam->transformation.is_close(rotation_z(30.f) * translation(Vec(-4.f, 0.f, 1.f))));
   EXPECT_TRUE(are_close(cam->asp_ratio, 1.f));
   EXPECT_TRUE(are_close(cam->distance, 2.f));
+}
+
+TEST(SceneTest, test_parse_scene_undefined_material) {
+  std::istringstream ss("plane(identity, this_material_does_not_exist)");
+  InputStream input_stream(ss);
+  Scene scene;
+
+  try {
+    scene.parse_scene(input_stream); // Should throw GrammarError for unknown material
+    // If no exception is thrown, FAIL() will execute and the test will fail here
+    FAIL() << "A GrammarError for unknown material was expected, but none was thrown";
+  } catch (const GrammarError &err) {
+    // Check that the error message says "unknown material"
+    EXPECT_NE(std::string(err.what()).find("unknown material"), std::string::npos);
+
+    // Check the error is on line 1, column 17 (where the unknown material appears)
+    EXPECT_EQ(err.location.line, 1);
+    EXPECT_EQ(err.location.column, 17);
+  } catch (...) {
+    // If a different exception is thrown, mark the test as failed
+    FAIL() << "Expected GrammarError, got different exception";
+  }
+}
+
+TEST(SceneTest, test_parse_scene_double_camera) {
+  std::istringstream ss(
+      "camera(perspective, rotation_z(30) * translation([-4, 0, 1]), 1.0, 1.0)\ncamera(orthogonal, identity, 1.0, 1.0)");
+
+  InputStream input_stream(ss);
+  Scene scene;
+
+  try {
+    scene.parse_scene(input_stream); // Should throw GrammarError for multiple camera definition
+    // If no exception is thrown, FAIL() will execute and the test will fail here
+    FAIL() << "A GrammarError for multiple camera definition was expected, but none was thrown";
+  } catch (const GrammarError &err) {
+    // Check that the error message says "camera already defined"
+    EXPECT_NE(std::string(err.what()).find("camera already defined"), std::string::npos);
+
+    // Check the error is on line 2, column 1 (where the second camera definition appears)
+    EXPECT_EQ(err.location.line, 2);
+    EXPECT_EQ(err.location.column, 1);
+  } catch (...) {
+    // If a different exception is thrown, mark the test as failed
+    FAIL() << "Expected GrammarError, got different exception";
+  }
 }
