@@ -39,13 +39,12 @@ class HitRecord {
 public:
   //-------Properties--------
 
-  std::shared_ptr<const Shape>
-      shape;           // shape that was hit (required in order to trace back to the material that was hit)
-  Point world_point;   // 3D coordinates of the intersection point in real world
-  Normal normal;       // normal to the surface at the intersection point
-  Vec2d surface_point; // 2D coordinates on the surface
-  Ray ray;             // the ray that actually hit the shape
-  float t;             // distance from the origin of the ray to the intersection point
+  std::shared_ptr<const Shape> shape; // shape that was hit (required in order to trace back to the material that was hit)
+  Point world_point;                  // 3D coordinates of the intersection point in real world
+  Normal normal;                      // normal to the surface at the intersection point
+  Vec2d surface_point;                // 2D coordinates on the surface
+  Ray ray;                            // the ray that actually hit the shape
+  float t;                            // distance from the origin of the ray to the intersection point
 
   //-----------Constructors-----------
   /// Default constructor
@@ -128,8 +127,7 @@ public:
   Sphere() : Shape() {};
 
   /// Constructor with parameters
-  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr)
-      : Shape(transformation, material) {};
+  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr) : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -169,8 +167,7 @@ public:
     Point hit_point = ray.at(t_first_hit);
 
     // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
-    Normal normal =
-        Normal(hit_point.x, hit_point.y, hit_point.z); // normal to the sphere is just the vector from the origin
+    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z); // normal to the sphere is just the vector from the origin
     normal = enforce_correct_normal_orientation(normal, ray);
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
@@ -185,8 +182,8 @@ public:
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
     // nullable type cannot be build calling the construcor directly, need to use emplace or similar syntax instead
-    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
-                ray_world_frame, t_first_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
+                t_first_hit);
     return hit;
   };
 };
@@ -205,8 +202,7 @@ public:
   Plane() : Shape() {};
 
   /// Constructor with parameters
-  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr)
-      : Shape(transformation, material) {};
+  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr) : Shape(transformation, material) {};
 
   //--------------------Methods----------------------
 
@@ -240,8 +236,8 @@ public:
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
-    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates,
-                ray_world_frame, t_hit);
+    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
+                t_hit);
     return hit;
   };
 };
@@ -271,7 +267,8 @@ public:
 //-------------------------------------------------------------------------------------------------------------
 // -----------WORLD CLASS ------------------
 // ------------------------------------------------------------------------------------------------------------
-/// @brief World class contains all the objects in the scene (and light sources for pointlight tracing) and trace rays against them
+/// @brief World class contains all the objects in the scene (and light sources for pointlight tracing) and trace rays against
+/// them
 class World {
 public:
   // ------- Properties --------

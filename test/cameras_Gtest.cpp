@@ -38,9 +38,8 @@ TEST(RayTest, test_at) {
 // test transform method
 TEST(RayTest, test_ray_transformation) {
   Ray ray = Ray(Point(1.f, 2.f, 3.f), Vec(6.f, 5.f, 4.f));
-  Transformation T =
-      translation(Vec(10.f, 11.f, 12.f)) *
-      rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
+  Transformation T = translation(Vec(10.f, 11.f, 12.f)) *
+                     rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
 
   EXPECT_TRUE(transformed.origin.is_close(Point(11.f, 8.f, 14.f)));
@@ -179,7 +178,7 @@ TEST(TestAntialiasing, test_stratified_sample) {
   int n_rays = 0; // number of traced rays
 
   // lambda that returns the same color for every ray after checking that it lands inside the screen
-  auto trace_ray = [&tracer, &n_rays] (Ray ray) -> Color {
+  auto trace_ray = [&tracer, &n_rays](Ray ray) -> Color {
     Point point = ray.at(1.f);
     EXPECT_TRUE(are_close(point.x, 0.f));
     EXPECT_TRUE(point.y > -1.f && point.y < 1.f);

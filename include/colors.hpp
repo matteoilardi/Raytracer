@@ -65,9 +65,7 @@ public:
   }
 };
 
-bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) {
-  return std::fabs(x - y) < error_tolerance;
-}
+bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) { return std::fabs(x - y) < error_tolerance; }
 
 /// @brief normalize a float number (between 0 and 1) using the formula
 /// x/(1+x) (almost x for small x, but saturates to 1 for large x)
@@ -111,7 +109,7 @@ public:
   Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
 
   // Compound addition assigmenent
-  Color& operator+=(const Color &other) {
+  Color &operator+=(const Color &other) {
     *this = *this + other;
     return *this;
   }
@@ -120,7 +118,7 @@ public:
   Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
 
   // Compound product assigmenent of two Colors
-  Color& operator*=(const Color &other) {
+  Color &operator*=(const Color &other) {
     *this = *this * other;
     return *this;
   }
@@ -129,16 +127,16 @@ public:
   Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
 
   // Compound product assigmenent of a color and a scalar
-  Color& operator*=(float scalar) {
+  Color &operator*=(float scalar) {
     *this = *this * scalar;
     return *this;
   }
 
   // Division: color / scalar
-  Color operator/(float scalar) const { return *this * (1.f/scalar); }
+  Color operator/(float scalar) const { return *this * (1.f / scalar); }
 
   // Compound division assigment of a color and a scalar
-  Color& operator/=(float scalar) {
+  Color &operator/=(float scalar) {
     *this = *this / scalar;
     return *this;
   }
@@ -375,7 +373,7 @@ public:
   // vector.
   HdrImage(int32_t w, int32_t h) : width(w), height(h) {
     if (w <= 0 || h <= 0) {
-        throw std::invalid_argument("HdrImage dimensions must be positive");
+      throw std::invalid_argument("HdrImage dimensions must be positive");
     }
     pixels.resize(static_cast<size_t>(w * h), Color());
   }
@@ -388,10 +386,10 @@ public:
   // Open a PFM file and read the stream of bytes from it, again invoking
   // `read_pfm_file` method
   HdrImage(const std::string &file_name) {
-    std::ifstream stream(file_name);
+    std::ifstream stream(file_name, std::ios::binary); // Open the file in binary mode
     if (!stream.is_open()) {
       std::string error_msg = "Failed to open file \"" + file_name + "\"";
-      if (errno) { // errno is a system-specific number that identifies an error occured
+      if (errno) {                                        // errno is a system-specific number that identifies an error occured
         error_msg += ": " + std::string(strerror(errno)); // convert errno to the string describing the message
       }
       throw std::runtime_error(error_msg);

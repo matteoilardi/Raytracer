@@ -31,7 +31,7 @@ public:
   //-------Properties--------
 
   uint64_t state; // internal state of the generator
-  uint64_t inc; // increment, different increments generate different orthogonal sequences from the same internal states
+  uint64_t inc;   // increment, different increments generate different orthogonal sequences from the same internal states
   // TODO is it true?
 
   //-----------Constructors-----------
@@ -72,10 +72,10 @@ public:
   std::pair<float, float> random_phong(int n) {
     // sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
     float x = random_float();
-    float theta = std::acos(std::pow(x, 1.f/(n+1)));
+    float theta = std::acos(std::pow(x, 1.f / (n + 1)));
 
     // sample phi
-    float phi = random_float() * 2*std::numbers::pi;
+    float phi = random_float() * 2 * std::numbers::pi;
 
     return {theta, phi};
   }

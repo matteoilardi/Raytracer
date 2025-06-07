@@ -30,8 +30,7 @@ public:
   Color background_color;       // background color
 
   //-----------Constructors-----------
-  Renderer(std::shared_ptr<World> world, Color background_color = Color())
-      : world(world), background_color(background_color) {};
+  Renderer(std::shared_ptr<World> world, Color background_color = Color()) : world(world), background_color(background_color) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
@@ -94,8 +93,7 @@ public:
       hit_material = hit->shape->material;
       brdf = hit_material->brdf;
 
-      auto specular =
-          false; // NOTE delete this line and restore the next one when implementation of SpecularBRDF is ready
+      auto specular = false; // NOTE delete this line and restore the next one when implementation of SpecularBRDF is ready
       // auto specular = std::dynamic_pointer_cast<SpecularBRDF>(brdf); // returns nullptr if brdf is not a pointer to
       // an object of the derived class SpecularBRDF
       // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by
@@ -119,10 +117,10 @@ public:
 
       if (in_dir.has_value()) {
         float distance = in_dir->norm();
-        float distance_factor =
-            (source->emission_radius > 0.f) ? std::pow((source->emission_radius / distance), 2) : 1.f;
+        float distance_factor = (source->emission_radius > 0.f) ? std::pow((source->emission_radius / distance), 2) : 1.f;
         // angle between normal at hitting point and incoming direction (from light source)
-        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) * (hit->normal); //QUESTION why the minus sign? and why we multiply by costheta?
+        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) *
+                          (hit->normal); // QUESTION why the minus sign? and why we multiply by costheta?
         cum_radiance += source->color * distance_factor * cos_theta *
                         brdf->eval(hit->normal, *in_dir, -hit->ray.direction, hit->surface_point);
       }
@@ -151,10 +149,9 @@ public:
   /// @param ray depth before russian roulette kicks in
   /// @param maximum ray depth
   /// @param background color
-  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 100,
-             int russian_roulette_lim = 2, int max_depth = 2, Color background = Color())
-      : Renderer(world, background), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim),
-        max_depth(max_depth) {
+  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 100, int russian_roulette_lim = 2,
+             int max_depth = 2, Color background = Color())
+      : Renderer(world, background), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim), max_depth(max_depth) {
     if (!this->pcg) {
       pcg = std::make_shared<PCG>();
     }
