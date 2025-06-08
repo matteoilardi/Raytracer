@@ -772,19 +772,19 @@ public:
       }
       case KeywordEnum::ROTATION_X: {
         expect_symbol(input_stream, '(');
-        result = result * rotation_x(expect_number(input_stream));
+        result = result * rotation_x(degs_to_rads(expect_number(input_stream)));
         expect_symbol(input_stream, ')');
         break;
       }
       case KeywordEnum::ROTATION_Y: {
         expect_symbol(input_stream, '(');
-        result = result * rotation_y(expect_number(input_stream));
+        result = result * rotation_y(degs_to_rads(expect_number(input_stream)));
         expect_symbol(input_stream, ')');
         break;
       }
       case KeywordEnum::ROTATION_Z: {
         expect_symbol(input_stream, '(');
-        result = result * rotation_z(expect_number(input_stream));
+        result = result * rotation_z(degs_to_rads(expect_number(input_stream)));
         expect_symbol(input_stream, ')');
         break;
       }
@@ -912,6 +912,7 @@ public:
   /// @brief Parse a scene from a stream
   /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from command line
   void parse_scene(InputStream &input_stream) {
+    // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float, material, sphere, plane, camera, point_light
     while (true) {
       Token new_token = input_stream.read_token();
       if (new_token.type == TokenType::STOP_TOKEN) {
