@@ -1,7 +1,3 @@
-#ifdef type
-#undef type
-#endif
-
 #include "CLI11.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"

@@ -9,10 +9,6 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#ifdef type
-#undef type
-#endif
-
 #include <cassert> // C++ library for assert (for debugging)
 #include <cctype>  // C++ library for character classification functions (isalpha, isdigit, etc.)
 #include <iostream>

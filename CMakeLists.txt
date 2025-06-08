@@ -35,6 +35,9 @@ add_executable(raytracer
         src/raytracer.cpp
 )
 
+# Overwrite Windows type macro definition with local definitions
+target_compile_definitions(raytracer PRIVATE type=__type)
+
 # Include the headers in the "include" directory
 target_include_directories(raytracer PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
