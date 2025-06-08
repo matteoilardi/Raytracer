@@ -898,7 +898,7 @@ public:
   // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
 
   /// @brief Parse a scene from a stream
-  /// @details It is meant to be called after overwrite_from_CL() if you want to overwrite float vars from command line
+  /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from command line
   void parse_scene(InputStream &input_stream) {
     while (true) {
       Token new_token = input_stream.read_token();
@@ -974,5 +974,13 @@ public:
       }
     }
   }
-  // TODO implement overwrite_from_CL()
+
+  void initialize_float_variables_with_priority(std::unordered_map<std::string, float>&& variables_from_cl) {
+    assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to be parsed and added to float_variables before parsing the scene file
+
+    float_variables = std::move(variables_from_cl);
+    for (const auto& name : float_variables) {
+      overwritten_variables.insert(name.first);
+    }
+  }
 };
