@@ -2,12 +2,13 @@
 #include "colors.hpp"
 #include "geometry.hpp"
 #include "renderers.hpp"
+#include "scenefiles.hpp"
 #include "shapes.hpp"
 #include <fstream>
 #include <iostream>
 
-std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
-                                          const Transformation &obs_transformation, int samples_per_pixel_edge);
+std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height, const Transformation &obs_transformation,
+                                          int samples_per_pixel_edge);
 
 int main(int argc, char **argv) {
   CLI::App app{"Raytracer"};    // Define the main App
@@ -17,7 +18,7 @@ int main(int argc, char **argv) {
   app.require_subcommand(1);
 
   // -----------------------------------------------------------
-  // Parameters that are common to both demo and pfm2png modes
+  // Parameters that are common to at least two of the modes
   // -----------------------------------------------------------
 
   // Default values of gamma and alpha (may be overwritten in pfm2png mode)
@@ -27,6 +28,13 @@ int main(int argc, char **argv) {
   // Name of output file
   std::string output_file_name;
 
+  // Image size (# pixels)
+  int width = 1280;
+  int height = 960;
+
+  // Antialisasing parameter
+  int samples_per_pixel_edge = 3;
+
   // -----------------------------------------------------------
   // Command line parsing for demo mode
   // -----------------------------------------------------------
@@ -35,31 +43,23 @@ int main(int argc, char **argv) {
       app.add_subcommand("demo", "Run demo rendering and save PFM and PNG files"); // Returns a pointer to an App object
 
   // Parse image width and height (# pixels)
-  int width = 1280;
-  int height = 960;
   demo_subc->add_option("--width", width, "Specify image width")->check(CLI::PositiveNumber)->default_val(1280);
   demo_subc->add_option("--height", height, "Specify image height")->check(CLI::PositiveNumber)->default_val(960);
-  ;
 
   // Choose between perspective and orthogonal projection
   bool orthogonal = false;
-  auto orthogonal_flag =
-      demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
+  auto orthogonal_flag = demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
 
   // Parse output file name
-  demo_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")
-      ->default_val("demo");
+  demo_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
 
   // Parse observer transformation: composition of a translation along -VEC_X and rotation around the scene (endcoded in
   // distance, angle phi and angle theta). Default position: Origin - VEC_X.
   float distance = 1.f;
   float theta = std::numbers::pi / 2.f;
   float phi = 0.f;
-  int samples_per_pixel_edge = 3;
 
-  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")
-      ->excludes(orthogonal_flag)
-      ->default_val(1.f);
+  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")->excludes(orthogonal_flag)->default_val(1.f);
 
   demo_subc
       ->add_option_function<float>(
@@ -69,15 +69,40 @@ int main(int argc, char **argv) {
 
   demo_subc
       ->add_option_function<float>(
-          "--phi-deg", [&phi](const float &phi_deg) { phi = phi_deg / 180.f * std::numbers::pi; },
-          "Specify observer's angle phi")
+          "--phi-deg", [&phi](const float &phi_deg) { phi = phi_deg / 180.f * std::numbers::pi; }, "Specify observer's angle phi")
       ->default_val(0.f);
-  ;
 
   demo_subc
       ->add_option<int>("--antialiasing", samples_per_pixel_edge,
                         "Specify #samples per pixel edge (square root of #samples per pixel)")
       ->default_val(3);
+
+  // -----------------------------------------------------------
+  // Command line parsing for render mode
+  // -----------------------------------------------------------
+
+  auto render_subc =
+      app.add_subcommand("render", "Render the scene encoded in an input file"); // Returns a pointer to an App object
+
+  // Image width and height (# pixels)
+  render_subc->add_option("--width", width, "Specify image width")->check(CLI::PositiveNumber)->default_val(1280);
+  render_subc->add_option("--height", height, "Specify image height")->check(CLI::PositiveNumber)->default_val(960);
+
+  // Input (source) file
+  std::string source_file_name;
+  render_subc->add_option("-s, --source", source_file_name, "Specify input (source) file containing the scene to render");
+
+  // Output file
+  render_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
+
+  // Antialiasing
+  render_subc
+      ->add_option<int>("--antialiasing", samples_per_pixel_edge,
+                        "Specify #samples per pixel edge (square root of #samples per pixel)")
+      ->default_val(3);
+
+  // TODO add algorithm switch after merge of branch pathtracing, and remember to implement  sub-swithces (e. g. ambient_color for
+  // point light tracing)
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -106,7 +131,8 @@ int main(int argc, char **argv) {
   if (*demo_subc) {
     // 2. (DEMO) Compute the demo image and save PFM file
     Transformation observer_transformation =
-        rotation_z(phi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-VEC_X * distance);
+        rotation_z(phi) * rotation_y(std::numbers::pi / 2.f - theta) *
+        translation(-VEC_X); // evaluates to (identity * backwards translation) for default values of theta and phi
 
     std::cout << "Rendering demo image... " << std::flush;
     img = make_demo_image(orthogonal, width, height, observer_transformation, samples_per_pixel_edge);
@@ -114,6 +140,36 @@ int main(int argc, char **argv) {
 
     // Save PFM image
     img->write_pfm(output_file_name + ".pfm");
+
+  } else if (*render_subc) {
+    // 2. (REDERER) Parse input file
+    std::ifstream is;
+    try {
+      is.open(source_file_name);
+    } catch (const std::exception &err) {
+      std::cerr << "Error opening input (source) file. " << err.what() << '\n';
+      return EXIT_FAILURE;
+    }
+    InputStream input_stream(is, source_file_name);
+    Scene scene;
+    try {
+      scene.parse_scene(input_stream);
+    } catch (const std::exception &err) {
+      std::cerr << err.what() << '\n';
+      return EXIT_FAILURE;
+    }
+
+    ImageTracer tracer = ImageTracer(std::make_unique<HdrImage>(width, height), std::move(scene.camera), samples_per_pixel_edge);
+
+    PointLightTracer renderer{scene.world, Color(0.1f, 0.f, 0.1f), Color(0.f, 0.f, 0.f)};
+
+    std::cout << "Rendering image in " << source_file_name << "... " << std::flush;
+    tracer.fire_all_rays(renderer);
+    std::cout << "Done." << std::endl;
+
+    // Save PFM image
+    tracer.image->write_pfm(output_file_name + ".pfm");
+    img = std::move(tracer.image);
 
   } else if (*pfm2png_subc) {
     // 2. (CONVERTER) Read input image from file
@@ -143,54 +199,55 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
-std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height,
-                                          const Transformation &obs_transformation, int samples_per_pixel_edge) {
+std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height, const Transformation &obs_transformation,
+                                          int samples_per_pixel_edge) {
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
 
-  float aspect_ratio = (float)width / height;
+  // float aspect_ratio = (float)width / height;
+  float aspect_ratio = 1.f; // Since it's different from width/height ratio, the image will be shrinked
 
-  std::unique_ptr<Camera> cam;
+  std::shared_ptr<Camera> cam;
   if (orthogonal) {
     // provide aspect ratio and observer transformation
-    cam = std::make_unique<OrthogonalCamera>(aspect_ratio, obs_transformation);
+    cam = std::make_shared<OrthogonalCamera>(aspect_ratio, obs_transformation);
   } else {
     // provide default *origin-screen* distance, aspect ratio and observer transformation
-    cam = std::make_unique<PerspectiveCamera>(1.f, aspect_ratio, obs_transformation);
+    cam = std::make_shared<PerspectiveCamera>(1.f, aspect_ratio, obs_transformation);
   }
-  ImageTracer tracer(std::move(img), std::move(cam), samples_per_pixel_edge);
+  ImageTracer tracer(std::move(img), cam, samples_per_pixel_edge);
 
   // Initialize demo World
   auto world = std::make_shared<World>();
 
   scaling sc({0.1f, 0.1f, 0.1f}); // common scaling for all spheres
 
-  std::vector<Vec> sphere_positions = {
-      {0.5f, 0.5f, 0.5f},   {0.5f, 0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},   {0.5f, -0.5f, -0.5f}, {-0.5f, 0.5f, 0.5f},
-      {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, -0.5f},  {0.0f, 0.5f, 0.0f}};
+  std::vector<Vec> sphere_positions = {{0.5f, 0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, -0.5f, -0.5f},
+                                       {-0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, -0.5f, -0.5f},
+                                       {0.0f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}};
 
   for (const Vec &pos : sphere_positions) {
     auto sphere = std::make_shared<Sphere>(translation(pos) * sc);
     world->add_object(sphere);
   }
 
-//COMMENT TO RESTORE THE OLD DEMO
-  auto sphere_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f))));
+  // COMMENT TO RESTORE THE OLD DEMO
+  auto sphere_material =
+      std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f))));
   for (auto sphere : world->objects) {
     sphere->material = sphere_material;
   }
   auto source = std::make_shared<PointLightSource>();
   world->add_light_source(source);
-  PointLightTracer renderer{world, Color(0.0002f, 0.0002f, 0.0002f), Color(0.0001f, 0.0001f, 0.0001f)};
+  PointLightTracer renderer{world, Color(0.1f, 0.f, 0.1f), Color(0.f, 0.f, 0.f)};
   tracer.fire_all_rays(renderer);
 
-
-//UNCOMMENT TO RESTORE OLD DEMO
-//  // Perform on/off tracing
-//  tracer.fire_all_rays([&world](Ray ray) -> Color {
-//    return world->on_off_trace(ray);
-//  }); // World::on_off_trace requires three arguments, the first one being the World instance, hence it is not
-//      // compatible with type RaySolver. A lambda wrapping is therefore needed.
+  // UNCOMMENT TO RESTORE OLD DEMO
+  //   // Perform on/off tracing
+  //   tracer.fire_all_rays([&world](Ray ray) -> Color {
+  //     return world->on_off_trace(ray);
+  //   }); // World::on_off_trace requires three arguments, the first one being the World instance, hence it is not
+  //       // compatible with type RaySolver. A lambda wrapping is therefore needed.
 
   // Return demo image
   return std::move(tracer.image);

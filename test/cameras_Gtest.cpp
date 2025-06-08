@@ -124,9 +124,9 @@ protected:
   std::unique_ptr<ImageTracer> tracer;
 
   void SetUp() override {
-    std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
-    std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1.f, 2.f);
-    tracer = std::make_unique<ImageTracer>(std::move(img), std::move(cam));
+    auto img = std::make_unique<HdrImage>(4, 2);
+    auto cam = std::make_shared<PerspectiveCamera>(1.f, 2.f);
+    tracer = std::make_unique<ImageTracer>(std::move(img), cam);
   }
 };
 
@@ -172,8 +172,8 @@ TEST_F(ImageTracerTest, test_image_orientation) {
 // test stratified sampling for a small 1-pixel image
 TEST(TestAntialiasing, test_stratified_sample) {
   auto small_img = std::make_unique<HdrImage>(1, 1);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer{std::move(small_img), std::move(cam), 10}; // 10 samples per pixel edge
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer{std::move(small_img), cam, 10}; // 10 samples per pixel edge
 
   int n_rays = 0; // number of traced rays
 

@@ -30,8 +30,8 @@ TEST(FlatTracerTest, test_example) {
   FlatTracer renderer{world, Color()};
 
   auto img = std::make_unique<HdrImage>(3, 3);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer{std::move(img), std::move(cam)};
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer{std::move(img), cam};
 
   tracer.fire_all_rays(renderer);
 
@@ -51,8 +51,8 @@ TEST(FlatTracerTest, test_example) {
 TEST(PointLightTracer, test_example) {
   // A single ray is scattered along the x axis
   auto img = std::make_unique<HdrImage>(1, 1);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer{std::move(img), std::move(cam), 1};
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer{std::move(img), cam, 1};
 
   auto plane_pigment = std::make_shared<UniformPigment>(Color(0.2f, 0.f, 0.f));
   auto plane_brdf = std::make_shared<DiffusiveBRDF>(plane_pigment);

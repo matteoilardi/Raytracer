@@ -247,8 +247,8 @@ TEST(WorldTest, test_ray_intersection) {
 // test on/off tracing
 TEST(WorldTest, test_on_off_tracing) {
   auto img = std::make_unique<HdrImage>(3, 3);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer(std::move(img), std::move(cam));
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer(std::move(img), cam);
 
   World world = World();
   auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));

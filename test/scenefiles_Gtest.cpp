@@ -259,7 +259,7 @@ TEST(SceneTest, test_parse_scene) {
   auto sky_brdf = dynamic_pointer_cast<DiffusiveBRDF>(sky_material->brdf);
   auto sky_brdf_pigment = dynamic_pointer_cast<UniformPigment>(sky_material->brdf->pigment);
   // dynamic_pointer_cast converts a smart pointer to the base class into a smart pointer to a specific derived class
-  //it fails (returns nullptr) if the object pointed at is NOT an instance of the derived class
+  // it fails (returns nullptr) if the object pointed at is NOT an instance of the derived class
 
   EXPECT_TRUE(sky_brdf);
   EXPECT_TRUE(sky_brdf_pigment);

@@ -145,17 +145,16 @@ public:
   // the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot
   // pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
-  std::unique_ptr<Camera> camera; // Safer version of a regular pointer. "Unique" because the only owner of the object
-                                  // Camera is the ImageTracer
-  int samples_per_pixel_edge;     // total samples per pixel = samples_per_pixel_side^2
-  std::shared_ptr<PCG> pcg;       // random number generator, for antialiasing (stratified sampling)
+  std::shared_ptr<Camera> camera;
+  int samples_per_pixel_edge; // total samples per pixel = samples_per_pixel_side^2
+  std::shared_ptr<PCG> pcg;   // random number generator, for antialiasing (stratified sampling)
 
   //-----------Constructors-----------
 
   /// Default constructor
 
   /// Constructor with parameters
-  ImageTracer(std::unique_ptr<HdrImage> image, std::unique_ptr<Camera> camera, int samples_per_pixel_edge = 1,
+  ImageTracer(std::unique_ptr<HdrImage> image, std::shared_ptr<Camera> camera, int samples_per_pixel_edge = 1,
               std::shared_ptr<PCG> pcg = nullptr)
       : image(std::move(image)), camera(std::move(camera)), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
     if (!pcg) {

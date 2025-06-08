@@ -567,7 +567,7 @@ public:
 
 // NOTE I am implementing the parse functions as methods of the scene class, but I am not sure it is the best option
 //  in the other case these methods should access the FloatVariables and overriddenVariables in scene class
-//REMOVE_TAG when you read (we already agreed on keeping everything inside the scene class)
+// REMOVE_TAG when you read (we already agreed on keeping everything inside the scene class)
 
 class Scene {
 public:
@@ -892,6 +892,7 @@ public:
     expect_symbol(input_stream, ',');
     float emission_radius = expect_number(input_stream);
 
+    expect_symbol(input_stream, ')');
     return std::make_shared<PointLightSource>(position.to_point(), emitted_radiance, emission_radius);
   }
   // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
@@ -965,6 +966,7 @@ public:
       case KeywordEnum::POINT_LIGHT: {
         // Add Point Light to World
         world->add_light_source(parse_point_light(input_stream));
+        break;
       }
 
       default:

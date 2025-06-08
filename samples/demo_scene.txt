@@ -1,0 +1,21 @@
+# Source description of the demo image used for point light tracing
+
+camera(perspective, translation([-1, 0, 0]), 1, 1)
+# remember that the transformation provided applies to the default position of the screen, which is [0, 0, 0]
+# distance is actually observer-screen distance and is defaulted to 1 in the code
+
+material mat(diffuse(uniform(<0.5, 0.5, 0.5>)),
+         uniform(<0, 0, 0>))
+
+point_light([0, 0, 0], <1, 1, 1>, 0)
+
+sphere(translation([0.5, 0.5, 0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([0.5, 0.5, -0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([0.5, -0.5, 0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([0.5, -0.5, -0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([-0.5, 0.5, 0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([-0.5, 0.5, -0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([-0.5, -0.5, 0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([-0.5, -0.5, -0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([0, 0, -0.5]) * scaling([0.1, 0.1, 0.1]), mat)
+sphere(translation([0, 0.5, 0]) * scaling([0.1, 0.1, 0.1]), mat)
