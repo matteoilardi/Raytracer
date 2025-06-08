@@ -293,7 +293,7 @@ TEST(SceneTest, test_parse_scene) {
   // Check defined Shapes
   EXPECT_EQ(scene.world->objects.size(), 3);
   EXPECT_TRUE(dynamic_pointer_cast<Plane>(scene.world->objects[0]));
-  EXPECT_TRUE(scene.world->objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(150.f)));
+  EXPECT_TRUE(scene.world->objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(degs_to_rads(150.f))));
   EXPECT_TRUE(dynamic_pointer_cast<Plane>(scene.world->objects[1]));
   EXPECT_TRUE(scene.world->objects[1]->transformation.is_close(Transformation()));
   EXPECT_TRUE(dynamic_pointer_cast<Sphere>(scene.world->objects[2]));
@@ -302,7 +302,7 @@ TEST(SceneTest, test_parse_scene) {
   // Check defined Camera
   auto cam = dynamic_pointer_cast<PerspectiveCamera>(scene.camera);
   EXPECT_TRUE(cam);
-  EXPECT_TRUE(cam->transformation.is_close(rotation_z(30.f) * translation(Vec(-4.f, 0.f, 1.f))));
+  EXPECT_TRUE(cam->transformation.is_close(rotation_z(degs_to_rads(30.f)) * translation(Vec(-4.f, 0.f, 1.f))));
   EXPECT_TRUE(are_close(*cam->asp_ratio, 1.f));
   EXPECT_TRUE(are_close(cam->distance, 2.f));
 }

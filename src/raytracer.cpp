@@ -122,6 +122,11 @@ int main(int argc, char **argv) {
     }
   }, "Define named float variables as name=value");
 
+  // DEBUG
+  SourceLocation loc{};
+  Token token{loc, TokenType::KEYWORD};
+  static_assert(std::is_same<decltype(token.type), TokenType>::value, "Wrong Token::type");
+
 
 
   // TODO add algorithm switch after merge of branch pathtracing, and remember to implement  sub-swithces (e. g. ambient_color for
