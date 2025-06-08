@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
     img->write_pfm(output_file_name + ".pfm");
 
   } else if (*render_subc) {
-    // B. (REDERER) Parse input file
+    // B. (RENDERER) Parse input file
     std::ifstream is;
     try {
       is.open(source_file_name);
@@ -186,8 +186,7 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
 
-    ImageTracer tracer = ImageTracer(std::make_unique<HdrImage>(width, height), std::move(scene.camera), samples_per_pixel_edge);
-
+    ImageTracer tracer = ImageTracer(std::make_unique<HdrImage>(width, height), scene.camera, samples_per_pixel_edge);
     PointLightTracer renderer{scene.world, Color(0.1f, 0.f, 0.1f), Color(0.f, 0.f, 0.f)};
 
     std::cout << "Rendering image in " << source_file_name << "... " << std::flush;
@@ -225,6 +224,8 @@ int main(int argc, char **argv) {
 
   return EXIT_SUCCESS;
 }
+
+
 
 std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height, const Transformation &obs_transformation,
                                           int samples_per_pixel_edge) {

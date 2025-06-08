@@ -303,7 +303,7 @@ TEST(SceneTest, test_parse_scene) {
   auto cam = dynamic_pointer_cast<PerspectiveCamera>(scene.camera);
   EXPECT_TRUE(cam);
   EXPECT_TRUE(cam->transformation.is_close(rotation_z(30.f) * translation(Vec(-4.f, 0.f, 1.f))));
-  EXPECT_TRUE(are_close(cam->asp_ratio, 1.f));
+  EXPECT_TRUE(are_close(*cam->asp_ratio, 1.f));
   EXPECT_TRUE(are_close(cam->distance, 2.f));
 }
 

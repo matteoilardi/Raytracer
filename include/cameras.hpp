@@ -72,17 +72,18 @@ public:
 class Camera {
 public:
   //-------Properties--------
-  float asp_ratio;               // aspect ratio
+  std::optional<float> asp_ratio;               // aspect ratio
   Transformation transformation; // transformation that takes into account camera orientation
 
   //-----------Constructors-----------
-  /// Default constructor
-  Camera() : asp_ratio(1.f), transformation(Transformation()) {};
 
   /// @brief Constructor with parameters
   /// @param aspect ratio
   /// @param tranformation encoding observer's orientation
-  Camera(float asp_ratio, Transformation transformation) : asp_ratio(asp_ratio), transformation(transformation) {};
+  Camera(std::optional<float> asp_ratio, Transformation transformation = Transformation()) : asp_ratio(asp_ratio), transformation(transformation) {};
+
+  Camera(float asp_ratio, Transformation transformation) : asp_ratio(std::make_optional<float>(asp_ratio)), transformation(transformation) {};
+
 
   virtual ~Camera() {}
 
@@ -90,9 +91,7 @@ public:
   /// @brief virtual method that fires a ray through a point of the screen
   /// @param screen coordinate u
   /// @param screen coordinate v
-  virtual Ray fire_ray(float u, float v) const {
-    throw std::logic_error("Camera.fire_ray is an abstract method and cannot be called directly");
-  };
+  virtual Ray fire_ray(float u, float v) const = 0;
 };
 
 class OrthogonalCamera : public Camera {
@@ -101,12 +100,12 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  OrthogonalCamera(float asp_ratio = 1.f, Transformation transformation = Transformation()) : Camera(asp_ratio, transformation) {}
+  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, Transformation transformation = Transformation()) : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
-    Point origin = Point(-1.f, (1.f - 2.f * u) * asp_ratio, -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
+    Point origin = Point(-1.f, (1.f - 2.f * u) * asp_ratio.value(), -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
     Vec direction = VEC_X;
     return Ray(origin, direction).transform(transformation);
   };
@@ -121,7 +120,7 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  PerspectiveCamera(float distance = 1.f, float asp_ratio = 1.f, Transformation transformation = Transformation())
+  PerspectiveCamera(float distance = 1.f, std::optional<float> asp_ratio = std::nullopt, Transformation transformation = Transformation())
       : Camera(asp_ratio, transformation), distance(distance) {}
 
   //--------------------Methods----------------------
@@ -129,7 +128,7 @@ public:
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
     Point origin = Point(-distance, 0.f, 0.f);
-    Vec direction = Vec(distance, (1.f - 2.f * u) * asp_ratio, -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
+    Vec direction = Vec(distance, (1.f - 2.f * u) * asp_ratio.value(), -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
     return Ray(origin, direction).transform(transformation);
   };
 };
@@ -156,9 +155,13 @@ public:
   /// Constructor with parameters
   ImageTracer(std::unique_ptr<HdrImage> image, std::shared_ptr<Camera> camera, int samples_per_pixel_edge = 1,
               std::shared_ptr<PCG> pcg = nullptr)
-      : image(std::move(image)), camera(std::move(camera)), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
+      : image(std::move(image)), camera(camera), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
     if (!pcg) {
       this->pcg = std::make_shared<PCG>();
+    }
+
+    if (!camera->asp_ratio.has_value()) {
+      camera->asp_ratio.emplace(static_cast<float>(this->image->width)/static_cast<float>(this->image->height));
     }
   }
   // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to

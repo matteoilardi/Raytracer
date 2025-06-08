@@ -60,6 +60,7 @@ enum class KeywordEnum {
   CAMERA,
   ORTHOGONAL,
   PERSPECTIVE,
+  EXACT_ASP_RATIO,
   FLOAT,
   POINT_LIGHT
 };
@@ -74,7 +75,7 @@ const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {
     {"rotation_x", KeywordEnum::ROTATION_X},   {"rotation_y", KeywordEnum::ROTATION_Y},
     {"rotation_z", KeywordEnum::ROTATION_Z},   {"scaling", KeywordEnum::SCALING},
     {"camera", KeywordEnum::CAMERA},           {"orthogonal", KeywordEnum::ORTHOGONAL},
-    {"perspective", KeywordEnum::PERSPECTIVE}, {"float", KeywordEnum::FLOAT},
+    {"perspective", KeywordEnum::PERSPECTIVE}, {"exact_asp_ratio", KeywordEnum::EXACT_ASP_RATIO}, {"float", KeywordEnum::FLOAT},
     {"point_light", KeywordEnum::POINT_LIGHT}};
 
 /// @brief convert a keyword enum to its string representation (for debugging and printing)
@@ -114,6 +115,8 @@ std::string to_string(KeywordEnum kw) {
     return "orthogonal";
   case KeywordEnum::PERSPECTIVE:
     return "perspective";
+  case KeywordEnum::EXACT_ASP_RATIO:
+    return "exact_asp_ratio";
   case KeywordEnum::FLOAT:
     return "float";
   case KeywordEnum::POINT_LIGHT:
@@ -623,7 +626,7 @@ public:
       return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
     } else {
       throw GrammarError(token.source_location,
-                         "expected LITERAL_NUMBER or IDENTIFIER instead of \"" + token.type_to_string() + "\"");
+                         "expected LITERAL_NUMBER or IDENTIFIER instead of " + token.type_to_string());
     }
   }
 
@@ -631,7 +634,7 @@ public:
   std::string expect_string(InputStream &input_stream) {
     Token token = input_stream.read_token();
     if (token.type != TokenType::LITERAL_STRING) {
-      throw GrammarError(token.source_location, "expected LITERAL_STRING instead of \"" + token.type_to_string() + "\"");
+      throw GrammarError(token.source_location, "expected LITERAL_STRING instead of " + token.type_to_string());
     }
     return std::get<std::string>(token.value);
   }
@@ -640,7 +643,7 @@ public:
   std::string expect_identifier(InputStream &input_stream) {
     Token token = input_stream.read_token();
     if (token.type != TokenType::IDENTIFIER) {
-      throw GrammarError(token.source_location, "expected IDENTIFIER instead of \"" + token.type_to_string() + "\"");
+      throw GrammarError(token.source_location, "expected IDENTIFIER instead of " + token.type_to_string());
     }
     return std::get<std::string>(token.value);
   }
@@ -858,8 +861,17 @@ public:
     Transformation transformation = parse_transformation(input_stream);
 
     // Parse aspect ratio
+    std::optional<float> asp_ratio;
     expect_symbol(input_stream, ',');
-    float asp_ratio = expect_number(input_stream);
+    Token asp_ratio_token = input_stream.read_token();
+    if (asp_ratio_token.type == TokenType::KEYWORD) {
+      input_stream.unread_token(asp_ratio_token); // NOTE is it ok to use unread even if strictly speaking it is not necessary?
+      expect_keywords(input_stream, {KeywordEnum::EXACT_ASP_RATIO});
+      asp_ratio = std::nullopt;
+    } else {
+      input_stream.unread_token(asp_ratio_token);
+      asp_ratio = std::make_optional<float>(expect_number(input_stream));
+    }
 
     // Parse screen-observer distance (only in case of a PerspectiveCamera)
     float distance;
