@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 
   // Input (source) file
   std::string source_file_name;
-  render_subc->add_option("-s, --source", source_file_name, "Specify input (source) file containing the scene to render");
+  render_subc->add_option("-s, --source", source_file_name, "Specify input (source) file.txt containing the scene to render");
 
   // Output file
   render_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
   // 2. Fill in HdrImage
   std::unique_ptr<HdrImage> img;
   if (*demo_subc) {
-    // 2. (DEMO) Compute the demo image and save PFM file
+    // A. (DEMO) Compute the demo image and save PFM file
     Transformation observer_transformation =
         rotation_z(phi) * rotation_y(std::numbers::pi / 2.f - theta) *
         translation(-VEC_X); // evaluates to (identity * backwards translation) for default values of theta and phi
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
     img->write_pfm(output_file_name + ".pfm");
 
   } else if (*render_subc) {
-    // 2. (REDERER) Parse input file
+    // B. (REDERER) Parse input file
     std::ifstream is;
     try {
       is.open(source_file_name);
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
     img = std::move(tracer.image);
 
   } else if (*pfm2png_subc) {
-    // 2. (CONVERTER) Read input image from file
+    // C. (CONVERTER) Read input image from file
     try {
       img = make_unique<HdrImage>(input_pfm_file_name);
       std::cout << "File \"" << input_pfm_file_name << "\" has been read from disk.\n";
@@ -205,7 +205,7 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
   auto img = std::make_unique<HdrImage>(width, height);
 
   // float aspect_ratio = (float)width / height;
-  float aspect_ratio = 1.f; // Since it's different from width/height ratio, the image will be shrinked
+  float aspect_ratio = 1.f; // Since it's different from width/height ratio, the image will be shrinked //QUESTION you meant 'squashed' I guess?
 
   std::shared_ptr<Camera> cam;
   if (orthogonal) {

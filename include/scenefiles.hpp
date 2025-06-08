@@ -527,21 +527,25 @@ public:
     if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
       Token token(token_location, TokenType::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);
+      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
       _skip_whitespaces_and_comments(); // NOT SURE!
       return token;
     } else if (ch == '"') {
       // If it starts with a double quote, parse a string token
       Token token = parse_string_token(token_location);
+      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
       _skip_whitespaces_and_comments(); // NOT SURE!
       return token;
     } else if (std::isdigit(ch) || ch == '+' || ch == '-' || ch == '.') {
       // If it starts with a digit or a sign, parse a float token
       Token token = parse_float_token(ch, token_location);
+      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
       _skip_whitespaces_and_comments(); // NOT SURE!
       return token;
     } else if (std::isalpha(static_cast<unsigned char>(ch)) || ch == '_') {
       // If it starts with an alphabetic character or '_', parse a keyword or identifier token
       Token token = parse_keyword_or_identifier_token(ch, token_location);
+      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
       _skip_whitespaces_and_comments(); // NOT SURE!
       return token;
     } else {
@@ -564,10 +568,6 @@ public:
 // ------------------------------------------------------------------------------------------------------------
 // ----------------------------------- SCENE DATA STRUCTURE & PARSING METHODS ---------------------------------
 // ------------------------------------------------------------------------------------------------------------
-
-// NOTE I am implementing the parse functions as methods of the scene class, but I am not sure it is the best option
-//  in the other case these methods should access the FloatVariables and overriddenVariables in scene class
-// REMOVE_TAG when you read (we already agreed on keeping everything inside the scene class)
 
 class Scene {
 public:

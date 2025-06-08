@@ -145,7 +145,7 @@ public:
   // the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot
   // pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
-  std::shared_ptr<Camera> camera;
+  std::shared_ptr<Camera> camera; // use shared_ptr for camera to allow sharing with Scene::camera
   int samples_per_pixel_edge; // total samples per pixel = samples_per_pixel_side^2
   std::shared_ptr<PCG> pcg;   // random number generator, for antialiasing (stratified sampling)
 
