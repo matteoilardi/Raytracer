@@ -1,3 +1,7 @@
+#ifdef type
+#undef type
+#endif
+
 #include "CLI11.hpp"
 #include "colors.hpp"
 #include "geometry.hpp"
@@ -237,8 +241,7 @@ std::unique_ptr<HdrImage> make_demo_image(bool orthogonal, int width, int height
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
 
-  // float aspect_ratio = (float)width / height;
-  float aspect_ratio = 1.f; // Since it's different from width/height ratio, the image will be shrinked //QUESTION you meant 'squashed' I guess?
+  float aspect_ratio = (float)width / height;
 
   std::shared_ptr<Camera> cam;
   if (orthogonal) {
