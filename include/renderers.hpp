@@ -178,23 +178,20 @@ public:
   //-------Properties--------
   std::shared_ptr<PCG> pcg; // random number generator
   int n_rays;               // number of rays recursively scattered
-  int russian_roulette_lim; // minimum ray depth before russian roulette starts applying
+  int russian_roulette_lim; // ray depth reached before russian roulette starts applying
   int max_depth;            // maximum ray depth
 
   //-----------Constructors-----------
-  // TODO choose reasonable value for n_rays ()
-  // ANSWER I would rather set 10 as default for n_rays(), also shouldn't max_depth default value be biggger then
-  // russian_roulette_lim defualt value?
 
   /// @brief constructor with parameters
   /// @param world to render
   /// @param pcg random number generator
   /// @param number of rays recursively scattered
-  /// @param ray depth before russian roulette kicks in
+  /// @param ray depth reached before russian roulette starts applying
   /// @param maximum ray depth
   /// @param background color
-  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 10, int russian_roulette_lim = 2,
-             int max_depth = 4, Color background = Color())
+  PathTracer(std::shared_ptr<World> world, std::shared_ptr<PCG> pcg = nullptr, int n_rays = 10, int russian_roulette_lim = 3,
+             int max_depth = 5, Color background = Color())
       : Renderer(world, background), pcg(pcg), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim), max_depth(max_depth) {
     if (!this->pcg) {
       pcg = std::make_shared<PCG>();

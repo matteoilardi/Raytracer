@@ -151,14 +151,19 @@ int main(int argc, char **argv) {
       },
       "Define named float variables as name=value");
 
-  // TODO add algorithm switch after merge of branch pathtracing, and remember to implement  sub-swithces (e. g. ambient_color for
-  // point light tracing)
-
-  // Option to decide which render to use 
+  // Option to decide which rendering algorithm to use
   std::string render_mode_str = "flat"; // Default is flat tracing
   render_subc->add_option("-m,--mode", render_mode_str, "Rendering mode: on/off tracing, flat tracing (default), point light tracing or path tracing")
-      ->check(CLI::IsMember({"onoff", "flat", "point_light" "path"}))
+      ->check(CLI::IsMember({"onoff", "flat", "point_light", "path"}))
       ->default_val("flat");
+
+  // Parameters for path tracing
+  int n_rays = 10;
+  int russian_roulette_lim = 3;
+  int max_depth = 5;
+  render_subc->add_option("--n_rays", n_rays, "Specify number of rays scattered at every hit (requires path tracing)")->default_val(10);
+  render_subc->add_option("--roulette", russian_roulette_lim, "Specify ray depth reached before russian roulette starts applying (requires path tracing)")->default_val(3);
+  render_subc->add_option("--max-depth", max_depth, "Specify maximum ray depth (requires path tracing)")->default_val(5);
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -212,10 +217,9 @@ int main(int argc, char **argv) {
   } else if (*render_subc) {
     // B. (RENDERER) Parse input file
     std::ifstream is;
-    try {
-      is.open(source_file_name);
-    } catch (const std::exception &err) {
-      std::cerr << "Error opening input (source) file. " << err.what() << '\n';
+    is.open(source_file_name);
+    if (!is) {
+      std::cerr << "Error opening input (source) file \"" << source_file_name << "\"" << std::endl;
       return EXIT_FAILURE;
     }
     InputStream input_stream(is, source_file_name);
@@ -237,12 +241,12 @@ int main(int argc, char **argv) {
     if (render_mode_str == "onoff") {
         renderer = make_shared<OnOffTracer>(scene.world);
     } else if (render_mode_str == "flat") {
-        renderer = make_shared<FlatTracer>(scene.world, Color(0.f, 0.f, 0.f));
+        renderer = make_shared<FlatTracer>(scene.world, BLACK);
     } else if (render_mode_str == "point_light") {
-        renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.f, 0.1f), Color(0.f, 0.f, 0.f));
-    } else {
+        renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
+    } else if (render_mode_str == "path"){
         auto pcg = std::make_shared<PCG>();
-        renderer = make_shared<PathTracer>(scene.world, pcg, 10, 3, 5, BLACK);
+        renderer = make_shared<PathTracer>(scene.world, pcg, n_rays, russian_roulette_lim, max_depth, BLACK);
     }
 
     std::cout << "Rendering image in " << source_file_name << "... " << std::flush;
