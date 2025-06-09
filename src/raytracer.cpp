@@ -154,6 +154,11 @@ int main(int argc, char **argv) {
   // TODO add algorithm switch after merge of branch pathtracing, and remember to implement  sub-swithces (e. g. ambient_color for
   // point light tracing)
 
+  // Option to decide which render to use 
+  std::string render_mode_str = "flat"; // Default is flat tracing
+  render_subc->add_option("-m,--mode", render_mode_str, "Rendering mode: on/off tracing, flat tracing (default), point light tracing or path tracing")
+      ->check(CLI::IsMember({"onoff", "flat", "point_light" "path"}))
+      ->default_val("flat");
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -227,10 +232,21 @@ int main(int argc, char **argv) {
     }
 
     ImageTracer tracer = ImageTracer(std::make_unique<HdrImage>(width, height), scene.camera, samples_per_pixel_edge);
-    PointLightTracer renderer{scene.world, Color(0.1f, 0.f, 0.1f), Color(0.f, 0.f, 0.f)};
+
+    std::shared_ptr<Renderer> renderer;
+    if (render_mode_str == "onoff") {
+        renderer = make_shared<OnOffTracer>(scene.world);
+    } else if (render_mode_str == "flat") {
+        renderer = make_shared<FlatTracer>(scene.world, Color(0.f, 0.f, 0.f));
+    } else if (render_mode_str == "point_light") {
+        renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.f, 0.1f), Color(0.f, 0.f, 0.f));
+    } else {
+        auto pcg = std::make_shared<PCG>();
+        renderer = make_shared<PathTracer>(scene.world, pcg, 10, 3, 5, BLACK);
+    }
 
     std::cout << "Rendering image in " << source_file_name << "... " << std::flush;
-    tracer.fire_all_rays(renderer);
+    tracer.fire_all_rays([&](const Ray& ray) { return (*renderer)(ray); });
     std::cout << "Done." << std::endl;
 
     // Save PFM image
