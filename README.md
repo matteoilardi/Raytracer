@@ -2,36 +2,35 @@
 
 A simple raytracer written in modern C++ for educational and experimental purposes. Developed for the course *Numerical Techniques for Photorealistic Image Generation* (AY2024–2025) by Prof. Maurizio Tomasi at the Department of Physics, University of Milan.
 
-
 ## Features
 
+- Ray tracing with three different algorithms: path tracing, point light tracing and flat rendering.
+- External scene description files with variable definitions and parsing.
 - Conversion of HDR `.pfm` images to `.png` with tone mapping.
-- Ray tracing of a demo scene with diffusive materials.
 - Optional animation generation via a shell script (requires `ffmpeg`).
-
 
 ## Installation
 
 This project uses CMake and requires a C++17-compatible compiler.
 
 ```bash
-git clone <repo-url>
+git clone <https://github.com/matteoilardi/Raytracer>
 cd raytracer
 mkdir build
 cd build
 cmake ..
 make
 ```
-Google Test is included directly in the repository as a source dependency and built as part of the project.
-All other dependencies are header-only: [CLI11](https://github.com/CLIUtils/CLI11) and [stb_image_write](https://github.com/nothings/stb).
 
+Except for Google Test, which is fetched from remote, all dependencies are header-only: [CLI11](https://github.com/CLIUtils/CLI11) and [stb_image_write](https://github.com/nothings/stb).
 
 ## Command-Line Usage
 
-The program supports two main subcommands via CLI11:
+The program supports three main subcommands via CLI11:
 
+---
 
-### Convert PFM to PNG
+### 1. Convert PFM to PNG
 
 Convert an HDR `.pfm` file to a tone-mapped `.png` image:
 
@@ -46,28 +45,61 @@ Convert an HDR `.pfm` file to a tone-mapped `.png` image:
 | `-a`, `--alpha`      | Exposure normalization factor (default: 0.18)   |
 | `-g`, `--gamma`      | Gamma correction value (default: 2.2)           |
 
+---
 
-###  Generate a Demo Image
+### 2. Generate a Demo Image
 
-Render a basic scene composed of scaled spheres using on-off tracing:
+Render a built-in demo scene composed of an array of spheres:
 
 ```bash
-./raytracer demo -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 0
+./raytracer demo -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 0 --antialiasing 3
+```
+
+| Option               | Description                                                               |
+|----------------------|---------------------------------------------------------------------------|
+| `--width`, `--height`| Output resolution (defaults: 1280x960)                                    |
+| `--orthogonal`       | Use orthogonal projection (default: perspective)                          |
+| `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)                                |
+| `-d`, `--distance`   | Scene origin - screen distance (default: 1.0, excluded by --orthogonal)   |
+| `--theta-deg`        | Polar viewing angle in degrees (default: 90)                              |
+| `--phi-deg`          | Azimuthal viewing angle in degrees (default: 0)                           |
+| `--antialiasing`     | Samples per pixel edge (default: 3)                                       |
+
+---
+
+### 3. Render Scene from File
+
+Render a scene described in a custom text-based file format:
+
+```bash
+./raytracer render -s scene.txt -o output --width 1280 --height 960 --antialiasing 3 --define-float radius=1.5
 ```
 
 | Option               | Description                                           |
 |----------------------|-------------------------------------------------------|
+| `-s`, `--source`     | Path to the scene description file (required)         |
+| `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)            |
 | `--width`, `--height`| Output resolution (defaults: 1280x960)                |
-| `--orthogonal`       | Use orthogonal projection (default: perspective)      |
-| `-o`, `--output-file`| Output base name (saves `demo.pfm`, `demo.png`)       |
-| `-d`, `--distance`   | Distance from scene origin (default: 1.0)             |
-| `--theta-deg`        | Polar viewing angle (default: 90)                     |
-| `--phi-deg`          | Azimuthal viewing angle (default: 0)                  |
+| `--antialiasing`     | Samples per pixel edge (default: 3)                   |
+| `--define-float`     | Define float variables (e.g., `--define-float radius=1.5`) |
 
+---
 
-### Generate a Demo Animation
+## Scene File Format
 
-Inside the `scripts/` directory, there is a helper script that generates multiple frames at varying observer angles and compiles them into a video.
+The scene file uses a custom format supporting:
+- Camera orientation
+- Materials definition
+- Object creation and transformation
+- Variable substitution with command-line overrides (`--define-float`)
+
+See `samples/demo_scene.txt` for usage. The lexer/parser is work in progress; a formal EBNF grammar description will be provided soon, along with more examples and use cases.
+
+---
+
+## Generate a Demo Animation
+
+A helper script in `scripts/` generates an animation by rendering frames at varying angles:
 
 ```bash
 cd scripts
@@ -76,35 +108,35 @@ cd scripts
 
 > **Note**: `ffmpeg` must be installed and available in your system's `PATH`.
 
+---
 
 ## Unit Testing
 
-Google Test is used for testing core components. After building, to run tests:
+Google Test is used for testing core components:
 
 ```bash
 cd build
 ctest
 ```
 
-Tests are located in the `tests/` directory.
+Tests are located in the `test/` directory.
 
-
-## Scene Files
-
-Support for external scene description files is **not yet implemented**, but is planned for future versions.
-
+---
 
 ## License
 
 This project is licensed under the MIT License. See [LICENSE.md](https://github.com/matteoilardi/Raytracer/blob/main/LICENSE.md) for details.
 
+---
 
 ## History
 
 See [CHANGELOG.MD](https://github.com/matteoilardi/Raytracer/blob/main/CHANGELOG.md).
 
+---
 
-## Author
+## Authors
 
 Developed by Master’s students in Theoretical Physics at the University of Milan.  
 Contributions, bug reports, and suggestions are welcome!
+ions, bug reports, and suggestions are welcome!

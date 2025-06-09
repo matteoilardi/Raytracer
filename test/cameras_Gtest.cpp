@@ -38,9 +38,8 @@ TEST(RayTest, test_at) {
 // test transform method
 TEST(RayTest, test_ray_transformation) {
   Ray ray = Ray(Point(1.f, 2.f, 3.f), Vec(6.f, 5.f, 4.f));
-  Transformation T =
-      translation(Vec(10.f, 11.f, 12.f)) *
-      rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
+  Transformation T = translation(Vec(10.f, 11.f, 12.f)) *
+                     rotation_x(0.5f * (float)std::numbers::pi); // Beware that std::sin accepts the angle measured in rads
   Ray transformed = ray.transform(T);
 
   EXPECT_TRUE(transformed.origin.is_close(Point(11.f, 8.f, 14.f)));
@@ -125,9 +124,9 @@ protected:
   std::unique_ptr<ImageTracer> tracer;
 
   void SetUp() override {
-    std::unique_ptr<HdrImage> img = std::make_unique<HdrImage>(4, 2);
-    std::unique_ptr<Camera> cam = std::make_unique<PerspectiveCamera>(1.f, 2.f);
-    tracer = std::make_unique<ImageTracer>(std::move(img), std::move(cam));
+    auto img = std::make_unique<HdrImage>(4, 2);
+    auto cam = std::make_shared<PerspectiveCamera>(1.f, 2.f);
+    tracer = std::make_unique<ImageTracer>(std::move(img), cam);
   }
 };
 
@@ -173,13 +172,13 @@ TEST_F(ImageTracerTest, test_image_orientation) {
 // test stratified sampling for a small 1-pixel image
 TEST(TestAntialiasing, test_stratified_sample) {
   auto small_img = std::make_unique<HdrImage>(1, 1);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer{std::move(small_img), std::move(cam), 10}; // 10 samples per pixel edge
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer{std::move(small_img), cam, 10}; // 10 samples per pixel edge
 
   int n_rays = 0; // number of traced rays
 
   // lambda that returns the same color for every ray after checking that it lands inside the screen
-  auto trace_ray = [&tracer, &n_rays] (Ray ray) -> Color {
+  auto trace_ray = [&tracer, &n_rays](Ray ray) -> Color {
     Point point = ray.at(1.f);
     EXPECT_TRUE(are_close(point.x, 0.f));
     EXPECT_TRUE(point.y > -1.f && point.y < 1.f);

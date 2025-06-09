@@ -57,8 +57,7 @@ TEST(SphereTest, test_translation) {
 
   Ray ray2 = Ray(Point(13.f, 0.f, 0.f), -VEC_X);
   std::optional<HitRecord> hit2 = translated_sphere->ray_intersection(ray2);
-  HitRecord expected2 =
-      HitRecord(translated_sphere, Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
+  HitRecord expected2 = HitRecord(translated_sphere, Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
   ASSERT_TRUE(hit2);
   EXPECT_TRUE(hit2.value().is_close(expected2));
 
@@ -248,8 +247,8 @@ TEST(WorldTest, test_ray_intersection) {
 // test on/off tracing
 TEST(WorldTest, test_on_off_tracing) {
   auto img = std::make_unique<HdrImage>(3, 3);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer(std::move(img), std::move(cam));
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer(std::move(img), cam);
 
   World world = World();
   auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));

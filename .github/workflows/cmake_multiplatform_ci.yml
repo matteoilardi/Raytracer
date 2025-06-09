@@ -4,7 +4,7 @@ on:
   #push:
   #  branches: ["main", "pathtracing"]
   pull_request:
-    branches: ["main", "pathtracing"]
+    branches: ["main", "pathtracing", "scenefiles"]
   workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
 
 jobs:
