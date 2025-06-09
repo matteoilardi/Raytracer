@@ -151,7 +151,7 @@ struct SourceLocation {
 
 //------------ TOKEN TYPE (used for dispatching at runtime)---------------
 
-enum class TokenType {
+enum class TokenKind {
   // these are the 6 types of token implemented in Pytracer
   STOP_TOKEN,     // A token signalling the end of a file
   KEYWORD,        // A token containing a keyword
@@ -164,33 +164,33 @@ enum class TokenType {
 // ------------ TOKEN VALUE: variant for possible token values ---------------
 using TokenValue = std::variant<std::monostate, KeywordEnum, char, std::string, float>;
 
-//------ TOKEN CLASS: product of `SourceLocation', `TokenType` and `TokenValue` (tagged union pattern in C++) ------
+//------ TOKEN CLASS: product of `SourceLocation', `TokenKind` and `TokenValue` (tagged union pattern in C++) ------
 class Token {
 public:
   //------- Properties --------
   SourceLocation source_location; // The source location
-  TokenType token_type;                 // The "tag"
+  TokenKind token_type;                 // The "tag"
   TokenValue value;               // The type-safe tagged union
 
   //----------- Constructors -----------
-  Token(const SourceLocation &loc, TokenType token_type) : source_location(loc), token_type(token_type), value(std::monostate{}) {
+  Token(const SourceLocation &loc, TokenKind token_type) : source_location(loc), token_type(token_type), value(std::monostate{}) {
     switch (token_type) {
-    case TokenType::STOP_TOKEN:
+    case TokenKind::STOP_TOKEN:
       // No value needed for STOP_TOKEN
       break;
-    case TokenType::KEYWORD:
+    case TokenKind::KEYWORD:
       value = KeywordEnum::NONE;
       break;
-    case TokenType::SYMBOL:
+    case TokenKind::SYMBOL:
       value = '\0';
       break;
-    case TokenType::IDENTIFIER:
+    case TokenKind::IDENTIFIER:
       value = std::string("");
       break;
-    case TokenType::LITERAL_STRING:
+    case TokenKind::LITERAL_STRING:
       value = std::string("");
       break;
-    case TokenType::LITERAL_NUMBER:
+    case TokenKind::LITERAL_NUMBER:
       value = 0.f;
       break;
     }
@@ -200,37 +200,37 @@ public:
 
   ///@brief assign a stop token (signals EndOfFile)
   void assign_stop_token() {
-    token_type = TokenType::STOP_TOKEN;
+    token_type = TokenKind::STOP_TOKEN;
     value = std::monostate{}; // No value needed for STOP_TOKEN
   }
 
   ///@brief assign a keyword token
   void assign_keyword(KeywordEnum kw) {
-    token_type = TokenType::KEYWORD;
+    token_type = TokenKind::KEYWORD;
     value = kw;
   }
 
   ///@brief assign a single character symbol token
   void assign_symbol(char c) {
-    token_type = TokenType::SYMBOL;
+    token_type = TokenKind::SYMBOL;
     value = c;
   }
 
   ///@brief assign an identifier token (e.g. variable name)
   void assign_identifier(const std::string &name) {
-    token_type = TokenType::IDENTIFIER;
+    token_type = TokenKind::IDENTIFIER;
     value = name;
   }
 
   ///@brief assign a string token value
   void assign_string(const std::string &s) {
-    token_type = TokenType::LITERAL_STRING;
+    token_type = TokenKind::LITERAL_STRING;
     value = s;
   }
 
   ///@brief assign a numeric token value
   void assign_number(float val) {
-    token_type = TokenType::LITERAL_NUMBER;
+    token_type = TokenKind::LITERAL_NUMBER;
     value = val;
   }
 
@@ -238,22 +238,22 @@ public:
   void print() const {
     std::cout << "Token Type: " + type_to_string();
     switch (token_type) {
-    case TokenType::STOP_TOKEN:
+    case TokenKind::STOP_TOKEN:
       break;
-    case TokenType::KEYWORD:
+    case TokenKind::KEYWORD:
       std::cout << ", Value: " << to_string(std::get<KeywordEnum>(value))
                 << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value)) << ")";
       break;
-    case TokenType::SYMBOL:
+    case TokenKind::SYMBOL:
       std::cout << ", Value: " << std::get<char>(value);
       break;
-    case TokenType::IDENTIFIER:
+    case TokenKind::IDENTIFIER:
       std::cout << ", Value: " << std::get<std::string>(value);
       break;
-    case TokenType::LITERAL_STRING:
+    case TokenKind::LITERAL_STRING:
       std::cout << ", Value: " << std::get<std::string>(value);
       break;
-    case TokenType::LITERAL_NUMBER:
+    case TokenKind::LITERAL_NUMBER:
       std::cout << ", Value: " << std::get<float>(value);
       break;
     }
@@ -263,17 +263,17 @@ public:
   ///@brief get the token value as a string
   std::string type_to_string() const {
     switch (token_type) {
-    case TokenType::STOP_TOKEN:
+    case TokenKind::STOP_TOKEN:
       return "STOP_TOKEN";
-    case TokenType::KEYWORD:
+    case TokenKind::KEYWORD:
       return "KEYWORD";
-    case TokenType::SYMBOL:
+    case TokenKind::SYMBOL:
       return "SYMBOL";
-    case TokenType::IDENTIFIER:
+    case TokenKind::IDENTIFIER:
       return "IDENTIFIER";
-    case TokenType::LITERAL_STRING:
+    case TokenKind::LITERAL_STRING:
       return "LITERAL_STRING";
-    case TokenType::LITERAL_NUMBER:
+    case TokenKind::LITERAL_NUMBER:
       return "LITERAL_NUMBER";
     }
   }
@@ -428,7 +428,7 @@ public:
     }
 
     // create the token with the parsed string and the appropriate constructor/methods
-    Token token(token_location, TokenType::LITERAL_STRING);
+    Token token(token_location, TokenKind::LITERAL_STRING);
     token.assign_string(token_str);
     return token;
   }
@@ -463,7 +463,7 @@ public:
     }
 
     // Create a token with the parsed number and the appropriate constructor/methods
-    Token token(token_location, TokenType::LITERAL_NUMBER);
+    Token token(token_location, TokenKind::LITERAL_NUMBER);
     token.assign_number(value);
     return token;
   }
@@ -489,11 +489,11 @@ public:
     // Check if it is a keyword
     auto kw_it = KEYWORDS.find(token_str);
     if (kw_it != KEYWORDS.end()) { // if it is a keyword, create a token accordingly
-      Token token(token_location, TokenType::KEYWORD);
+      Token token(token_location, TokenKind::KEYWORD);
       token.assign_keyword(kw_it->second); // kw_it->second is the KeywordEnum value
       return token;
     } else { // If it is not a keyword, it must be an identifier
-      Token token(token_location, TokenType::IDENTIFIER);
+      Token token(token_location, TokenKind::IDENTIFIER);
       token.assign_identifier(token_str);
       return token;
     }
@@ -522,13 +522,13 @@ public:
     char ch = read_char(); // read the first character
 
     if (ch == 0) { // You got to the end of file: create and return a STOP_TOKEN
-      Token token(token_location, TokenType::STOP_TOKEN);
+      Token token(token_location, TokenKind::STOP_TOKEN);
       return token;
     }
 
     // Handle single-character symbols or otherwise start parsing other token types
     if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
-      Token token(token_location, TokenType::SYMBOL); // Create a symbol token
+      Token token(token_location, TokenKind::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);
       // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
       _skip_whitespaces_and_comments(); // NOT SURE!
@@ -591,7 +591,7 @@ public:
   /// @brief Read a token and check that it matches the symbol expected from our grammar.
   void expect_symbol(InputStream &input_stream, char symbol) {
     Token token = input_stream.read_token();
-    if (token.token_type != TokenType::SYMBOL || std::get<char>(token.value) != symbol) {
+    if (token.token_type != TokenKind::SYMBOL || std::get<char>(token.value) != symbol) {
       throw GrammarError(token.source_location,
                          "got '" + std::string(1, std::get<char>(token.value)) + "' instead of '" + symbol + "'");
     }
@@ -601,7 +601,7 @@ public:
   KeywordEnum expect_keywords(InputStream &input_stream, const std::vector<KeywordEnum> &keywords) {
     // second argument is a {...} list of keywords from KeywordEnum class
     Token token = input_stream.read_token();
-    if (token.token_type != TokenType::KEYWORD) {
+    if (token.token_type != TokenKind::KEYWORD) {
       throw GrammarError(token.source_location, "expected KEYWORD instead of " + token.type_to_string());
     }
     KeywordEnum kw = std::get<KeywordEnum>(token.value);
@@ -615,9 +615,9 @@ public:
   /// @brief Read a token and check that it is either a literal number or a float variable defined in scene
   float expect_number(InputStream &input_stream) {
     Token token = input_stream.read_token();
-    if (token.token_type == TokenType::LITERAL_NUMBER) {
+    if (token.token_type == TokenKind::LITERAL_NUMBER) {
       return std::get<float>(token.value);
-    } else if (token.token_type == TokenType::IDENTIFIER) {
+    } else if (token.token_type == TokenKind::IDENTIFIER) {
       const std::string &variable_name = std::get<std::string>(token.value);
       auto map_it = float_variables.find(variable_name); // Look for the map entry with the variable name
       if (map_it == float_variables.end()) {             // If not found, throw an error
@@ -633,7 +633,7 @@ public:
   /// @brief Read a token and check that it is a literal string
   std::string expect_string(InputStream &input_stream) {
     Token token = input_stream.read_token();
-    if (token.token_type != TokenType::LITERAL_STRING) {
+    if (token.token_type != TokenKind::LITERAL_STRING) {
       throw GrammarError(token.source_location, "expected LITERAL_STRING instead of " + token.type_to_string());
     }
     return std::get<std::string>(token.value);
@@ -642,7 +642,7 @@ public:
   /// @brief Read a token and check that it is an identifier
   std::string expect_identifier(InputStream &input_stream) {
     Token token = input_stream.read_token();
-    if (token.token_type != TokenType::IDENTIFIER) {
+    if (token.token_type != TokenKind::IDENTIFIER) {
       throw GrammarError(token.source_location, "expected IDENTIFIER instead of " + token.type_to_string());
     }
     return std::get<std::string>(token.value);
@@ -800,7 +800,7 @@ public:
       }
 
       Token next_token = input_stream.read_token();
-      if (next_token.token_type != TokenType::SYMBOL || std::get<char>(next_token.value) != '*') {
+      if (next_token.token_type != TokenKind::SYMBOL || std::get<char>(next_token.value) != '*') {
         input_stream.unread_token(next_token);
         break;
       }
@@ -864,7 +864,7 @@ public:
     std::optional<float> asp_ratio;
     expect_symbol(input_stream, ',');
     Token asp_ratio_token = input_stream.read_token();
-    if (asp_ratio_token.token_type == TokenType::KEYWORD) {
+    if (asp_ratio_token.token_type == TokenKind::KEYWORD) {
       input_stream.unread_token(asp_ratio_token); // NOTE is it ok to use unread even if strictly speaking it is not necessary?
       expect_keywords(input_stream, {KeywordEnum::EXACT_ASP_RATIO});
       asp_ratio = std::nullopt;
@@ -915,7 +915,7 @@ public:
     // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float, material, sphere, plane, camera, point_light
     while (true) {
       Token new_token = input_stream.read_token();
-      if (new_token.token_type == TokenType::STOP_TOKEN) {
+      if (new_token.token_type == TokenKind::STOP_TOKEN) {
         break;
       } else {
         input_stream.unread_token(new_token);
