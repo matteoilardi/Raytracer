@@ -42,11 +42,11 @@ struct Pigment {
   virtual Color operator()(Vec2d uv) const = 0;
 };
 
-//-------------------------------------------------------------------------------------------------------------
-//------ UNIFORM PIGMENT ------------------
-// ------------------------------------------------------------------------------------------------------------
 
-/// @brief returns constant Color for all (u, v) coordinates
+//-------------------------------------------------------------------------
+//---------------------- UNIFORM PIGMENT STRUCT ------------------
+//-------------------------------------------------------------------------
+/// @brief returns constant Color
 struct UniformPigment : public Pigment {
 
   //-------Properties--------
@@ -64,9 +64,9 @@ struct UniformPigment : public Pigment {
   virtual Color operator()(Vec2d uv) const override { return color; };
 };
 
-//-------------------------------------------------------------------------------------------------------------
-//------ CHECKERED PIGMENT ------------------
-// ------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------------------------
+//---------------------- CHECKERED PIGMENT STRUCT ------------------
+//-------------------------------------------------------------------------
 
 /// @brief return checkered pattern of two Colors
 struct CheckeredPigment : public Pigment {
@@ -123,8 +123,8 @@ public:
     int row = static_cast<int>(uv.v * image.height);
 
     // Clamp indices to avoid potential out-of-bounds (only needed if u or v == 1.0)
-    // TODO Technically, uv should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes u or v=1
-    // We should check if these 'if checks' slow down the code significantly, if so, we can remove them
+    // TODO Technically, uv should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes u
+    // or v=1 We should check if these 'if checks' slow down the code significantly, if so, we can remove them
     if (col >= image.width)
       col = image.width - 1;
     if (row >= image.height)
@@ -170,18 +170,16 @@ public:
 };
 
 //-------------------------------------------------------------------------------------------------------------
-// -----------DIFFUSIVE BRDF ------------------
+// -----------DIFFUSIVE BRDF  ------------------
 // ------------------------------------------------------------------------------------------------------------
-
 /// @brief BRDF for isotropic light diffusion
 class DiffusiveBRDF : public BRDF {
 public:
   //-------Properties--------
 
   //-----------Constructor-----------
-  /// @param reflectance of the object (how bright it is, regardless of the color) set to 1 by default
-  /// @param pigment of the object (the actual color, regardless of the brightness)
-  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr, float reflectance = 1.f) : BRDF(pigment) {
+  /// @param pigment of the object
+  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr) : BRDF(pigment) {
     if (!this->pigment) {
       this->pigment = std::make_shared<UniformPigment>(); // if no pigment is provided, set uniform pigment (black)
     }
@@ -198,12 +196,10 @@ public:
   }
 
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    // TODO we should make sure we normalize only once, be it here, in the HitRecord, somewhereelse....
-    normal.normalize();
+    normal = normal.normalize(); // QUESTION is it necessary?
     ONB onb{normal.to_vector()};
-    auto [theta, phi] =
-        pcg->random_phong(1); // since diffusive BRDF is constant, doing importance sampling for the rendering integral
-                              // with distribution p~ BRDF*cos(theta)~cos(theta), hence use Phong n=1 distribution
+    auto [theta, phi] = pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to
+                                              // cos(theta), hence we perform importance sampling using Phong n=1 distribution
     Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
                      onb.e3 * std::cos(theta)}; // get outgoing direction from the local ONB basis
 
@@ -223,8 +219,8 @@ public:
   //-----------Constructor-----------
   SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr) : BRDF(pigment) {
     if (!this->pigment) {
-      this->pigment =
-          std::make_shared<UniformPigment>(WHITE); // if no pigment is provided, set uniform pigment WHITE for perfect mirror
+      this->pigment = std::make_shared<UniformPigment>(
+          Color(1.f, 1.f, 1.f)); // if no pigment is provided, set uniform pigment WHITE for perfect mirror
     }
   }
 
@@ -238,9 +234,9 @@ public:
     Normal n = normal;
     Vec in = in_dir;
     Vec out = out_dir;
-    n.normalize();
-    in.normalize();
-    out.normalize();
+    n = n.normalize();
+    in = in.normalize();
+    out = out.normalize();
 
     float theta_in = std::acos(n * -in);  // incidence angle
     float theta_out = std::acos(n * out); // reflection angle
@@ -256,10 +252,10 @@ public:
 
   /// @brief deterministic perfect mirror reflection
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
+    incoming_dir = incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
                               // somewhereelse
     Vec n = normal.to_vector();
-    n.normalize();
+    n = n.normalize();
 
     Vec reflected = incoming_dir - n * 2.f * (n * incoming_dir);
 

@@ -1,41 +1,142 @@
 # Raytracer
 
-This is a simple raytracer written in C++. It is a work in progress for Prof. Maurizio Tomasi's course *Numerical Techniques for Photorealistic Image Generation* (AY2024–2025) at the Department of Physics, University of Milan.
+A simple raytracer written in modern C++ for educational and experimental purposes. Developed for the course *Numerical Techniques for Photorealistic Image Generation* (AY2024–2025) by Prof. Maurizio Tomasi at the Department of Physics, University of Milan.
+
+## Features
+
+- Ray tracing with three different algorithms: path tracing, point light tracing and flat rendering.
+- External scene description files with variable definitions and parsing.
+- Conversion of HDR `.pfm` images to `.png` with tone mapping.
+- Optional animation generation via a shell script (requires `ffmpeg`).
 
 ## Installation
 
-**Coming soon**
-
-## Usage
-
-As of now, the program supports converting a PFM (Portable FloatMap) image into a PNG image. To do this, run the program from the command line with the following arguments:
+This project uses CMake and requires a C++17-compatible compiler.
 
 ```bash
-./raytracer <input.pfm> <alpha> <gamma> <output.png>
+git clone <https://github.com/matteoilardi/Raytracer>
+cd raytracer
+mkdir build
+cd build
+cmake ..
+make
 ```
 
-- `<input.pfm>`: The name of the input PFM file.
-- `<alpha>`: A multiplier for scaling the pixel values.
-- `<gamma>`: The gamma correction value for your monitor (e.g., 2.2).
-- `<output.png>`: The name of the output image file (PNG format).
+Except for Google Test, which is fetched from remote, all dependencies are header-only: [CLI11](https://github.com/CLIUtils/CLI11) and [stb_image_write](https://github.com/nothings/stb).
 
-> ⚠️ Rendering features are still under development. Image generation is currently limited to PFM-to-PNG conversion.
+## Command-Line Usage
 
-To run the available test suite and verify the core components, use:
+The program supports three main subcommands via CLI11:
+
+---
+
+### 1. Convert PFM to PNG
+
+Convert an HDR `.pfm` file to a tone-mapped `.png` image:
 
 ```bash
-./colorTest
-./geometryTest
+./raytracer pfm2png -i input.pfm -o output.png -a 0.18 -g 2.2
 ```
 
-## Scene Files
+| Option               | Description                                     |
+|----------------------|-------------------------------------------------|
+| `-i`, `--input-file` | Input image in `.pfm` format (required)         |
+| `-o`, `--output-file`| Output `.png` filename (required)               |
+| `-a`, `--alpha`      | Exposure normalization factor (default: 0.18)   |
+| `-g`, `--gamma`      | Gamma correction value (default: 2.2)           |
 
-**Work in progress**
+---
 
-## History
+### 2. Generate a Demo Image
 
-**Coming soon**
+Render a built-in demo scene composed of an array of spheres:
+
+```bash
+./raytracer demo -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 0 --antialiasing 3
+```
+
+| Option               | Description                                                               |
+|----------------------|---------------------------------------------------------------------------|
+| `--width`, `--height`| Output resolution (defaults: 1280x960)                                    |
+| `--orthogonal`       | Use orthogonal projection (default: perspective)                          |
+| `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)                                |
+| `-d`, `--distance`   | Scene origin - screen distance (default: 1.0, excluded by --orthogonal)   |
+| `--theta-deg`        | Polar viewing angle in degrees (default: 90)                              |
+| `--phi-deg`          | Azimuthal viewing angle in degrees (default: 0)                           |
+| `--antialiasing`     | Samples per pixel edge (default: 3)                                       |
+
+---
+
+### 3. Render Scene from File
+
+Render a scene described in a custom text-based file format:
+
+```bash
+./raytracer render -s scene.txt -o output --width 1280 --height 960 --antialiasing 3 --define-float radius=1.5
+```
+
+| Option               | Description                                           |
+|----------------------|-------------------------------------------------------|
+| `-s`, `--source`     | Path to the scene description file (required)         |
+| `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)            |
+| `--width`, `--height`| Output resolution (defaults: 1280x960)                |
+| `--antialiasing`     | Samples per pixel edge (default: 3)                   |
+| `--define-float`     | Define float variables (e.g., `--define-float radius=1.5`) |
+
+---
+
+## Scene File Format
+
+The scene file uses a custom format supporting:
+- Camera orientation
+- Materials definition
+- Object creation and transformation
+- Variable substitution with command-line overrides (`--define-float`)
+
+See `samples/demo_scene.txt` for usage. The lexer/parser is work in progress; a formal EBNF grammar description will be provided soon, along with more examples and use cases.
+
+---
+
+## Generate a Demo Animation
+
+A helper script in `scripts/` generates an animation by rendering frames at varying angles:
+
+```bash
+cd scripts
+./generate_animation.sh
+```
+
+> **Note**: `ffmpeg` must be installed and available in your system's `PATH`.
+
+---
+
+## Unit Testing
+
+Google Test is used for testing core components:
+
+```bash
+cd build
+ctest
+```
+
+Tests are located in the `test/` directory.
+
+---
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](./LICENSE.md) for details.
+This project is licensed under the MIT License. See [LICENSE.md](https://github.com/matteoilardi/Raytracer/blob/main/LICENSE.md) for details.
+
+---
+
+## History
+
+See [CHANGELOG.MD](https://github.com/matteoilardi/Raytracer/blob/main/CHANGELOG.md).
+
+---
+
+## Authors
+
+Developed by Master’s students in Theoretical Physics at the University of Milan.  
+Contributions, bug reports, and suggestions are welcome!
+ions, bug reports, and suggestions are welcome!

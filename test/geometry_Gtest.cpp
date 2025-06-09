@@ -182,19 +182,18 @@ TEST(TransformationTest, test_scalings) {
   EXPECT_TRUE(expected.is_close(sc1 * sc2));
 }
 
-
 // ------------------------------------------------------------------------------------------------------------
 // -------------------------TESTS FOR ONB-----------------
 // ------------------------------------------------------------------------------------------------------------
 
-TEST(ONBTest, test_is_consistent){
+TEST(ONBTest, test_is_consistent) {
   ONB world_onb;
   EXPECT_TRUE(world_onb.is_consistent());
 
   ONB wrong_onb1{VEC_X, VEC_Y, VEC_Y};
   EXPECT_FALSE(wrong_onb1.is_consistent());
 
-  ONB wrong_onb2{1.1f*VEC_X, VEC_Y, VEC_Z};
+  ONB wrong_onb2{1.1f * VEC_X, VEC_Y, VEC_Z};
   EXPECT_FALSE(wrong_onb2.is_consistent());
 }
 

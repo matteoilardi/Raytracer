@@ -109,11 +109,38 @@ public:
   // Sum of two colors
   Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
 
+  // Compound addition assigmenent
+  Color &operator+=(const Color &other) {
+    *this = *this + other;
+    return *this;
+  }
+
   // Product of two colors
   Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
 
+  // Compound product assigmenent of two Colors
+  Color &operator*=(const Color &other) {
+    *this = *this * other;
+    return *this;
+  }
+
   // Product: color * scalar
   Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
+
+  // Compound product assigmenent of a color and a scalar
+  Color &operator*=(float scalar) {
+    *this = *this * scalar;
+    return *this;
+  }
+
+  // Division: color / scalar
+  Color operator/(float scalar) const { return *this * (1.f / scalar); }
+
+  // Compound division assigment of a color and a scalar
+  Color &operator/=(float scalar) {
+    *this = *this / scalar;
+    return *this;
+  }
 
   // Friend function to allow commutative product: scalar * color
   friend Color operator*(float scalar, const Color &my_color) {
@@ -359,7 +386,12 @@ public:
   // Default constructor: if dimensions are positive, initializes the pixels
   // vector with width*height copies of Color(); otherwise, creates an empty
   // vector.
-  HdrImage(int32_t w, int32_t h) : width(w), height(h), pixels((w > 0 && h > 0) ? static_cast<size_t>(w * h) : 0, Color()) {}
+  HdrImage(int32_t w, int32_t h) : width(w), height(h) {
+    if (w <= 0 || h <= 0) {
+      throw std::invalid_argument("HdrImage dimensions must be positive");
+    }
+    pixels.resize(static_cast<size_t>(w * h), Color());
+  }
 
   // First constructor pfm file --> Hdr image
   // Read a PFM file from a stream invoking `read_pfm_file` method
@@ -369,7 +401,7 @@ public:
   // Open a PFM file and read the stream of bytes from it, again invoking
   // `read_pfm_file` method
   HdrImage(const std::string &file_name) {
-    std::ifstream stream(file_name);
+    std::ifstream stream(file_name, std::ios::binary); // Open the file in binary mode
     if (!stream.is_open()) {
       std::string error_msg = "Failed to open file \"" + file_name + "\"";
       if (errno) {                                        // errno is a system-specific number that identifies an error occured

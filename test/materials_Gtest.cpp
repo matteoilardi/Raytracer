@@ -77,13 +77,13 @@ HdrImage image(2, 2);
 TEST(BRDFTest, test_specular_brdf_reflection) {
   // Setup: incident direction and surface normal
   Vec in_dir = Vec(0.f, -1.f, -1.f);
-  in_dir.normalize();
+  in_dir = in_dir.normalize();
   Normal normal = Normal(0.f, 0.f, 1.f); 
   Point hit_point = Point(0.f, 0.f, 0.f); // arbitrary intersection point
 
   // Expected reflected direction
   Vec expected_out = Vec(0.f, -1.f, 1.f);
-  expected_out.normalize();
+  expected_out = expected_out.normalize();
 
   // Build the BRDF
   auto pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
@@ -93,7 +93,7 @@ TEST(BRDFTest, test_specular_brdf_reflection) {
   // Call scatter_ray
   Ray scattered = brdf.scatter_ray(pcg, in_dir, hit_point, normal, 1);
   Vec out_dir = scattered.direction;
-  out_dir.normalize(); // Ensure the direction is normalized
+  out_dir = out_dir.normalize(); // Ensure the direction is normalized
   
 
   // Test reflected direction

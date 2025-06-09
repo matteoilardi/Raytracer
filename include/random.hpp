@@ -31,16 +31,9 @@ public:
   //-------Properties--------
 
   uint64_t state; // internal state of the generator
-  uint64_t inc;   // increment, different increments generate different orthogonal sequences from the same internal states
-
-  // TODO is it true?
-  // ANSWER Yes, since it is because increment is alway odd so any two different increments are coprime with 2^64 and
-  // produce two not overlapping cycles which I believe (read chatgpt) is what people call 'being orthogonal' (you can
-  // actually prove it with modular arithmetic, things like chinese remainder theorem, etc that I have forgotten...)
-  // REMOVE_TAG when you read this comment
+  uint64_t inc;   // increment, different increments generate orthogonal sequences from the same internal states
 
   //-----------Constructors-----------
-  /// Default constructor
 
   /// Constructor with parameters
   ///@param initial state of the generator
@@ -54,6 +47,7 @@ public:
   };
 
   //------------Methods-----------
+
   ///@brief generate random uint32 and advance internal state
   uint32_t random() {
     uint64_t old_state = state;
@@ -82,6 +76,7 @@ public:
     float x = random_float();
     float theta = std::acos(std::pow(x, 1.f / (n + 1)));
 
+
     // sample phi: the conditional distribution for phi is actually independent of the theta value you pick
     float phi = random_float() * 2 * std::numbers::pi;
 
@@ -96,9 +91,9 @@ public:
   ///@brief extract random numbers and discard them, used to advance the internal state of the generator
   ///@param n how many numbers to discard
   void discard(int n) {
-    uint32_t ran;
     while (n > 0) {
-      ran = random();
+      random(); // Intentionally discard the return value of random(); calling it advances the RNG state, which is the
+                // purpose here. Assigning to a dummy variable may trigger a compiler warning for unused variable.
       n--;
     }
     return;

@@ -80,7 +80,7 @@ public:
   Vec(float x, float y, float z) : x(x), y(y), z(z) {}
 
   /// Constructor for a normalized Vec accepting polar coordinates
-  Vec(float theta, float phi) : x(std::sin(theta)*std::cos(phi)), y(std::sin(theta)*std::sin(phi)), z(std::cos(theta)){}
+  Vec(float theta, float phi) : x(std::sin(theta) * std::cos(phi)), y(std::sin(theta) * std::sin(phi)), z(std::cos(theta)) {}
 
   //--------------------Methods----------------------
 
@@ -110,14 +110,12 @@ public:
   float norm() const { return std::sqrt(squared_norm()); }
 
   /// normalize the vector
-  void normalize() {
+  [[nodiscard]] Vec normalize() const {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero vector");
     }
-    x = x / n;
-    y = y / n;
-    z = z / n;
+    return Vec(x / n, y / n, z / n);
   }
 
   /// convert vector to a normal
@@ -213,14 +211,12 @@ public:
   float norm() const { return std::sqrt(squared_norm()); }
 
   /// normalize the normal
-  void normalize() {
+  [[nodiscard]] Normal normalize() const {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero normal");
     }
-    x = x / n;
-    y = y / n;
-    z = z / n;
+    return Normal(x / n, y / n, z / n);
   }
 
   /// convert normal to a vector
@@ -567,8 +563,7 @@ public:
   // Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
   ///@param rotation angle (rads)
   rotation_x(const float &theta)
-      : Transformation(
-            {{{1.f, 0.f, 0.f}, {0.f, std::cos(theta), -std::sin(theta)}, {0.f, std::sin(theta), std::cos(theta)}}}) {}
+      : Transformation({{{1.f, 0.f, 0.f}, {0.f, std::cos(theta), -std::sin(theta)}, {0.f, std::sin(theta), std::cos(theta)}}}) {}
 };
 
 class rotation_y : public Transformation {
@@ -576,8 +571,7 @@ public:
   // Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
   ///@param rotation angle (rads)
   rotation_y(const float &theta)
-      : Transformation(
-            {{{std::cos(theta), 0.f, std::sin(theta)}, {0.f, 1.f, 0.f}, {-std::sin(theta), 0.f, std::cos(theta)}}}) {}
+      : Transformation({{{std::cos(theta), 0.f, std::sin(theta)}, {0.f, 1.f, 0.f}, {-std::sin(theta), 0.f, std::cos(theta)}}}) {}
 };
 
 class rotation_z : public Transformation {
@@ -585,8 +579,7 @@ public:
   // Constructor builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
   ///@param rotation angle (rads)
   rotation_z(const float &theta)
-      : Transformation(
-            {{{std::cos(theta), -std::sin(theta), 0.f}, {std::sin(theta), std::cos(theta), 0.f}, {0.f, 0.f, 1.f}}}) {}
+      : Transformation({{{std::cos(theta), -std::sin(theta), 0.f}, {std::sin(theta), std::cos(theta), 0.f}, {0.f, 0.f, 1.f}}}) {}
 };
 
 class translation : public Transformation {
@@ -610,7 +603,6 @@ public:
 const Vec VEC_X = Vec(1.f, 0.f, 0.f);
 const Vec VEC_Y = Vec(0.f, 1.f, 0.f);
 const Vec VEC_Z = Vec(0.f, 0.f, 1.f);
-
 
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- ORTHONORMAL BASIS OBJECT ----------------------
@@ -651,4 +643,12 @@ struct ONB {
     }
     return true;
   }
+};
+
+//-------------------------------------------------------------------------------------------------------------
+//------------------------------- DEGREES TO RADIANS CONVERSION ----------------------
+//-------------------------------------------------------------------------------------------------------------
+
+float degs_to_rads(const float& angle_degs) {
+  return angle_degs * std::numbers::pi / 180.f;
 };

@@ -1,10 +1,10 @@
 name: CMake multiplatform ci
 
 on:
-  push: #remove if you don't want to trigger the workflow on push
-    branches: [ "main", "pathtracing" ] #remove pathtracing after merging into main
+  #push:
+  #  branches: ["main", "pathtracing"]
   pull_request:
-    branches: [ "main", "pathtracing" ] #remove pathtracing after merging into main
+    branches: ["main", "pathtracing", "scenefiles"]
   workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
 
     - name: Print test log on failure
       if: failure()
-      shell: bash  # Force bash so `if [[ ... ]]` works
+      shell: bash
       run: |
         cat "${{ steps.strings.outputs.build-output-dir }}\\Testing\\Temporary\\LastTest.log" || echo "Log file not found"
 

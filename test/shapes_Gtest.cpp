@@ -58,8 +58,7 @@ TEST(SphereTest, test_translation) {
 
   Ray ray2 = Ray(Point(13.f, 0.f, 0.f), -VEC_X);
   std::optional<HitRecord> hit2 = translated_sphere->ray_intersection(ray2);
-  HitRecord expected2 =
-      HitRecord(translated_sphere, Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
+  HitRecord expected2 = HitRecord(translated_sphere, Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
   ASSERT_TRUE(hit2);
   EXPECT_TRUE(hit2.value().is_close(expected2));
 
@@ -80,12 +79,8 @@ TEST(SphereTest, test_normals) {
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
 
   ASSERT_TRUE(hit1);
-  // TODO consider changing the implementation of Normal::normalize(), perhaps it should return a Normal
-  // ANSWER Isn't it already returning a Normal? it's a void method within the Normal class, so it should be
-  Normal computed_normal = hit1->normal;
-  Normal expected_normal = Normal(1.f, 4.f, 0.f);
-  computed_normal.normalize();
-  expected_normal.normalize();
+  Normal computed_normal = (hit1->normal).normalize();
+  Normal expected_normal = (Normal(1.f, 4.f, 0.f)).normalize();
   EXPECT_TRUE(computed_normal.is_close(expected_normal));
 }
 
@@ -253,8 +248,8 @@ TEST(WorldTest, test_ray_intersection) {
 // test on/off tracing
 TEST(WorldTest, test_on_off_tracing) {
   auto img = std::make_unique<HdrImage>(3, 3);
-  auto cam = std::make_unique<OrthogonalCamera>();
-  ImageTracer tracer(std::move(img), std::move(cam));
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer(std::move(img), cam);
 
   auto world = std::make_shared<World>();
   auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));
