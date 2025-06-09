@@ -231,12 +231,9 @@ public:
   Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
     // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
     // pass them by const reference?
-    Normal n = normal;
-    Vec in = in_dir;
-    Vec out = out_dir;
-    n = n.normalize();
-    in = in.normalize();
-    out = out.normalize();
+    Normal n = normal.normalize();
+    Vec in = in_dir.normalize();
+    Vec out = out_dir.normalize();
 
     float theta_in = std::acos(n * -in);  // incidence angle
     float theta_out = std::acos(n * out); // reflection angle
@@ -252,12 +249,12 @@ public:
 
   /// @brief deterministic perfect mirror reflection
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    incoming_dir = incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
+    Vec in = incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
                               // somewhereelse
-    Vec n = normal.to_vector();
-    n = n.normalize();
+    Vec n = (normal.to_vector()).normalize();
+    //n.normalize();
 
-    Vec reflected = incoming_dir - n * 2.f * (n * incoming_dir);
+    Vec reflected = in - n * 2.f * (n * in);
 
     return Ray(intersection_point, reflected, 1.e-5f, infinite, depth);
   }

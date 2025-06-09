@@ -130,23 +130,26 @@ int main(int argc, char **argv) {
 
   // Float variable definition from command line
   std::unordered_map<std::string, float> floats_from_cl;
-  render_subc->add_option_function<std::vector<std::string>>("--define-float", [&floats_from_cl](const std::vector<std::string> definition_strings){
-    for (const auto& def : definition_strings) {
-      auto pos = def.find('=');
-      if (pos == std::string::npos) {
-        throw CLI::ValidationError("Invalid --define format: use name=value");
-      }
-      std::string name = def.substr(0, pos);        // First pos characters of the string def
-      std::string value_string = def.substr(pos+1); // Characters of string def from pos+1 to the end
-      float value;
-      try {
-        value = std::stof(value_string);
-      } catch (...) {
-        throw CLI::ValidationError("Invalid float value");
-      }
-      floats_from_cl[name] = value;
-    }
-  }, "Define named float variables as name=value");
+  render_subc->add_option_function<std::vector<std::string>>(
+      "--define-float",
+      [&floats_from_cl](const std::vector<std::string> definition_strings) { // lambda function parsing float definitions from CL
+        for (const auto &def : definition_strings) {
+          auto pos = def.find('=');
+          if (pos == std::string::npos) {
+            throw CLI::ValidationError("Invalid --define format: use name=value");
+          }
+          std::string name = def.substr(0, pos);          // First pos characters of the string def
+          std::string value_string = def.substr(pos + 1); // Characters of string def from pos+1 to the end
+          float value;
+          try {
+            value = std::stof(value_string);
+          } catch (...) {
+            throw CLI::ValidationError("Invalid float value");
+          }
+          floats_from_cl[name] = value;
+        }
+      },
+      "Define named float variables as name=value");
 
   // TODO add algorithm switch after merge of branch pathtracing, and remember to implement  sub-swithces (e. g. ambient_color for
   // point light tracing)
