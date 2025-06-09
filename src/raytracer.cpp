@@ -129,7 +129,6 @@ int main(int argc, char **argv) {
       ->default_val(3);
 
   // Float variable definition from command line
-  std::vector<std::string> definition_strings;
   std::unordered_map<std::string, float> floats_from_cl;
   render_subc->add_option_function<std::vector<std::string>>("--define-float", [&floats_from_cl](const std::vector<std::string> definition_strings){
     for (const auto& def : definition_strings) {
