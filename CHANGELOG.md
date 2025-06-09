@@ -1,5 +1,8 @@
 # HEAD
 
+## 2025-06-09
+- Implement lexer and parser supporting scene description in a source file [PR#13](https://github.com/matteoilardi/Raytracer/pull/13)
+
 ## 2025-05-29
 -  Implement point light tracing [PR#11](https://github.com/matteoilardi/Raytracer/pull/11)
 
@@ -10,7 +13,7 @@
 -   Create shapes.hpp library [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
 -   Import external library CLI11 [PR#8](https://github.com/matteoilardi/Raytracer/pull/8)
 -   Implement workflow for continuous integration [PR#6](https://github.com/matteoilardi/Raytracer/pull/6)
--   Implement Google Test unit testing framework [PR#6](https://github.com/matteoilardi/Raytracer/pull/6)
+-   Adopt Google Test unit testing framework [PR#6](https://github.com/matteoilardi/Raytracer/pull/6)
 
 ## 2025-05-02
 -   Fix an issue with the vertical order of the images [#5](https://github.com/matteoilardi/Raytracer/pull/5)
