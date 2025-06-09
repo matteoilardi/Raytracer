@@ -4,7 +4,7 @@ A simple raytracer written in modern C++ for educational and experimental purpos
 
 ## Features
 
-- Ray tracing with three different algorithms: path tracing, point light tracing and flat rendering.
+- Ray tracing with four rendering algorithms: on/off tracing, flat shading, point light tracing, and path tracing.
 - External scene description files with variable definitions and parsing.
 - Conversion of HDR `.pfm` images to `.png` with tone mapping.
 - Optional animation generation via a shell script (requires `ffmpeg`).
@@ -49,20 +49,22 @@ Convert an HDR `.pfm` file to a tone-mapped `.png` image:
 
 ### 2. Generate a Demo Image
 
-Render a built-in demo scene composed of an array of spheres:
+Render a built-in demo scene composed of an array of spheres (mode `onoff`) or a scene composed of a checkered floor, a reflective sphere, a diffusive sphere and a light-emitting sky (mode `path`).
+The output PNG images can be found at `/samples/demo_onoff_tracing.png` and `/samples/demo_path_tracing.png` respectively.
 
 ```bash
-./raytracer demo -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 0 --antialiasing 3
+./raytracer demo -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 180 --antialiasing 3
 ```
 
 | Option               | Description                                                               |
 |----------------------|---------------------------------------------------------------------------|
+| `-m`, `--mode`       | Rendering mode: `onoff` (default) or `path`                               |
 | `--width`, `--height`| Output resolution (defaults: 1280x960)                                    |
 | `--orthogonal`       | Use orthogonal projection (default: perspective)                          |
 | `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)                                |
-| `-d`, `--distance`   | Scene origin - screen distance (default: 1.0, excluded by --orthogonal)   |
+| `-d`, `--distance`   | Scene origin - screen distance (excluded if using `--orthogonal`)         |
 | `--theta-deg`        | Polar viewing angle in degrees (default: 90)                              |
-| `--phi-deg`          | Azimuthal viewing angle in degrees (default: 0)                           |
+| `--phi-deg`          | Azimuthal viewing angle in degrees (default: 180)                         |
 | `--antialiasing`     | Samples per pixel edge (default: 3)                                       |
 
 ---
@@ -82,6 +84,10 @@ Render a scene described in a custom text-based file format:
 | `--width`, `--height`| Output resolution (defaults: 1280x960)                |
 | `--antialiasing`     | Samples per pixel edge (default: 3)                   |
 | `--define-float`     | Define float variables (e.g., `--define-float radius=1.5`) |
+| `-m`, `--mode`       | Rendering mode: `flat` (default), `onoff`, `point_light`, `path` |
+| `--n_rays`           | Number of rays scattered at each hit (path tracing)   |
+| `--roulette`         | Ray depth threshold for Russian roulette (path tracing) |
+| `--max-depth`        | Maximum ray recursion depth (path tracing)           |
 
 ---
 
@@ -93,7 +99,7 @@ The scene file uses a custom format supporting:
 - Object creation and transformation
 - Variable substitution with command-line overrides (`--define-float`)
 
-See `samples/demo_scene.txt` for usage. The lexer/parser is work in progress; a formal EBNF grammar description will be provided soon, along with more examples and use cases.
+See `samples/demo_scene.txt` for usage. A formal EBNF grammar description will be provided soon, along with more examples and use cases.
 
 ---
 

@@ -3,6 +3,13 @@
 ## 2025-06-09
 - Implement lexer and parser supporting scene description in a source file [PR#13](https://github.com/matteoilardi/Raytracer/pull/13)
 
+## 2025-06-09
+-   Implement path tracing algorithm [PR#9](https://github.com/matteoilardi/Raytracer/pull/9)
+-   Implement flat renderer [PR#9](https://github.com/matteoilardi/Raytracer/pull/9)
+-   Implement specular BRDF [PR#9](https://github.com/matteoilardi/Raytracer/pull/9)
+-   Finish materials.cpp library implementation (including ImagePigment) [PR#9](https://github.com/matteoilardi/Raytracer/pull/9)
+-   Implement PCG (random number generator) [PR#9](https://github.com/matteoilardi/Raytracer/pull/9)
+
 ## 2025-05-29
 -  Implement point light tracing [PR#11](https://github.com/matteoilardi/Raytracer/pull/11)
 

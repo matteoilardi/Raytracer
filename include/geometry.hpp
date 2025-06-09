@@ -614,7 +614,7 @@ struct ONB {
   Vec e1, e2, e3;
 
   // ------- Constructors --------
-  /// @brief Default constructor: same base as the world's reference frame
+  /// @brief Default constructor: same basis as the world's reference frame
   ONB() : e1(VEC_X), e2(VEC_Y), e3(VEC_Z) {};
 
   /// @brief Constructor from three Vec
@@ -622,10 +622,9 @@ struct ONB {
 
   /// @brief Branchless constructor from a Vec (cast into e_3)
   /// @details Assumes the input Vec to be normalized. Based on the algorithm by Duff et al. (2017)
-  /// @param normalized Vec = e_3
+  /// @param vec normalized Vec = e_3
   ONB(Vec vec) : e3(vec) {
-    float sign =
-        std::copysignf(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the second one
+    float sign = std::copysignf(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the second one (sign is set negative if e3.z=0)
     const float a = -1.f / (sign + e3.z);
     const float b = e3.x * e3.y * a;
 

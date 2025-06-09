@@ -31,8 +31,10 @@
 #include <vector>
 
 // ------------------------------------------------------------------------------------------------------------
-// CONSTANTS, ENDIANNESS, EXCEPTIONS, GLOBAL FUNCTIONS
+// ----- CONSTANTS, ENDIANNESS, EXCEPTIONS, GLOBAL FUNCTIONS, FORWARD DECLARATIONS
 // ------------------------------------------------------------------------------------------------------------
+
+class Color;
 
 constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5f; // Default tolerance to decide if two float numbers are close
 
@@ -88,8 +90,7 @@ public:
 
   Color() : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
 
-  Color(float red, float green,
-        float blue) // Constructor with externally assigned values
+  Color(float red, float green, float blue) // Constructor with externally assigned values
       : r(red), g(green), b(blue) {}
 
   // Methods
@@ -145,6 +146,13 @@ public:
   friend Color operator*(float scalar, const Color &my_color) {
     return my_color * scalar; // Reuse the member function
   }
+  
+  // Helper method to display the color in a readable format.
+  std::string to_string() const {
+    std::ostringstream oss;
+    oss << "Color(r: " << r << ", g: " << g << ", b: " << b << ")";
+    return oss.str();
+  }
 
   // Helper method to display the color.
   void display() const { std::cout << "r: " << r << " g: " << g << " b: " << b; }
@@ -161,6 +169,13 @@ public:
   /// instead of Shirley & Morley formula)
   /// @return
   float luminosity_arithemic_avg() const { return (r + g + b) / 3.f; }
+
+  /// clamp the color values to the range [0, 1]
+  void clamp() {
+    r = std::clamp(r, 0.f, 1.f);
+    g = std::clamp(g, 0.f, 1.f);
+    b = std::clamp(b, 0.f, 1.f);
+  }
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -590,3 +605,16 @@ public:
     output_ldr_file_name = argv[4];
   }
 };
+
+//-------------------------------------------------------------------------------------------------------------
+//---------- PREDEFINED COLORS ------------------
+//-------------------------------------------------------------------------------------------------------------
+
+Color BLACK(0.0f, 0.0f, 0.0f);
+Color WHITE(1.0f, 1.0f, 1.0f);
+Color RED(1.0f, 0.0f, 0.0f);
+Color GREEN(0.0f, 1.0f, 0.0f);
+Color BLUE(0.0f, 0.0f, 1.0f);
+Color YELLOW(1.0f, 1.0f, 0.0f);
+Color PURPLE(1.0f, 0.0f, 1.0f);
+Color CYAN(0.0f, 1.0f, 1.0f);
