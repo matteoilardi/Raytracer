@@ -139,4 +139,3 @@ See [CHANGELOG.MD](https://github.com/matteoilardi/Raytracer/blob/main/CHANGELOG
 
 Developed by Master’s students in Theoretical Physics at the University of Milan.  
 Contributions, bug reports, and suggestions are welcome!
-ions, bug reports, and suggestions are welcome!
