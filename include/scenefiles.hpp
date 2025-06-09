@@ -275,6 +275,8 @@ public:
       return "LITERAL_STRING";
     case TokenKind::LITERAL_NUMBER:
       return "LITERAL_NUMBER";
+    default:
+      return "UNKNOWN_TOKEN_KIND";
     }
   }
 };
