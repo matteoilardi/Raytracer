@@ -10,17 +10,12 @@
 //---------- FORWARD DECLARATIONS ----------
 //---------------------------------------------
 // generate demo image with on off rendering
-std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, const Transformation &obs_transformation);
+std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation);
 // generate demo image with flat rendering
-std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int height, const Transformation &obs_transformation);
+std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation);
 // generate demo image with Monte Carlo path tracing rendering
-std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, const Transformation &obs_transformation);
+std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation);
 
-enum class DemoMode {
-  OnOff,
-  Flat,
-  Path // Path tracing demo is not implemented yet, but will be
-};
 
 //-------------------------------------------------------------------
 //---------- MAIN FUNCTION ----------
@@ -48,20 +43,19 @@ int main(int argc, char **argv) {
   // Command line parsing for demo mode
   // -----------------------------------------------------------
 
-  // Add a subcommand for the demo mode and provide a description
+  // Add a subcommand for the demo mode
   auto demo_subc =
       app.add_subcommand("demo", "Run demo rendering and save PFM and PNG files"); // Returns a pointer to an App object
 
-  // Add option for on_off, flat or MonteCarlo pathtracing rendering and provide description in the help output
-  // default demo mode is on_off rendering
+  // Add option for on_off tracing or path tracing rendering
+  // Default is on/off tracing
   std::string mode_str = "onoff";
-  DemoMode demo_mode;
-  demo_subc->add_option("-m,--mode", mode_str, "Rendering mode: on/off (default), flat, or MonteCarlo path tracing")
-      ->check(CLI::IsMember({"onoff", "flat", "path"}))
+  demo_subc->add_option("-m,--mode", mode_str, "Rendering mode: on/off tracing (default) or path tracing")
+      ->check(CLI::IsMember({"onoff", "path"}))
       ->default_val("onoff");
 
   // Add options for image width and height (# pixels) and provide description in the help output
-  // Default values 1280x960, but can be overwritten by command line arguments
+  // Default values are 1280x960
   int width = 1280;
   int height = 960;
   demo_subc->add_option("--width", width, "Specify image width")
@@ -72,22 +66,19 @@ int main(int argc, char **argv) {
       ->default_val(960); // reject negative values
   ;
 
-  // Add option for perspective or orthogonal projection and provide description in the help output
+  // Add option for perspective or orthogonal projection
   bool orthogonal = false;
   auto orthogonal_flag = demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
 
-  // Add option for output file name and provide description in the help output
-  // Default value is "demo", but can be overwritten by command line arguments
+  // Add option for output file name
+  // Default value is "demo"
   demo_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
 
-  // Add option for observer transformation: composition of a translation along -VEC_X and rotation around the scene
-  // endcoded in distance, angles phi and angle theta (colatitude, theta=0 north pole). Default position: Origin - VEC_X.
+  // Add option for observer transformation: rotation around the scene and camera-screen distance (only for perspective camera). Angles phi and theta: longitude and colatitude (theta=0 -> north pole). Default position along the negative x direction: theta = 90, phi = 180.
   float distance = 1.f;
   float theta = std::numbers::pi / 2.f;
-  float phi = 0.f;
+  float phi = std::numbers::pi;
 
-  // specifying distance only makes sense for perspective camera
-  // if user selects a distance, orthogonal flag is automatically set to false
   demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")->excludes(orthogonal_flag)->default_val(1.f);
 
   demo_subc
@@ -99,8 +90,8 @@ int main(int argc, char **argv) {
   demo_subc
       ->add_option_function<float>(
           "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi; },
-          "Specify observer's longitude angle phi (default is 0 degrees, observer at prime meridian)")
-      ->default_val(0.f);
+          "Specify observer's longitude angle phi (default is 180 degrees, observer alogn negative direction of x-axis)")
+      ->default_val(180.f);
   ;
 
   // -----------------------------------------------------------
@@ -130,27 +121,25 @@ int main(int argc, char **argv) {
 
   if (*demo_subc) {
     // A. (DEMO) Compute the demo image and save PFM file
-    Transformation observer_transformation =
-        rotation_z(phi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-VEC_X * distance);
+    Transformation observer_transformation;
+        translation(-3.f*VEC_X) * rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta);
 
-    // check which demo mode is selected
     if (mode_str == "onoff") {
-      demo_mode = DemoMode::OnOff;
-    } else if (mode_str == "flat") {
-      demo_mode = DemoMode::Flat;
+      observer_transformation =
+        translation(-VEC_X) * rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta);
     } else if (mode_str == "path") {
-      demo_mode = DemoMode::Path;
+      observer_transformation =
+        translation(-3.f*VEC_X) * rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta);
     }
 
     // Generate the demo image accordingly
     std::cout << "Rendering demo image... " << std::flush;
 
-    if (demo_mode == DemoMode::Flat) {
-      img = make_demo_image_flat(orthogonal, width, height, observer_transformation);
-    } else if (demo_mode == DemoMode::OnOff) {
-      img = make_demo_image_onoff(orthogonal, width, height, observer_transformation);
-    } else if (demo_mode == DemoMode::Path) {
-      img = make_demo_image_path(orthogonal, width, height, observer_transformation); // placeholder
+
+    if (mode_str == "onoff") {
+      img = make_demo_image_onoff(orthogonal, width, height, distance, observer_transformation);
+    } else if (mode_str == "path") {
+      img = make_demo_image_path(orthogonal, width, height, distance, observer_transformation);
     }
 
     std::cout << "Done." << std::endl;
@@ -193,7 +182,7 @@ int main(int argc, char **argv) {
 //------------- OnOff Tracing Demo Image -------------
 
 std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height,
-                                                const Transformation &obs_transformation) {
+                                                float distance, const Transformation &obs_transformation) {
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
 
@@ -205,7 +194,7 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
     cam = std::make_unique<OrthogonalCamera>(aspect_ratio, obs_transformation);
   } else {
     // provide default *origin-screen* distance, aspect ratio and observer transformation
-    cam = std::make_unique<PerspectiveCamera>(1.f, aspect_ratio, obs_transformation);
+    cam = std::make_unique<PerspectiveCamera>(distance, aspect_ratio, obs_transformation);
   }
   ImageTracer tracer(std::move(img), std::move(cam));
 
@@ -230,62 +219,16 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
   return std::move(tracer.image);
 }
 
-//--------------------- Flat Tracing demo image ---------------------
 
-std::unique_ptr<HdrImage> make_demo_image_flat(bool orthogonal, int width, int height, const Transformation &obs_transformation) {
-  // Initialize ImageTracer
-  auto img = std::make_unique<HdrImage>(width, height);
 
-  float aspect_ratio = (float)width / height;
+//--------------------- Path tracing demo image ---------------------
 
-  std::unique_ptr<Camera> cam;
-  if (orthogonal) {
-    // provide aspect ratio and observer transformation
-    cam = std::make_unique<OrthogonalCamera>(aspect_ratio, obs_transformation);
-  } else {
-    // provide default *origin-screen* distance, aspect ratio and observer transformation
-    cam = std::make_unique<PerspectiveCamera>(1.f, aspect_ratio, obs_transformation);
-  }
-  ImageTracer tracer(std::move(img), std::move(cam));
-
-  // Initialize demo World
-  auto world = std::make_shared<World>();
-
-  scaling sc({0.1f, 0.1f, 0.1f}); // common scaling for all spheres
-
-  std::vector<Vec> sphere_positions = {{0.5f, 0.5f, 0.5f},  {0.5f, 0.5f, -0.5f},  {0.5f, -0.5f, 0.5f},  {0.5f, -0.5f, -0.5f},
-                                       {-0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, -0.5f, -0.5f},
-                                       {0.0f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}};
-
-  // set colors for spheres
-  std::shared_ptr<Pigment> emitted_radiance =
-      std::make_shared<CheckeredPigment>(Color(1.f, 0.f, 0.f), Color(0.f, 0.f, 1.f), 4);
-  std::shared_ptr<DiffusiveBRDF> diffusive_brdf = std::make_shared<DiffusiveBRDF>(emitted_radiance);
-  std::shared_ptr<Material> material = std::make_shared<Material>(diffusive_brdf, emitted_radiance);
-
-  // add spheres to the world
-  for (const Vec &pos : sphere_positions) {
-    auto sphere = std::make_shared<Sphere>(translation(pos) * sc, material);
-    world->add_object(sphere);
-  }
-
-  // Perform on/off tracing
-  tracer.fire_all_rays(FlatTracer(world));
-
-  // Return demo image
-  return std::move(tracer.image);
-}
-
-//--------------------- MonteCarlo path tracing demo image ---------------------
-
-//TODO check implementation and take care of camera orientation (see demo in Tomasi Pytracer)
-
-std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, const Transformation &obs_transformation) {
+std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation) {
   // 1. Create World
   std::shared_ptr<World> world = std::make_shared<World>();
 
   // 2. Define Pigments and Materials
-  auto sky_emission = std::make_shared<UniformPigment>(Color(0.7f, 0.5f, 1.0f));
+  auto sky_emission = std::make_shared<UniformPigment>(Color(0.2f, 0.3f, 1.f));
   auto black_pigment = std::make_shared<UniformPigment>(BLACK);
   auto sky_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(black_pigment), sky_emission);
 
@@ -294,76 +237,36 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
                                                     std::make_shared<UniformPigment>(Color(0.f, 0.f, 0.f)));
 
   auto grey_pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
-  auto sphere_material = std::make_shared<Material>(std::make_shared<SpecularBRDF>(grey_pigment),
-                                                    std::make_shared<UniformPigment>(Color(0.f, 0.f, 0.f)));
+  auto sphere_material = std::make_shared<Material>(std::make_shared<SpecularBRDF>(grey_pigment), black_pigment);
+
+  auto red_pigment = std::make_shared<UniformPigment>(Color(0.8f, 0.1f, 0.f));
+  auto sphere2_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(red_pigment), black_pigment);
 
   // 3. Add objects
-  Transformation sky_transform = rotation_y(5.f * std::numbers::pi / 6.f)* translation(Vec(0.f, 0.f, 100.f));
-  world->add_object(std::make_shared<Plane>(sky_transform, sky_material));
+  Transformation sky_transform = scaling({50.f, 50.f, 50.f});
+  world->add_object(std::make_shared<Sphere>(sky_transform, sky_material));
   world->add_object(std::make_shared<Plane>(translation(Vec(0.f, 0.f, -2.f)), ground_material));
-  world->add_object(std::make_shared<Sphere>(translation(Vec(0.f, 0.f, 1.f)), sphere_material));
+  world->add_object(std::make_shared<Sphere>(scaling({0.4f, 0.4f, 0.4f}), sphere_material));
+  world->add_object(std::make_shared<Sphere>(translation(Vec(0.f, -1.5f, -2.f)), sphere2_material));
 
   // 4. Setup camera
   std::unique_ptr<Camera> camera;
-  //Transformation my_obs_transformation = translation(Vec(-4.f, 0.f, 1.f)) * rotation_z(30.f * std::numbers::pi / 180.f);
 
   if (orthogonal) { 
-    camera = std::make_unique<OrthogonalCamera>(static_cast<float>(height) / width, obs_transformation);
+    camera = std::make_unique<OrthogonalCamera>(static_cast<float>(width) / height, obs_transformation);
   } else {
-    camera = std::make_unique<PerspectiveCamera>(1.f, static_cast<float>(height) / width, obs_transformation);
+    camera = std::make_unique<PerspectiveCamera>(distance, static_cast<float>(width) / height, obs_transformation);
   }
 
   // 5. Render image with Montecarlo path tracing
   auto pcg = std::make_shared<PCG>();
-  //PathTracer path_tracer(world, pcg, 10, 2, 4); // tweakable: n_rays, roulette limit, max_depth
-  FlatTracer flat_tracer(world, Color(1.f, 0.f, 0.f));
+  PathTracer path_tracer(world, pcg, 10, 2, 6); // n_rays, roulette limit, max_depth
 
   // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);
   ImageTracer image_tracer(std::move(image), std::move(camera));
   //image_tracer.fire_all_rays(path_tracer);
-  image_tracer.fire_all_rays(flat_tracer);
+  image_tracer.fire_all_rays(path_tracer);
 
   return std::move(image_tracer.image);
 }
-
-//-------------------------------------------------------------------------------------------------------------------------------
-// ---------------------------OLD MAIN BODY (for reference)---------------------------
-//--------------------------------------------------------------------------------------------------------------------------------
-
-// int main(int argc, char *argv[]) {
-//   // Step 1: Parse command-line arguments
-//   Parameters parameters;
-//   try {
-//     parameters.parse_command_line(argc, argv);
-//   } catch (const std::runtime_error &err) {
-//     std::cerr << "Error parsing command line. " << err.what() << '\n';
-//     return EXIT_FAILURE;
-//   }
-//
-//   // Step 2: Read HDR image from PFM file
-//   HdrImage img(0, 0);
-//   try {
-//     img = HdrImage(parameters.input_pfm_file_name);
-//     std::cout << "File \"" << parameters.input_pfm_file_name << "\" has been read from disk.\n";
-//
-//   } catch (const std::exception &err) {
-//     std::cerr << "Error reading image. " << err.what() << '\n';
-//     return EXIT_FAILURE;
-//   }
-//
-//   // Step 3: Process the image (normalize + clamp)
-//   img.normalize_image(parameters.a_factor);
-//   img.clamp_image();
-//
-//   // Step 4: Write the output image (LDR, 8-bit PNG)
-//   try {
-//     img.write_ldr_image(parameters.output_ldr_file_name, parameters.gamma, "png");
-//     std::cout << "File \"" << parameters.output_ldr_file_name << "\" has been written to disk.\n";
-//   } catch (const std::exception &err) {
-//     std::cerr << "Error writing image. " << err.what() << '\n';
-//     return EXIT_FAILURE;
-//   }
-//
-//   return EXIT_SUCCESS;
-// }
