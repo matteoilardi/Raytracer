@@ -14,27 +14,27 @@
 // ------------------------------------------------------------------------------------------------------------
 
 void expect_eq_keyword(const Token &token, KeywordEnum keyword) {
-  EXPECT_EQ(token.token_type, TokenKind::KEYWORD);
+  EXPECT_EQ(token.type, TokenKind::KEYWORD);
   EXPECT_EQ(std::get<KeywordEnum>(token.value), keyword);
 }
 
 void expect_eq_identifier(const Token &token, const std::string &identifier) {
-  EXPECT_EQ(token.token_type, TokenKind::IDENTIFIER);
+  EXPECT_EQ(token.type, TokenKind::IDENTIFIER);
   EXPECT_EQ(std::get<std::string>(token.value), identifier);
 }
 
 void expect_eq_symbol(const Token &token, char symbol) {
-  EXPECT_EQ(token.token_type, TokenKind::SYMBOL);
+  EXPECT_EQ(token.type, TokenKind::SYMBOL);
   EXPECT_EQ(std::get<char>(token.value), symbol);
 }
 
 void expect_eq_number(const Token &token, float number) {
-  EXPECT_EQ(token.token_type, TokenKind::LITERAL_NUMBER);
+  EXPECT_EQ(token.type, TokenKind::LITERAL_NUMBER);
   EXPECT_FLOAT_EQ(std::get<float>(token.value), number);
 }
 
 void expect_eq_string(const Token &token, const std::string &s) {
-  EXPECT_EQ(token.token_type, TokenKind::LITERAL_STRING);
+  EXPECT_EQ(token.type, TokenKind::LITERAL_STRING);
   EXPECT_EQ(std::get<std::string>(token.value), s);
 }
 
@@ -141,7 +141,7 @@ TEST(InputStreamTest, test_lexer) {
 
   // Should be at end of file since comments and whitespaces are skipped
   Token eof = input_file.read_token();
-  EXPECT_EQ(eof.token_type, TokenKind::STOP_TOKEN);
+  EXPECT_EQ(eof.type, TokenKind::STOP_TOKEN);
 }
 
 // ---- Test GrammarError functionality of lexer --------------------------------------------------------
