@@ -129,8 +129,9 @@ public:
     if (row >= image.height)
       row = image.height - 1;
 
-    if (col < 10 && row < 10) {
-      (image.get_pixel(col, row)).display(); // TODO remove this debug print
+    // TODO remove this debug print, I am using it to make sure pixels are visited and the right colors are returned
+    if (100<col<120 && 100<row < 120) {
+      (image.get_pixel(col, row)).display(); 
     }
 
     // Return the corresponding pixel color from the image
