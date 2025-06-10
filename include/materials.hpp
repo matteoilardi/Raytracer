@@ -130,7 +130,7 @@ public:
       row = image.height - 1;
 
     // TODO remove this debug print, I am using it to make sure pixels are visited and the right colors are returned
-    if (100<col<120 && 100<row < 120) {
+    if (118<col<120 && 118<row < 120) {
       (image.get_pixel(col, row)).display(); 
     }
 

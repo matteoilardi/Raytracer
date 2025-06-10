@@ -13,7 +13,7 @@ float r_earth(2)
 camera(perspective, translation([-1, 0, 0]), exact_asp_ratio, 1)
 
 # define the materials
-material mat(diffuse(uniform(<0.3,0.3,0.3>)), image("../samples/memorial.pfm"))
+material mat(diffuse(uniform(<0.000,0.000,0.000>)), image("../samples/memorial.pfm"))
 
 
 sphere(translation([4,0,0]) * scaling([r_earth, r_earth, r_earth]), mat)
