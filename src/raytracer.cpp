@@ -196,10 +196,10 @@ int main(int argc, char **argv) {
 
     if (mode_str == "onoff") {
       observer_transformation =
-        translation(-VEC_X) * rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta);
+        rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-VEC_X);
     } else if (mode_str == "path") {
       observer_transformation =
-        translation(-3.f*VEC_X) * rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta);
+         rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-3.f*VEC_X);
     }
 
     // Generate the demo image accordingly
@@ -373,13 +373,13 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
 
   // 5. Render image with Montecarlo path tracing
   auto pcg = std::make_shared<PCG>();
-  PathTracer path_tracer(world, pcg, 10, 2, 6); // n_rays, roulette limit, max_depth
+  PathTracer tracer(world, pcg, 10, 2, 6); // n_rays, roulette limit, max_depth
+  //FlatTracer tracer(world);
 
   // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);
   ImageTracer image_tracer(std::move(image), std::move(camera));
-  //image_tracer.fire_all_rays(path_tracer);
-  image_tracer.fire_all_rays(path_tracer);
+  image_tracer.fire_all_rays(tracer);
 
   return std::move(image_tracer.image);
 }
