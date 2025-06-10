@@ -42,7 +42,6 @@ struct Pigment {
   virtual Color operator()(Vec2d uv) const = 0;
 };
 
-
 //-------------------------------------------------------------------------
 //---------------------- UNIFORM PIGMENT STRUCT ------------------
 //-------------------------------------------------------------------------
@@ -129,6 +128,10 @@ public:
       col = image.width - 1;
     if (row >= image.height)
       row = image.height - 1;
+
+    if (col < 10 && row < 10) {
+      (image.get_pixel(col, row)).display(); // TODO remove this debug print
+    }
 
     // Return the corresponding pixel color from the image
     return image.get_pixel(col, row);
@@ -249,10 +252,10 @@ public:
 
   /// @brief deterministic perfect mirror reflection
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    Vec in = incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it here or
-                              // somewhereelse
+    Vec in = incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it
+                                       // here or somewhereelse
     Vec n = (normal.to_vector()).normalize();
-    //n.normalize();
+    // n.normalize();
 
     Vec reflected = in - n * 2.f * (n * in);
 

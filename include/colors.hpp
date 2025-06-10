@@ -155,7 +155,7 @@ public:
   }
 
   // Helper method to display the color.
-  void display() const { std::cout << "r: " << r << " g: " << g << " b: " << b; }
+  void display() const { std::cout << "r: " << r << " g: " << g << " b: " << b << std::endl; }
 
   /// @brief luminosity of the color (computed using Shirley & Morley
   /// formula)

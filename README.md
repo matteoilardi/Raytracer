@@ -26,7 +26,7 @@ Except for Google Test, which is fetched from remote, all dependencies are heade
 
 ## Command-Line Usage
 
-The program supports three main subcommands via CLI11:
+The program supports three main subcommands via CLI11.
 
 ---
 
@@ -53,7 +53,7 @@ Render a built-in demo scene composed of an array of spheres (mode `onoff`) or a
 The output PNG images can be found at `/samples/demo_onoff_tracing.png` and `/samples/demo_path_tracing.png` respectively.
 
 ```bash
-./raytracer demo -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 180 --antialiasing 3
+./raytracer demo -m RENDER_MODE -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 180 --antialiasing 3
 ```
 
 | Option               | Description                                                               |
