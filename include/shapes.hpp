@@ -105,7 +105,7 @@ public:
   ///@brief flip the normal to the surface so that it has negative scalar product with the hitting ray
   ///@param normal normal to the surface
   ///@param ray incoming ray hitting the shape
-  Normal enforce_correct_normal_orientation(Normal normal, Ray ray) const {
+  Normal _enforce_correct_normal_orientation(Normal normal, Ray ray) const {
     if (normal * ray.direction > 0) {
       return -normal; // the normal and the ray must have opposite directions, if this is false (dot product>0), flip
                       // the normal
@@ -113,6 +113,17 @@ public:
       return normal;
     }
   }
+
+  /// @brief returns a vector containing *all* valid intersections with a given ray, sorted by increasing t
+  /// @details used for CSG
+  virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const = 0;
+  // This method's logic and purpose are very similar to those of ray_intersection(). However, in most circumstances only the first intersection is relevant: since for some shapes the closest intersection search lends itself to a more efficient implementation, it makes sense to have two separate methods.
+
+  ///@brief Compute the normal to the surface at the intersection point
+  virtual Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const = 0;
+
+  ///@brief Compute the surface (u, v) coordinates at the intersection point
+  virtual Vec2d _surface_coordinates_at_hit(const Point& hit_point) const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -171,17 +182,11 @@ public:
     Point hit_point = ray.at(t_first_hit);
 
     // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
-    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z); // normal to the sphere is just the vector from the origin
-    normal = enforce_correct_normal_orientation(normal, ray);      // enforce normal and hitting ray have opposite directions
+    Normal normal = _normal_at_hit(hit_point, ray);
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
     // reference frame by our convention)
-    float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi); // atan2 is the arctangent
-    if (u < 0.f) {
-      u = u + 1.f;
-    } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
-    float v = std::acos(hit_point.z) / std::numbers::pi;
-    Vec2d surface_coordinates = Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
+    Vec2d surface_coordinates = _surface_coordinates_at_hit(hit_point);
 
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
@@ -190,6 +195,65 @@ public:
                 t_first_hit);
     return hit;
   };
+
+  virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
+    //  Important note: unless otherwise specified, every geometrical object in the body of this method is in the
+    //  reference frame of the *standard* sphere
+
+    // 1. Transform the ray to the *standard* sphere's reference frame
+    Ray ray = ray_world_frame.transform(transformation.inverse());
+
+    // 2. Compute the discriminant of the 2nd degree equation in slides 8b 29-31, return null if the ray is tangent (as
+    // if there were no intersections)
+    Vec O = ray.origin.to_vector();
+    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1);
+    if (reduced_discriminant == 0.f) {
+      return std::vector<HitRecord>();
+    }
+
+    std::vector<float> t_hits;
+    float t1 = (-O * ray.direction - std::sqrt(reduced_discriminant)) / ray.direction.squared_norm();
+    float t2 = (-O * ray.direction + std::sqrt(reduced_discriminant)) / ray.direction.squared_norm();
+    if (t1 > ray.tmin && t1 < ray.tmax) { // If t1 represents a valid intersection, also t2 will represent a valid one, unless it exceeds the ray's maximum t. t1 < t2, so the array is ordered by increasing t
+      t_hits.push_back(t1);
+      if (t2 < ray.tmax) {
+        t_hits.push_back(t2);
+      }
+    } else if (t2 > ray.tmin && t2 < ray.tmax) {
+      t_hits.push_back(t2);
+    } // If neither t1 nor t2 represent valid intersections, t_hits will remain empty
+
+    std::vector<HitRecord> hits;
+    // Loop over hits: generate a HitRecord for each one of them
+    for (auto t_hit :  t_hits) {
+      // Compute hitting point, normal, surface coordinates
+      Point hit_point = ray.at(t_hit);
+      Normal normal = _normal_at_hit(hit_point, ray);
+      Vec2d surface_coordinates = _surface_coordinates_at_hit(hit_point);
+
+      // Build HitRecord and add to vector
+      HitRecord hit{shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
+                t_hit};
+      hits.push_back(hit);
+    }
+
+    return hits;
+  }
+
+  virtual Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const override {
+    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z);  // normal to the sphere is just the vector from the origin
+    normal = _enforce_correct_normal_orientation(normal, ray);      // enforce normal and hitting ray have opposite directions
+    return normal;
+  };
+
+  virtual Vec2d _surface_coordinates_at_hit(const Point& hit_point) const override {
+    float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi); // atan2 is the arctangent
+    if (u < 0.f) {
+      u = u + 1.f;
+    } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
+    float v = std::acos(hit_point.z) / std::numbers::pi;
+    return Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -232,11 +296,10 @@ public:
     Point hit_point = ray.at(t_hit);
 
     // 4. Compute the normal to the plane at the intersection point (i. e. choose the sign of the normal)
-    Normal normal = enforce_correct_normal_orientation(VEC_Z.to_normal(), ray);
+    Normal normal = _normal_at_hit(hit_point, ray);
 
-    // 5. Compute surface 2D coordinates (u,v) of the intersection point (periodic parametrization Tomasi Lesson 8a
-    // slides 37-38)
-    Vec2d surface_coordinates = Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
+    // 5. Compute surface 2D coordinates (u,v) of the intersection point
+    Vec2d surface_coordinates = _surface_coordinates_at_hit(hit_point);
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
@@ -244,7 +307,78 @@ public:
                 t_hit);
     return hit;
   };
+
+  virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
+    // The number of hits with a plane is at most one
+    std::optional<HitRecord> hit = ray_intersection(ray_world_frame);
+
+    std::vector<HitRecord> hits;
+    if (hit.has_value()) { hits.push_back(hit.value()); }
+    return hits;
+  }
+
+  virtual Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const override {
+    return _enforce_correct_normal_orientation(VEC_Z.to_normal(), ray);
+  }
+
+  // Periodic parametrization of the plane (Tomasi Lesson 8a slides 37-38)
+  virtual Vec2d _surface_coordinates_at_hit(const Point& hit_point) const override {
+    return Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
+  }
 };
+
+
+
+//-------------------------------------------------------------------------------------------------------------
+// -----------CSGObject CLASS ------------------
+// ------------------------------------------------------------------------------------------------------------
+
+//class CSG : public Shape {
+//  //-------Properties--------
+//  std::shared_ptr<Shape> object1;
+//  std::shared_ptr<Shape> object2;
+//
+//  enum class Operation { UNION, INTERSECTION, DIFFERENCE};
+//  Operation operation;
+//
+//  CSGObject(std::shared_ptr<Shape> object1 = std::nullptr, std::shared_ptr<Shape> object2 = std::nullptr) : Shape(), object1(object1), object2(object2) {};
+//
+//  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+//    std::vector<HitRecord> hits = all_ray_intersections(ray_world_frame);
+//    if (hits.begin() == hits.end()) { return std::nullopt; }
+//    else { return std::make_optional<HitRecord>(hits[0]); }
+//    // We assume that all_ray_intersections() returns a vector of HitRecords ordered by increasing t
+//  }
+//
+//  virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
+//    std::vector<HitRecord> intersections1 = object1->all_ray_intersections(ray_world_frame);
+//    std::vector<HitRecord> intersections2 = object2->all_ray_intersections(ray_world_frame);
+//
+//
+//
+//    //Mergesort merge strategy
+//
+//    // Return orderd array with valid entries
+//
+//
+//  }
+//
+//  bool intersection_is_valid(HitRecord intersection, Operation operation) {
+//    switch (operation) {
+//    case Operation::UNION:
+//
+//      break;
+//    case Operation::INTERSECTION:
+//      break;
+//    case Operation::DIFFERENCE:
+//      break;
+//
+//    }
+//  }
+//
+//};
+
+
 
 //-------------------------------------------------------------------------------------------------------------
 // ----------- POINT LIGHT SOURCE CLASS ------------------
