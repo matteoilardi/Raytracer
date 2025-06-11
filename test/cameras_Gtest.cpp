@@ -170,7 +170,7 @@ TEST_F(ImageTracerTest, test_image_orientation) {
 }
 
 // test stratified sampling for a small 1-pixel image
-TEST(TestAntialiasing, test_stratified_sample) {
+TEST(TestAntialiasing, test_stratified_sampling) {
   auto small_img = std::make_unique<HdrImage>(1, 1);
   auto cam = std::make_shared<OrthogonalCamera>();
   ImageTracer tracer{std::move(small_img), cam, 10}; // 10 samples per pixel edge
@@ -178,7 +178,7 @@ TEST(TestAntialiasing, test_stratified_sample) {
   int n_rays = 0; // number of traced rays
 
   // lambda that returns the same color for every ray after checking that it lands inside the screen
-  auto trace_ray = [&tracer, &n_rays](Ray ray) -> Color {
+  auto trace_ray = [&n_rays](Ray ray) -> Color {
     Point point = ray.at(1.f);
     EXPECT_TRUE(are_close(point.x, 0.f));
     EXPECT_TRUE(point.y > -1.f && point.y < 1.f);
@@ -193,4 +193,24 @@ TEST(TestAntialiasing, test_stratified_sample) {
 
   EXPECT_EQ(n_rays, 100); // check that the total number of traced rays is the expected one
   EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color(1.f, 2.f, 3.f))); // check color normalization
+}
+
+TEST(TestAntialiasing, test_mean) {
+  auto small_img = std::make_unique<HdrImage>(1, 1);
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer{std::move(small_img), cam, 100}; // 100 samples per pixel edge, 10000 samples in total
+
+  PCG pcg{};
+  // lambda that returns BLACK or RED with equal probability
+  auto trace_ray = [&pcg](Ray ray) -> Color {
+    if (pcg.random_float() >= 0.5f) { return RED; }
+    else { return BLACK; }
+  };
+
+  tracer.fire_all_rays(trace_ray);
+
+  // Expected red compoent of the Color the pixel is 0.5
+  // Variance is 0.5/sqrt(# of rays) = 5e-3 by the central limit theorem
+  // Check that the value of the r component of the pixel is within 5 sigma from the expected value
+  EXPECT_TRUE(are_close(tracer.image->get_pixel(0, 0).r, 0.5f, 5*5e-3));
 }
