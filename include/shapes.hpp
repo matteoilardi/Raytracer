@@ -158,8 +158,8 @@ public:
     // 2. Compute the discriminant of the 2nd degree equation in slides 8b 29-31, return null if the ray is tangent (as
     // if there were no intersections)
     Vec O = ray.origin.to_vector();
-    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1);
-    if (reduced_discriminant == 0.f) {
+    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1.f);
+    if (reduced_discriminant <= 0.f || are_close(reduced_discriminant, 0.f)) {
       return std::nullopt;
     }
 
@@ -206,8 +206,8 @@ public:
     // 2. Compute the discriminant of the 2nd degree equation in slides 8b 29-31, return null if the ray is tangent (as
     // if there were no intersections)
     Vec O = ray.origin.to_vector();
-    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1);
-    if (reduced_discriminant == 0.f) {
+    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1.f);
+    if (reduced_discriminant <= 0.f || are_close(reduced_discriminant, 0.f)) {
       return std::vector<HitRecord>();
     }
 
