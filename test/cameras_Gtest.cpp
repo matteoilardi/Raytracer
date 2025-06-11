@@ -209,8 +209,8 @@ TEST(TestAntialiasing, test_mean) {
 
   tracer.fire_all_rays(trace_ray);
 
-  // Expected red compoent of the Color the pixel is 0.5
-  // Variance is 0.5/sqrt(# of rays) = 5e-3 by the central limit theorem
+  // Expected red compoent of the pixel's color is 0.5
+  // Standard deviation is 0.5/sqrt(# of rays) = 5e-3 by the central limit theorem
   // Check that the value of the r component of the pixel is within 5 sigma from the expected value
   EXPECT_TRUE(are_close(tracer.image->get_pixel(0, 0).r, 0.5f, 5*5e-3));
 }
