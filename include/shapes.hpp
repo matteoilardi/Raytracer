@@ -60,6 +60,11 @@ public:
            normal.is_close(other.normal, error_tolerance) && surface_point.is_close(other.surface_point, error_tolerance) &&
            ray.is_close(other.ray, error_tolerance) && are_close(t, other.t, error_tolerance);
   }
+
+  friend HitRecord operator*(Transformation transformation, const HitRecord& hit ) {
+    HitRecord result{hit.shape, transformation * hit.world_point, transformation * hit.normal, hit.surface_point, hit.ray.transform(transformation), hit.t};
+    return result;
+  }
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -119,11 +124,8 @@ public:
   virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const = 0;
   // This method's logic and purpose are very similar to those of ray_intersection(). However, in most circumstances only the first intersection is relevant: since for some shapes the closest intersection search lends itself to a more efficient implementation, it makes sense to have two separate methods.
 
-  ///@brief Compute the normal to the surface at the intersection point
-  virtual Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const = 0;
-
-  ///@brief Compute the surface (u, v) coordinates at the intersection point
-  virtual Vec2d _surface_coordinates_at_hit(const Point& hit_point) const = 0;
+  /// @brief Check if a point is inside the shape
+  virtual bool is_inside(const Point& point_world_frame) const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -240,19 +242,26 @@ public:
     return hits;
   }
 
-  virtual Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const override {
+  /// @brief Compute the normal to the surface at the intersection point
+  Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const {
     Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z);  // normal to the sphere is just the vector from the origin
     normal = _enforce_correct_normal_orientation(normal, ray);      // enforce normal and hitting ray have opposite directions
     return normal;
   };
 
-  virtual Vec2d _surface_coordinates_at_hit(const Point& hit_point) const override {
+  /// @brief Compute the surface (u, v) coordinates at the intersection point
+  Vec2d _surface_coordinates_at_hit(const Point& hit_point) const {
     float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi); // atan2 is the arctangent
     if (u < 0.f) {
       u = u + 1.f;
     } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
     float v = std::acos(hit_point.z) / std::numbers::pi;
     return Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
+  }
+
+  virtual bool is_inside(const Point& point_world_frame) const override {
+    Point point_sphere_frame = transformation.inverse() * point_world_frame;
+    return (point_sphere_frame.to_vector().squared_norm() < 1.f);
   }
 };
 
@@ -317,13 +326,20 @@ public:
     return hits;
   }
 
-  virtual Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const override {
+  /// @brief Compute the normal to the surface at the intersection point
+  Normal _normal_at_hit(const Point& hit_point, const Ray& ray) const {
     return _enforce_correct_normal_orientation(VEC_Z.to_normal(), ray);
   }
 
-  // Periodic parametrization of the plane (Tomasi Lesson 8a slides 37-38)
-  virtual Vec2d _surface_coordinates_at_hit(const Point& hit_point) const override {
+  /// @brief Compute the surface (u, v) coordinates at the intersection point
+  Vec2d _surface_coordinates_at_hit(const Point& hit_point) const {
+    // Periodic parametrization of the plane (Tomasi Lesson 8a slides 37-38)
     return Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
+  }
+
+  virtual bool is_inside(const Point& point_world_frame) const override {
+    Point point_sphere_frame = transformation.inverse() * point_world_frame;
+    return (point_sphere_frame.z < 0.f); // By convention, we consider the lower half space to be the interior of the plane
   }
 };
 
@@ -333,55 +349,112 @@ public:
 // -----------CSGObject CLASS ------------------
 // ------------------------------------------------------------------------------------------------------------
 
-//class CSG : public Shape {
+class CSGObject : public Shape {
+public:
+  //-------Properties--------
+  std::shared_ptr<Shape> object1;
+  std::shared_ptr<Shape> object2;
 
-//  //-------Properties--------
-//  std::shared_ptr<Shape> object1;
-//  std::shared_ptr<Shape> object2;
-//
-//  enum class Operation { UNION, INTERSECTION, DIFFERENCE};
-//  Operation operation;
-//  //-------Constructor --------
-//
-//  CSGObject(std::shared_ptr<Shape> object1 = std::nullptr, std::shared_ptr<Shape> object2 = std::nullptr) : Shape(), object1(object1), object2(object2) {};
-//   
-//    // ------Methods ---------------- 
-//  
-//   virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
-//    std::vector<HitRecord> hits = all_ray_intersections(ray_world_frame);
-//    if (hits.begin() == hits.end()) { return std::nullopt; }
-//    else { return std::make_optional<HitRecord>(hits[0]); }
-//    // We assume that all_ray_intersections() returns a vector of HitRecords ordered by increasing t
-//  }
-//
-//  virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
-//    std::vector<HitRecord> intersections1 = object1->all_ray_intersections(ray_world_frame);
-//    std::vector<HitRecord> intersections2 = object2->all_ray_intersections(ray_world_frame);
-//
-//
-//
-//    //Mergesort merge strategy
-//
-//    // Return orderd array with valid entries
-//
-//
-//  }
-//
-//  bool intersection_is_valid(HitRecord intersection, Operation operation) {
-//    switch (operation) {
-//    case Operation::UNION:
-//
-//      break;
-//    case Operation::INTERSECTION:
-//      break;
-//    case Operation::DIFFERENCE:
-//      break;
-//
-//    }
-//  }
-//
-//};
+   // TODO Keep transformation and material: you might want to apply a further global transformation or use assign a non trivial material (so: initialize the fields to default values in the constructor and implement methods so that they take into account further global transformations and possible non-trivial materials)
 
+  enum class Operation { UNION, INTERSECTION, DIFFERENCE };
+  Operation operation;
+
+  //-------Constructors--------
+  CSGObject(std::shared_ptr<Shape> object1, std::shared_ptr<Shape> object2, Operation operation) : Shape(), object1(object1), object2(object2), operation(operation) {};
+
+  CSGObject(std::shared_ptr<Shape> object1 = nullptr, std::shared_ptr<Shape> object2 = nullptr) : Shape(), object1(object1), object2(object2) {};
+
+  //-------Methods--------
+  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+    std::vector<HitRecord> hits = all_ray_intersections(ray_world_frame);
+    if (hits.begin() == hits.end()) { return std::nullopt; }
+    else { return std::make_optional<HitRecord>(hits[0]); }
+    // We assume that all_ray_intersections() returns a vector of HitRecords ordered by increasing t
+  }
+
+  virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
+    std::vector<HitRecord> intersections1 = object1->all_ray_intersections(ray_world_frame);
+    std::vector<HitRecord> intersections2 = object2->all_ray_intersections(ray_world_frame);
+
+    // Merge (same as in mergesort) valid hit records of the two arrays into one array
+    std::vector<HitRecord> result;
+    auto it1 = intersections1.begin();
+    auto it2 = intersections2.begin();
+
+    while (it1 != intersections1.end() && it2 != intersections2.end()) {
+      while (it1 != intersections1.end() && !_hit_on_1_is_valid(*it1)) {
+        ++it1;
+      }
+      if (it1 == intersections1.end()) { break; }
+      while (it2 != intersections2.end() && !_hit_on_2_is_valid(*it2)) {
+        ++it2;
+      }
+      if (it2 == intersections2.end()) { break; }
+      if (it1->t < it2->t) {
+        result.push_back(*it1);
+        ++it1;
+      } else {
+        result.push_back(*it2);
+        ++it2;
+      }
+    }
+
+    while (it1 != intersections1.end()) { // If end of vector 2 is reached, check remaining elements of vecotr 1
+      if (_hit_on_1_is_valid(*it1)) {
+        result.push_back(*it1);
+      }
+      ++it1;
+    }
+    while (it2 != intersections2.end()) { // If end of vector 1 is reached, check remaining elements of vecotr 2
+      if (_hit_on_2_is_valid(*it2)) {
+        result.push_back(*it2);
+      }
+      ++it2;
+    }
+    return result;
+  }
+
+  /// @brief Helper function for all_ray_intersections: returns true only if an intersection with object 1 is also an intersection with the CSGObject
+  bool _hit_on_1_is_valid(const HitRecord& hit) const {
+    switch (operation) {
+    case Operation::UNION:
+      return true;
+    case Operation::INTERSECTION:
+      return object2->is_inside(hit.world_point);
+    case Operation::DIFFERENCE:
+      return !object2->is_inside(hit.world_point);
+    }
+  }
+
+  /// @brief Helper function for all_ray_intersections: returns true only if an intersection with object 2 is also an intersection with the CSGObject
+  bool _hit_on_2_is_valid(const HitRecord& hit) const {
+    switch (operation) {
+    case Operation::UNION:
+      return true;
+    case Operation::INTERSECTION:
+      return object1->is_inside(hit.world_point);
+    case Operation::DIFFERENCE:
+      return object1->is_inside(hit.world_point);
+    }
+  }
+
+  virtual bool is_inside(const Point& point_world_frame) const override {
+    Point point_csg_frame = point_world_frame;
+    // Point point_csg_frame = transformation.inverse() * point_world_frame;
+    switch (operation) {
+    case Operation::UNION:
+      return object1->is_inside(point_world_frame) || object2->is_inside(point_world_frame);
+      break;
+    case Operation::INTERSECTION:
+      return object1->is_inside(point_world_frame) && object2->is_inside(point_world_frame);
+      break;
+    case Operation::DIFFERENCE:
+      return object1->is_inside(point_world_frame) && !object2->is_inside(point_world_frame);
+      break;
+    }
+  }
+};
 
 
 //-------------------------------------------------------------------------------------------------------------

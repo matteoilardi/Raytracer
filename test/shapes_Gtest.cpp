@@ -220,6 +220,115 @@ TEST(PlaneTest, test_surface_coordinates) {
   EXPECT_TRUE(hit2.value().surface_point.is_close(Vec2d(0.25f, 0.75f)));
 }
 
+
+
+
+
+
+// ------------------------------------------------------------------------------------------------------------
+// -------------TESTS FOR CSGOBJECT -------------------------------------------------
+// ------------------------------------------------------------------------------------------------------------
+
+
+class CSGTest : public ::testing::Test {
+protected:
+  std::shared_ptr<Sphere> sphere1;
+  std::shared_ptr<Sphere> sphere2;
+  std::shared_ptr<CSGObject> csg;
+  Ray ray1;
+  Ray ray2;
+  Ray ray3;
+
+  void SetUp() override {
+    sphere1 = std::make_shared<Sphere>(Transformation(), std::make_shared<Material>());
+    sphere2 = std::make_shared<Sphere>(translation(VEC_X), std::make_shared<Material>());
+    csg = std::make_shared<CSGObject>(sphere1, sphere2);
+
+    ray1 = Ray(Point(-2.f, 0.f, 0.f), VEC_X);
+    ray2 = Ray(Point(0.f, 0.f, -2.f), VEC_Z);
+    ray3 = Ray(Point(1.f, 0.f, -2.f), VEC_Z);
+  }
+};
+
+
+TEST_F(CSGTest, test_union) {
+  csg->operation = CSGObject::Operation::UNION;
+
+  auto hits1 = csg->all_ray_intersections(ray1);
+  ASSERT_EQ(hits1.size(), 4);
+  EXPECT_TRUE(are_close(hits1[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits1[1].t, 2.f));
+  EXPECT_TRUE(are_close(hits1[2].t, 3.f));
+  EXPECT_TRUE(are_close(hits1[3].t, 4.f));
+
+  auto hits2 = csg->all_ray_intersections(ray2);
+  ASSERT_EQ(hits2.size(), 2);
+  EXPECT_TRUE(are_close(hits2[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits2[1].t, 3.f));
+
+  auto hits3 = csg->all_ray_intersections(ray3);
+  ASSERT_EQ(hits3.size(), 2);
+  EXPECT_TRUE(are_close(hits3[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits3[1].t, 3.f));
+}
+
+TEST_F(CSGTest, test_intersection) {
+  csg->operation = CSGObject::Operation::INTERSECTION;
+
+  auto hits1 = csg->all_ray_intersections(ray1);
+  ASSERT_EQ(hits1.size(), 2);
+  EXPECT_TRUE(are_close(hits1[0].t, 2.f));
+  EXPECT_TRUE(are_close(hits1[1].t, 3.f));
+
+  auto hits2 = csg->all_ray_intersections(ray2);
+  ASSERT_EQ(hits2.size(), 0);
+
+  auto hits3 = csg->all_ray_intersections(ray3);
+  ASSERT_EQ(hits3.size(), 0);
+}
+
+TEST_F(CSGTest, test_difference) {
+  csg->operation = CSGObject::Operation::DIFFERENCE;
+
+  auto hits1 = csg->all_ray_intersections(ray1);
+  ASSERT_EQ(hits1.size(), 2);
+  EXPECT_TRUE(are_close(hits1[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits1[1].t, 2.f));
+
+  auto hits2 = csg->all_ray_intersections(ray2);
+  ASSERT_EQ(hits2.size(), 2);
+  EXPECT_TRUE(are_close(hits2[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits2[1].t, 3.f));
+
+  auto hits3 = csg->all_ray_intersections(ray3);
+  ASSERT_EQ(hits3.size(), 0);
+  }
+
+TEST_F(CSGTest, test_triple_csg) {
+  csg->operation = CSGObject::Operation::INTERSECTION;
+  auto plane = std::make_shared<Plane>(translation(-0.5f*VEC_Z), std::make_shared<Material>());
+  auto spearhead = std::make_shared<CSGObject>(csg, plane, CSGObject::Operation::DIFFERENCE);
+
+  auto hits1 = spearhead->all_ray_intersections(ray1);
+  ASSERT_EQ(hits1.size(), 2);
+  EXPECT_TRUE(are_close(hits1[0].t, 2.f));
+  EXPECT_TRUE(are_close(hits1[1].t, 3.f));
+
+  auto hits2 = spearhead->all_ray_intersections(ray2);
+  ASSERT_EQ(hits2.size(), 0);
+
+  auto hits3 = spearhead->all_ray_intersections(ray3);
+  ASSERT_EQ(hits3.size(), 0);
+
+  Ray ray4{Point(0.5f, 0.f, 2.f), -VEC_Z};
+  auto hits4 = spearhead->all_ray_intersections(ray4);
+  ASSERT_EQ(hits4.size(), 1);
+  EXPECT_TRUE(are_close(hits4[0].t, 2.5f));
+
+  // TODO that this is problematic... the intersections are actually two! Decide how to handle intersections on the boundary of one of the objects
+}
+
+
 // ------------------------------------------------------------------------------------------------------------
 // -------------TESTS FOR WORLD-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
