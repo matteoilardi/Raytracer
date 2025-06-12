@@ -211,6 +211,7 @@ public:
       return std::vector<HitRecord>();
     }
 
+    // 3. Keep all the valid intersections (at most 2)
     std::vector<float> t_hits;
     float t1 = (-O * ray.direction - std::sqrt(reduced_discriminant)) / ray.direction.squared_norm();
     float t2 = (-O * ray.direction + std::sqrt(reduced_discriminant)) / ray.direction.squared_norm();
@@ -223,14 +224,13 @@ public:
       t_hits.push_back(t2);
     } // If neither t1 nor t2 represent valid intersections, t_hits will remain empty
 
+    // 4. Loop over hits: generate a HitRecord for each one of them (as in the base method ray_intersection)
     std::vector<HitRecord> hits;
-    // Loop over hits: generate a HitRecord for each one of them
     for (auto t_hit :  t_hits) {
       // Compute hitting point, normal, surface coordinates
       Point hit_point = ray.at(t_hit);
       Normal normal = _normal_at_hit(hit_point, ray);
       Vec2d surface_coordinates = _surface_coordinates_at_hit(hit_point);
-
       // Build HitRecord and add to vector
       HitRecord hit{shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
                 t_hit};
@@ -334,16 +334,20 @@ public:
 // ------------------------------------------------------------------------------------------------------------
 
 //class CSG : public Shape {
+
 //  //-------Properties--------
 //  std::shared_ptr<Shape> object1;
 //  std::shared_ptr<Shape> object2;
 //
 //  enum class Operation { UNION, INTERSECTION, DIFFERENCE};
 //  Operation operation;
+//  //-------Constructor --------
 //
 //  CSGObject(std::shared_ptr<Shape> object1 = std::nullptr, std::shared_ptr<Shape> object2 = std::nullptr) : Shape(), object1(object1), object2(object2) {};
-//
-//  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+//   
+//    // ------Methods ---------------- 
+//  
+//   virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
 //    std::vector<HitRecord> hits = all_ray_intersections(ray_world_frame);
 //    if (hits.begin() == hits.end()) { return std::nullopt; }
 //    else { return std::make_optional<HitRecord>(hits[0]); }
