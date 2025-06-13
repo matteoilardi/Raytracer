@@ -355,8 +355,6 @@ public:
   std::shared_ptr<Shape> object1;
   std::shared_ptr<Shape> object2;
 
-   // TODO Keep transformation and material: you might want to apply a further global transformation or use assign a non trivial material (so: initialize the fields to default values in the constructor and implement methods so that they take into account further global transformations and possible non-trivial materials)
-
   enum class Operation { UNION, INTERSECTION, DIFFERENCE, FUSION };
   Operation operation;
 
@@ -364,11 +362,15 @@ public:
   /// @param object 1
   /// @param object 2
   /// @param operation
-  CSGObject(std::shared_ptr<Shape> object1, std::shared_ptr<Shape> object2, Operation operation) : Shape(), object1(object1), object2(object2), operation(operation) {};
+  /// @param transformation
+  /// @param material
+  CSGObject(std::shared_ptr<Shape> object1, std::shared_ptr<Shape> object2, Operation operation, Transformation transformation = Transformation(), std::shared_ptr<Material> material = nullptr) : Shape(transformation, material), object1(object1), object2(object2), operation(operation) {};
 
   /// @param object 1
   /// @param object 2
-  CSGObject(std::shared_ptr<Shape> object1 = nullptr, std::shared_ptr<Shape> object2 = nullptr) : Shape(), object1(object1), object2(object2) {};
+  /// @param transformation
+  /// @param material
+  CSGObject(std::shared_ptr<Shape> object1 = nullptr, std::shared_ptr<Shape> object2 = nullptr, Transformation transformation = Transformation(), std::shared_ptr<Material> material = nullptr) : Shape(transformation, material), object1(object1), object2(object2) {};
 
   //-------Methods--------
   virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
@@ -379,9 +381,11 @@ public:
   }
 
   virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
-    // Intersections with objects 1 and 2 ordered separately by increasing t
-    std::vector<HitRecord> intersections1 = object1->all_ray_intersections(ray_world_frame);
-    std::vector<HitRecord> intersections2 = object2->all_ray_intersections(ray_world_frame);
+    Ray ray_csg_frame = ray_world_frame.transform(transformation.inverse());
+
+    // Intersections with objects 1 and 2 *in csg frame* ordered separately by increasing t
+    std::vector<HitRecord> intersections1 = object1->all_ray_intersections(ray_csg_frame);
+    std::vector<HitRecord> intersections2 = object2->all_ray_intersections(ray_csg_frame);
 
     // Merge (same as in mergesort) valid hit records of the two arrays into one array
     std::vector<HitRecord> result;
@@ -425,6 +429,10 @@ public:
       }
       ++it2;
     }
+
+    // Transform back to world reference frame and apply csg material
+    _apply_csg_transformation_and_material(result);
+
     return result;
   }
 
@@ -468,6 +476,21 @@ public:
       return object1->is_point_inside(point_world_frame) && !object2->is_point_inside(point_world_frame);
     case Operation::FUSION:
       return object1->is_point_inside(point_world_frame) || object2->is_point_inside(point_world_frame); // same as union
+    }
+  }
+
+  void _apply_csg_transformation_and_material(std::vector<HitRecord> hits) const {
+    // Apply CSGObject global Transformation to all hits if transformation is defined
+    for (auto& hit : hits) {
+      hit.world_point = transformation * hit.world_point;
+      hit.normal = transformation * hit.normal;
+      hit.ray = hit.ray.transform(transformation);
+    }
+    // Apply CSGObject Material to all hits if material is defined
+    if (material) {
+      for (auto& hit : hits) {
+        hit.shape = shared_from_this();
+      }
     }
   }
 };
