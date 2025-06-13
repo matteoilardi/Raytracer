@@ -245,29 +245,30 @@ TEST(WorldTest, test_ray_intersection) {
   EXPECT_TRUE(hit2->world_point.is_close(Point(9.f, 0.f, 0.f)));
 }
 
-// test on/off tracing
-TEST(WorldTest, test_on_off_tracing) {
-  auto img = std::make_unique<HdrImage>(3, 3);
-  auto cam = std::make_shared<OrthogonalCamera>();
-  ImageTracer tracer(std::move(img), cam);
+TEST(WorldTest, test_offset_if_visible) {
+  World world = World();
 
-  auto world = std::make_shared<World>();
-  auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));
-  auto material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(pigment));
-  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
-  world->add_object(sphere);
+  auto sphere1 = std::make_shared<Sphere>(translation(2.f*VEC_X));
+  auto sphere2 = std::make_shared<Sphere>(translation(8.f*VEC_X));
+  world.add_object(sphere1);
+  world.add_object(sphere2);
 
-  tracer.fire_all_rays(OnOffTracer(world));
+  EXPECT_FALSE(world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(10.f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f)));
+  EXPECT_FALSE(world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(5.f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f)));
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close(Color()));
+  std::optional<Vec> v1 = world.offset_if_visible(Point(4.f, 0.f, 0.f), Point(5.f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f));
+  EXPECT_TRUE(v1.has_value());
+  EXPECT_TRUE(v1.value().is_close(VEC_X));
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close(Color(1.f, 1.f, 1.f)));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close(Color()));
+  std::optional<Vec> v2 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.5f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f));
+  EXPECT_TRUE(v2.has_value());
+  EXPECT_TRUE(v2.value().is_close(0.5f*VEC_X));
 
-  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close(Color()));
-  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(Color()));
+  std::optional<Vec> v3 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.f, 10.f, 0.f), Normal(0.f, -1.f, 0.f));
+  EXPECT_TRUE(v3.has_value());
+  EXPECT_TRUE(v3.value().is_close(10.f*VEC_Y));
+
+  std::optional<Vec> v4 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.f, 0.f, 10.f), Normal(0.f, 0.f, -1.f));
+  EXPECT_TRUE(v4.has_value());
+  EXPECT_TRUE(v4.value().is_close(10.f*VEC_Z));
 }

@@ -14,10 +14,35 @@
 #include "shapes.hpp"
 #include <gtest/gtest.h>
 
-// ------------------------------------------------------------------------------------------------------------
-// -------------TESTS FOR PATH TRACING-------------------------------------------------
-// ------------------------------------------------------------------------------------------------------------
+// Test on/off tracing
+TEST(OnOffTracerTest, test_example) {
+  auto img = std::make_unique<HdrImage>(3, 3);
+  auto cam = std::make_shared<OrthogonalCamera>();
+  ImageTracer tracer(std::move(img), cam);
 
+  auto world = std::make_shared<World>();
+  auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));
+  auto material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(pigment));
+  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
+  world->add_object(sphere);
+
+  tracer.fire_all_rays(OnOffTracer(world));
+
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 0).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 0).is_close(Color()));
+
+  EXPECT_TRUE(tracer.image->get_pixel(0, 1).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 1).is_close(Color(1.f, 1.f, 1.f)));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 1).is_close(Color()));
+
+  EXPECT_TRUE(tracer.image->get_pixel(0, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(1, 2).is_close(Color()));
+  EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(Color()));
+}
+
+
+// Test flat renderer
 TEST(FlatTracerTest, test_example) {
   Color sphere_color{1.f, 2.f, 3.f};
   auto pigment = std::make_shared<UniformPigment>(sphere_color);
@@ -50,6 +75,7 @@ TEST(FlatTracerTest, test_example) {
   EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(BLACK));
 }
 
+// Test point light tracing
 TEST(PointLightTracer, test_example) {
   // A single ray is scattered along the x axis
   auto img = std::make_unique<HdrImage>(1, 1);
@@ -81,6 +107,8 @@ TEST(PointLightTracer, test_example) {
   EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(expected_color));
 }
 
+
+// Test path tracing
 // Furnace test: cast a ray inside a closed surface with diffusive BRDF and uniform reflectance rho_d and emitted
 // radiance L_e; scatter exactly one ray at every hit (every ray should yield the same contribution regardless of its
 // direction); stop after a large number of reflections (200); compare with the analytical solution: L = L_e/(1 - rho_d),
