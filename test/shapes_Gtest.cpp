@@ -304,6 +304,25 @@ TEST_F(CSGTest, test_difference) {
   ASSERT_EQ(hits3.size(), 0);
   }
 
+TEST_F(CSGTest, test_fusion) {
+  csg->operation = CSGObject::Operation::FUSION;
+
+  auto hits1 = csg->all_ray_intersections(ray1);
+  ASSERT_EQ(hits1.size(), 2);
+  EXPECT_TRUE(are_close(hits1[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits1[1].t, 4.f));
+
+  auto hits2 = csg->all_ray_intersections(ray2);
+  ASSERT_EQ(hits2.size(), 2);
+  EXPECT_TRUE(are_close(hits2[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits2[1].t, 3.f));
+
+  auto hits3 = csg->all_ray_intersections(ray3);
+  ASSERT_EQ(hits3.size(), 2);
+  EXPECT_TRUE(are_close(hits3[0].t, 1.f));
+  EXPECT_TRUE(are_close(hits3[1].t, 3.f));
+}
+
 TEST_F(CSGTest, test_triple_csg) {
   csg->operation = CSGObject::Operation::INTERSECTION;
   auto plane = std::make_shared<Plane>(translation(-0.5f*VEC_Z), std::make_shared<Material>());

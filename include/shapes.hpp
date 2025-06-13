@@ -125,7 +125,7 @@ public:
   // This method's logic and purpose are very similar to those of ray_intersection(). However, in most circumstances only the first intersection is relevant: since for some shapes the closest intersection search lends itself to a more efficient implementation, it makes sense to have two separate methods.
 
   /// @brief Check if a point is inside the shape
-  virtual bool is_inside(const Point& point_world_frame) const = 0;
+  virtual bool is_point_inside(const Point& point_world_frame) const = 0;
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -259,7 +259,7 @@ public:
     return Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
   }
 
-  virtual bool is_inside(const Point& point_world_frame) const override {
+  virtual bool is_point_inside(const Point& point_world_frame) const override {
     Point point_sphere_frame = transformation.inverse() * point_world_frame;
     return (point_sphere_frame.to_vector().squared_norm() < 1.f);
   }
@@ -337,7 +337,7 @@ public:
     return Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
   }
 
-  virtual bool is_inside(const Point& point_world_frame) const override {
+  virtual bool is_point_inside(const Point& point_world_frame) const override {
     Point point_sphere_frame = transformation.inverse() * point_world_frame;
     return (point_sphere_frame.z < 0.f); // By convention, we consider the lower half space to be the interior of the plane
   }
@@ -357,23 +357,29 @@ public:
 
    // TODO Keep transformation and material: you might want to apply a further global transformation or use assign a non trivial material (so: initialize the fields to default values in the constructor and implement methods so that they take into account further global transformations and possible non-trivial materials)
 
-  enum class Operation { UNION, INTERSECTION, DIFFERENCE };
+  enum class Operation { UNION, INTERSECTION, DIFFERENCE, FUSION };
   Operation operation;
 
   //-------Constructors--------
+  /// @param object 1
+  /// @param object 2
+  /// @param operation
   CSGObject(std::shared_ptr<Shape> object1, std::shared_ptr<Shape> object2, Operation operation) : Shape(), object1(object1), object2(object2), operation(operation) {};
 
+  /// @param object 1
+  /// @param object 2
   CSGObject(std::shared_ptr<Shape> object1 = nullptr, std::shared_ptr<Shape> object2 = nullptr) : Shape(), object1(object1), object2(object2) {};
 
   //-------Methods--------
   virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+    // We assume that all_ray_intersections() returns a vector of HitRecords ordered by increasing t
     std::vector<HitRecord> hits = all_ray_intersections(ray_world_frame);
     if (hits.begin() == hits.end()) { return std::nullopt; }
     else { return std::make_optional<HitRecord>(hits[0]); }
-    // We assume that all_ray_intersections() returns a vector of HitRecords ordered by increasing t
   }
 
   virtual std::vector<HitRecord> all_ray_intersections(Ray ray_world_frame) const override {
+    // Intersections with objects 1 and 2 ordered separately by increasing t
     std::vector<HitRecord> intersections1 = object1->all_ray_intersections(ray_world_frame);
     std::vector<HitRecord> intersections2 = object2->all_ray_intersections(ray_world_frame);
 
@@ -383,15 +389,19 @@ public:
     auto it2 = intersections2.begin();
 
     while (it1 != intersections1.end() && it2 != intersections2.end()) {
-      while (it1 != intersections1.end() && !_hit_on_1_is_valid(*it1)) {
+      while (it1 != intersections1.end() && !_hit_on_1_is_valid(*it1)) { // Skip non valid intersections of shape 1
         ++it1;
       }
-      if (it1 == intersections1.end()) { break; }
-      while (it2 != intersections2.end() && !_hit_on_2_is_valid(*it2)) {
+      if (it1 == intersections1.end()) {
+        break; // If you reach end of vector 1, perform final checks on vector 2 separately, outside of the loop
+      }
+      while (it2 != intersections2.end() && !_hit_on_2_is_valid(*it2)) { // Skip non valid intersections of shape 2
         ++it2;
       }
-      if (it2 == intersections2.end()) { break; }
-      if (it1->t < it2->t) {
+      if (it2 == intersections2.end()) {
+        break; // If you reach end of vector 2, perform final checks on vector 1 separately, outside of the loop
+      }
+      if (it1->t < it2->t) { // Compare valid intersections with shae 1 and 2 and choose the one with smaller t
         result.push_back(*it1);
         ++it1;
       } else {
@@ -400,13 +410,16 @@ public:
       }
     }
 
-    while (it1 != intersections1.end()) { // If end of vector 2 is reached, check remaining elements of vecotr 1
+    // If end of vector 2 is reached, check remaining elements of vecotr 1
+    while (it1 != intersections1.end()) {
       if (_hit_on_1_is_valid(*it1)) {
         result.push_back(*it1);
       }
       ++it1;
     }
-    while (it2 != intersections2.end()) { // If end of vector 1 is reached, check remaining elements of vecotr 2
+
+    // If end of vector 1 is reached, check remaining elements of vector 2
+    while (it2 != intersections2.end()) {
       if (_hit_on_2_is_valid(*it2)) {
         result.push_back(*it2);
       }
@@ -421,9 +434,11 @@ public:
     case Operation::UNION:
       return true;
     case Operation::INTERSECTION:
-      return object2->is_inside(hit.world_point);
+      return object2->is_point_inside(hit.world_point);
     case Operation::DIFFERENCE:
-      return !object2->is_inside(hit.world_point);
+      return !object2->is_point_inside(hit.world_point);
+    case Operation::FUSION:
+      return !object2->is_point_inside(hit.world_point);
     }
   }
 
@@ -433,25 +448,26 @@ public:
     case Operation::UNION:
       return true;
     case Operation::INTERSECTION:
-      return object1->is_inside(hit.world_point);
+      return object1->is_point_inside(hit.world_point);
     case Operation::DIFFERENCE:
-      return object1->is_inside(hit.world_point);
+      return object1->is_point_inside(hit.world_point);
+    case Operation::FUSION:
+      return !object1->is_point_inside(hit.world_point);
     }
   }
 
-  virtual bool is_inside(const Point& point_world_frame) const override {
+  virtual bool is_point_inside(const Point& point_world_frame) const override {
     Point point_csg_frame = point_world_frame;
     // Point point_csg_frame = transformation.inverse() * point_world_frame;
     switch (operation) {
     case Operation::UNION:
-      return object1->is_inside(point_world_frame) || object2->is_inside(point_world_frame);
-      break;
+      return object1->is_point_inside(point_world_frame) || object2->is_point_inside(point_world_frame);
     case Operation::INTERSECTION:
-      return object1->is_inside(point_world_frame) && object2->is_inside(point_world_frame);
-      break;
+      return object1->is_point_inside(point_world_frame) && object2->is_point_inside(point_world_frame);
     case Operation::DIFFERENCE:
-      return object1->is_inside(point_world_frame) && !object2->is_inside(point_world_frame);
-      break;
+      return object1->is_point_inside(point_world_frame) && !object2->is_point_inside(point_world_frame);
+    case Operation::FUSION:
+      return object1->is_point_inside(point_world_frame) || object2->is_point_inside(point_world_frame); // same as union
     }
   }
 };
