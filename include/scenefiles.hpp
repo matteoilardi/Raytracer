@@ -582,6 +582,7 @@ public:
   std::shared_ptr<Camera> camera = nullptr;                             // camera used for firing rays
   std::unordered_map<std::string, float> float_variables;               // float identifiers table
   std::unordered_set<std::string> overwritten_variables; // set of float identifiers that can be overwritten from command line
+  std::unordered_map<std::string, std::shared_ptr<Shape>> objects;      // map of object (shape) names to Shape objects
 
   // -------- constructors --------
   Scene() : world(std::make_shared<World>()) {}
@@ -957,14 +958,58 @@ public:
       }
 
       case KeywordEnum::SPHERE: {
-        // Add Sphere to World
-        world->add_object(parse_sphere(input_stream));
+        new_token = input_stream.read_token();
+
+        // If the next token is '(', parse a definition that doesn't assign a name to the sphere
+        if (new_token.type == TokenKind::SYMBOL) {
+          // Unread token '('
+          input_stream.unread_token(new_token);
+          world->add_object(parse_sphere(input_stream));
+        } else { // Otherwise parse definition with name
+          // Unread token '('
+          input_stream.unread_token(new_token);
+
+          // Parse Sphere name
+          std::string sphere_name = expect_identifier(input_stream);
+
+          // Throw if an object with the same name has already been defined
+          if (objects.count(sphere_name)) {
+            throw GrammarError(source_location, "object with name \"" + sphere_name + "\" already declared elsewhere in the file");
+          }
+
+          // Add Sphere to World
+          auto sphere = parse_sphere(input_stream);
+          world->add_object(sphere);
+          objects[sphere_name] = sphere;
+        }
         break;
       }
 
       case KeywordEnum::PLANE: {
-        // Add Plane to World
-        world->add_object(parse_plane(input_stream));
+        new_token = input_stream.read_token();
+
+        // If the next token is '(', parse a definition that doesn't assign a name to the sphere
+        if (new_token.type == TokenKind::SYMBOL) {
+          // Unread token '('
+          input_stream.unread_token(new_token);
+          world->add_object(parse_plane(input_stream));
+        } else { // Otherwise parse definition with name
+          // Unread token '('
+          input_stream.unread_token(new_token);
+
+          // Parse Plane name
+          std::string plane_name = expect_identifier(input_stream);
+
+          // Throw if an object with the same name has already been defined
+          if (objects.count(plane_name)) {
+            throw GrammarError(source_location, "object with name \"" + plane_name + "\" already declared elsewhere in the file");
+          }
+
+          // Add Plane to World
+          auto plane = parse_plane(input_stream);
+          world->add_object(plane);
+          objects[plane_name] = plane;
+        }
         break;
       }
 
