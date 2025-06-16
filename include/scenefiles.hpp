@@ -73,17 +73,33 @@ enum class KeywordEnum {
 };
 
 /// @brief map of keywords to their enum values
-const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {
-    {"material", KeywordEnum::MATERIAL},    {"infer", KeywordEnum::INFER},    {"plane", KeywordEnum::PLANE},
-    {"sphere", KeywordEnum::SPHERE},      {"csg", KeywordEnum::CSG},  {"union", KeywordEnum::UNION}, {"intersection", KeywordEnum::INTERSECTION}, {"difference", KeywordEnum::DIFFERENCE}, {"fusion", KeywordEnum::FUSION}, {"norender", KeywordEnum::NORENDER}, {"diffuse", KeywordEnum::DIFFUSE},
-    {"specular", KeywordEnum::SPECULAR},       {"uniform", KeywordEnum::UNIFORM},
-    {"checkered", KeywordEnum::CHECKERED},     {"image", KeywordEnum::IMAGE},
-    {"identity", KeywordEnum::IDENTITY},       {"translation", KeywordEnum::TRANSLATION},
-    {"rotation_x", KeywordEnum::ROTATION_X},   {"rotation_y", KeywordEnum::ROTATION_Y},
-    {"rotation_z", KeywordEnum::ROTATION_Z},   {"scaling", KeywordEnum::SCALING},
-    {"camera", KeywordEnum::CAMERA},           {"orthogonal", KeywordEnum::ORTHOGONAL},
-    {"perspective", KeywordEnum::PERSPECTIVE}, {"exact_asp_ratio", KeywordEnum::EXACT_ASP_RATIO}, {"float", KeywordEnum::FLOAT},
-    {"point_light", KeywordEnum::POINT_LIGHT}};
+const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", KeywordEnum::MATERIAL},
+                                                               {"infer", KeywordEnum::INFER},
+                                                               {"plane", KeywordEnum::PLANE},
+                                                               {"sphere", KeywordEnum::SPHERE},
+                                                               {"csg", KeywordEnum::CSG},
+                                                               {"union", KeywordEnum::UNION},
+                                                               {"intersection", KeywordEnum::INTERSECTION},
+                                                               {"difference", KeywordEnum::DIFFERENCE},
+                                                               {"fusion", KeywordEnum::FUSION},
+                                                               {"norender", KeywordEnum::NORENDER},
+                                                               {"diffuse", KeywordEnum::DIFFUSE},
+                                                               {"specular", KeywordEnum::SPECULAR},
+                                                               {"uniform", KeywordEnum::UNIFORM},
+                                                               {"checkered", KeywordEnum::CHECKERED},
+                                                               {"image", KeywordEnum::IMAGE},
+                                                               {"identity", KeywordEnum::IDENTITY},
+                                                               {"translation", KeywordEnum::TRANSLATION},
+                                                               {"rotation_x", KeywordEnum::ROTATION_X},
+                                                               {"rotation_y", KeywordEnum::ROTATION_Y},
+                                                               {"rotation_z", KeywordEnum::ROTATION_Z},
+                                                               {"scaling", KeywordEnum::SCALING},
+                                                               {"camera", KeywordEnum::CAMERA},
+                                                               {"orthogonal", KeywordEnum::ORTHOGONAL},
+                                                               {"perspective", KeywordEnum::PERSPECTIVE},
+                                                               {"exact_asp_ratio", KeywordEnum::EXACT_ASP_RATIO},
+                                                               {"float", KeywordEnum::FLOAT},
+                                                               {"point_light", KeywordEnum::POINT_LIGHT}};
 
 /// @brief convert a keyword enum to its string representation (for debugging and printing)
 std::string to_string(KeywordEnum kw) {
@@ -603,7 +619,7 @@ public:
   std::shared_ptr<Camera> camera = nullptr;                             // camera used for firing rays
   std::unordered_map<std::string, float> float_variables;               // float identifiers table
   std::unordered_set<std::string> overwritten_variables; // set of float identifiers that can be overwritten from command line
-  std::unordered_map<std::string, std::shared_ptr<Shape>> objects;      // map of object (shape) names to Shape objects
+  std::unordered_map<std::string, std::shared_ptr<Shape>> objects; // map of object (shape) names to Shape objects
 
   // -------- constructors --------
   Scene() : world(std::make_shared<World>()) {}
@@ -649,8 +665,7 @@ public:
       }
       return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
     } else {
-      throw GrammarError(token.source_location,
-                         "expected LITERAL_NUMBER or IDENTIFIER instead of " + token.type_to_string());
+      throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of " + token.type_to_string());
     }
   }
 
@@ -873,12 +888,11 @@ public:
     return std::make_shared<Plane>(plane_transformation, materials_it->second);
   }
 
-
   /// @brief parse a general object, which may be specified by an indentifier or an inline definition
   std::shared_ptr<Shape> parse_object(InputStream &input_stream) {
     Token new_token = input_stream.read_token();
     if (new_token.type == TokenKind::IDENTIFIER) {
-      const std::string& object_name = std::get<std::string>(new_token.value);
+      const std::string &object_name = std::get<std::string>(new_token.value);
       if (objects.contains(object_name)) {
         return objects[object_name];
       } else {
@@ -913,7 +927,8 @@ public:
     // Parse CSG operation
     CSGObject::Operation operation;
     SourceLocation location = input_stream.location;
-    KeywordEnum operation_keyword = expect_keywords(input_stream, {KeywordEnum::UNION, KeywordEnum::INTERSECTION, KeywordEnum::DIFFERENCE, KeywordEnum::FUSION});
+    KeywordEnum operation_keyword = expect_keywords(
+        input_stream, {KeywordEnum::UNION, KeywordEnum::INTERSECTION, KeywordEnum::DIFFERENCE, KeywordEnum::FUSION});
     switch (operation_keyword) {
     case KeywordEnum::UNION:
       operation = CSGObject::Operation::UNION;
@@ -945,7 +960,7 @@ public:
       input_stream.unread_token(new_token);
 
       SourceLocation source_location =
-        input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
+          input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
       std::string material_identifier = expect_identifier(input_stream);
       auto materials_it = materials.find(material_identifier); // Look for the material in the material map
       if (materials_it == materials.end()) {                   // If not found, throw an error
@@ -1020,9 +1035,11 @@ public:
   // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
 
   /// @brief Parse a scene from a stream
-  /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from command line
+  /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from
+  /// command line
   void parse_scene(InputStream &input_stream) {
-    // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float, material, sphere, plane, camera, point_light
+    // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float,
+    // material, sphere, plane, camera, point_light
     while (true) {
       // Check for end of stream or norender keyword
       Token new_token = input_stream.read_token();
@@ -1040,8 +1057,9 @@ public:
       if (norender) {
         keyword = expect_keywords(input_stream, {KeywordEnum::SPHERE, KeywordEnum::PLANE, KeywordEnum::CSG});
       } else {
-        keyword = expect_keywords(input_stream, {KeywordEnum::FLOAT, KeywordEnum::MATERIAL, KeywordEnum::SPHERE,
-                                                           KeywordEnum::PLANE, KeywordEnum::CSG, KeywordEnum::CAMERA, KeywordEnum::POINT_LIGHT});
+        keyword =
+            expect_keywords(input_stream, {KeywordEnum::FLOAT, KeywordEnum::MATERIAL, KeywordEnum::SPHERE, KeywordEnum::PLANE,
+                                           KeywordEnum::CSG, KeywordEnum::CAMERA, KeywordEnum::POINT_LIGHT});
       }
 
       switch (keyword) {
@@ -1093,7 +1111,8 @@ public:
 
           // Throw if an object with the same name has already been defined
           if (objects.count(sphere_name)) {
-            throw GrammarError(source_location, "object with name \"" + sphere_name + "\" already declared elsewhere in the file");
+            throw GrammarError(source_location,
+                               "object with name \"" + sphere_name + "\" already declared elsewhere in the file");
           }
 
           // Add Sphere to World
@@ -1192,12 +1211,13 @@ public:
     }
   }
 
-  void initialize_float_variables_with_priority(std::unordered_map<std::string, float>&& variables_from_cl) {
+  void initialize_float_variables_with_priority(std::unordered_map<std::string, float> &&variables_from_cl) {
     // Actually to be fair the *priority* which we refer to is enforced by the method parse_scene(): case KeywordEnum::FLOAT
-    assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to be parsed and added to float_variables before parsing the scene file
+    assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to
+                                     // be parsed and added to float_variables before parsing the scene file
 
     float_variables = std::move(variables_from_cl);
-    for (const auto& name : float_variables) {
+    for (const auto &name : float_variables) {
       overwritten_variables.insert(name.first);
     }
   }
