@@ -41,7 +41,6 @@ TEST(OnOffTracerTest, test_example) {
   EXPECT_TRUE(tracer.image->get_pixel(2, 2).is_close(Color()));
 }
 
-
 // Test flat renderer
 TEST(FlatTracerTest, test_example) {
   Color sphere_color{1.f, 2.f, 3.f};
@@ -49,9 +48,9 @@ TEST(FlatTracerTest, test_example) {
   auto brdf = std::make_shared<DiffusiveBRDF>(pigment);
   auto material = std::make_shared<Material>(brdf);
 
-  //move the sphere to the center of the screen and make it small enough to cover only the central pixel
-  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material); 
-  
+  // move the sphere to the center of the screen and make it small enough to cover only the central pixel
+  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
+
   auto world = std::make_shared<World>();
   world->add_object(sphere);
   FlatTracer renderer{world, Color()};
@@ -89,8 +88,8 @@ TEST(PointLightTracer, test_example) {
 
   // The ray intersects the plane 1 at (1, 0, 0)
   auto world = std::make_shared<World>();
-  auto plane1 = std::make_shared<Plane>(translation(VEC_X) * rotation_y(-std::numbers::pi / 2.f), plane_material);
-  auto plane2 = std::make_shared<Plane>(translation(VEC_Y) * rotation_x(std::numbers::pi / 2.f), plane_material);
+  auto plane1 = std::make_shared<Plane>(translation(VEC_X) * rotation_y(-std::numbers::pi_v<float> / 2.f), plane_material);
+  auto plane2 = std::make_shared<Plane>(translation(VEC_Y) * rotation_x(std::numbers::pi_v<float> / 2.f), plane_material);
   world->add_object(plane1);
   world->add_object(plane2);
   // The first light source is behind plane 2, the other two are visible from point (1, 0, 0)
@@ -102,11 +101,10 @@ TEST(PointLightTracer, test_example) {
   tracer.fire_all_rays(renderer);
 
   // Expected r component: cos_theta * brdf_r_component * light_source_color (= 1) / pi for each visible source
-  Color expected_color =
-      Color(0.f, 0.3f, 0.1f) + (1.f / std::sqrt(5.f) + 1.f / std::sqrt(10.f)) * Color(0.2f, 0.f, 0.f) / std::numbers::pi;
+  Color expected_color = Color(0.f, 0.3f, 0.1f) +
+                         (1.f / std::sqrtf(5.f) + 1.f / std::sqrtf(10.f)) * Color(0.2f, 0.f, 0.f) / std::numbers::pi_v<float>;
   EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(expected_color));
 }
-
 
 // Test path tracing
 // Furnace test: cast a ray inside a closed surface with diffusive BRDF and uniform reflectance rho_d and emitted
@@ -122,7 +120,7 @@ TEST(PathTracerTest, test_furnace) {
   auto material = std::make_shared<Material>(brdf, emitted_radiance);
 
   // 2. Build enclosing sphere and world
-  auto enclosure = std::make_shared<Sphere>(Transformation(), material); //unit sphere at the origin with material above
+  auto enclosure = std::make_shared<Sphere>(Transformation(), material); // unit sphere at the origin with material above
   auto world = std::make_shared<World>();
   world->add_object(enclosure);
 

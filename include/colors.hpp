@@ -40,9 +40,9 @@ constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5f; // Default tolerance to decide 
 constexpr float DEFAULT_DELTA_LOG = 1e-10f;      // Default quantity added to the argument to prevent caluculating the
                                                  // logarithm of zero
 constexpr float DEFAULT_AVG_LUMINOSITY_DARK_MODE =
-    0.1; // Default value replacing the average luminosity of the HDR image in tone mapping (reciprocal of exposure): to be used
-         // for dark (almost-black) images. THe default value here provided (0.1) is fine as long as the non-dark portions of the
-         // image have average luminosity of the same order of magnitude, which is often the case.
+    0.1f; // Default value replacing the average luminosity of the HDR image in tone mapping (reciprocal of exposure): to be used
+          // for dark (almost-black) images. THe default value here provided (0.1) is fine as long as the non-dark portions of the
+          // image have average luminosity of the same order of magnitude, which is often the case.
 
 /// @brief endianness is order you read floats with (recall 32_bit_float =4
 /// bytes) (left to right or right to left)

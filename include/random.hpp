@@ -53,19 +53,20 @@ public:
     uint64_t old_state = state;
 
     // advance internal state with linear congruential generator (state*multiplier + increment) mod 2^64
-    state = old_state * 6364136223846793005ull + inc; 
+    state = old_state * 6364136223846793005ull + inc;
 
-    //generate the random number with PCG algorithm
-    uint32_t xorshifted = static_cast<uint32_t>(((old_state >> 18ull) ^ old_state) >> 27ull); //scramble the bits 
-    uint32_t rot = static_cast<uint32_t>(old_state >> 59ull); //pick the 5 most significant bits (64-59=5)
+    // generate the random number with PCG algorithm
+    uint32_t xorshifted = static_cast<uint32_t>(((old_state >> 18ull) ^ old_state) >> 27ull); // scramble the bits
+    uint32_t rot = static_cast<uint32_t>(old_state >> 59ull); // pick the 5 most significant bits (64-59=5)
 
-    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31u));
+    return (xorshifted >> rot) | (xorshifted << ((32 - rot) % 32)); // (32 - rot) % 32 = (-rot) & 31u, but avoids applying a minus
+                                                                    // to an unsigned type, which may trigger a compiler warning
   };
 
   ///@brief generate random float uniformly distributed in [0, 1)
   float random_float() {
     uint32_t ran = random();
-    return static_cast<float>(ran) / std::pow(2.f, 32);
+    return static_cast<float>(ran) / std::powf(2.f, 32);
   }
 
   ///@brief Generate random (theta, phi) sampling Phong distribution on hemiphere
@@ -74,11 +75,10 @@ public:
   std::pair<float, float> random_phong(int n) {
     // sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
     float x = random_float();
-    float theta = std::acos(std::pow(x, 1.f / (n + 1)));
-
+    float theta = std::acosf(std::powf(x, 1.f / (n + 1)));
 
     // sample phi: the conditional distribution for phi is actually independent of the theta value you pick
-    float phi = random_float() * 2 * std::numbers::pi;
+    float phi = random_float() * 2 * std::numbers::pi_v<float>;
 
     return {theta, phi};
   }

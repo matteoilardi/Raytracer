@@ -147,7 +147,7 @@ public:
     // 2. Compute the discriminant of the 2nd degree equation in slides 8b 29-31, return null if the ray is tangent (as
     // if there were no intersections)
     Vec O = ray.origin.to_vector();
-    float reduced_discriminant = std::pow(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1);
+    float reduced_discriminant = std::powf(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1.f);
     if (reduced_discriminant == 0.f) {
       return std::nullopt;
     }
@@ -176,11 +176,11 @@ public:
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
     // reference frame by our convention)
-    float u = atan2(hit_point.y, hit_point.x) / (2.f * std::numbers::pi); // atan2 is the arctangent
+    float u = atan2f(hit_point.y, hit_point.x) / (2.f * std::numbers::pi_v<float>); // atan2 is the arctangent
     if (u < 0.f) {
       u = u + 1.f;
     } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
-    float v = std::acos(hit_point.z) / std::numbers::pi;
+    float v = std::acos(hit_point.z) / std::numbers::pi_v<float>;
     Vec2d surface_coordinates = Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
 
     // 7. Transform the intersection point parameters back to the world's reference frame

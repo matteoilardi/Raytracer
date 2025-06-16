@@ -83,8 +83,8 @@ struct CheckeredPigment : public Pigment {
     float subinterval = 1.f / n_intervals; // length of u and v subintervals
 
     // get the column and row of the subinterval in which the (u, v) coordinates fall
-    int col = std::floor(uv.u / subinterval);
-    int row = std::floor(uv.v / subinterval);
+    int col = std::floorf(uv.u / subinterval);
+    int row = std::floorf(uv.v / subinterval);
     if ((col + row) % 2 == 0) { // entry has color1 if col and row have same parity
       return color1;
     } else {
@@ -193,7 +193,8 @@ public:
   Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
     // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
     // pass them by const reference?
-    return (*pigment)(uv) * (1.f / std::numbers::pi); // dereference pigment pointer, get color at uv coordinates, divide by pi
+    return (*pigment)(uv) *
+           (1.f / std::numbers::pi_v<float>); // dereference pigment pointer, get color at uv coordinates, divide by pi
   }
 
   Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {

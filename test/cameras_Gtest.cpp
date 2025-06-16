@@ -203,8 +203,11 @@ TEST(TestAntialiasing, test_mean) {
   PCG pcg{};
   // lambda that returns BLACK or RED with equal probability
   auto trace_ray = [&pcg](Ray ray) -> Color {
-    if (pcg.random_float() >= 0.5f) { return RED; }
-    else { return BLACK; }
+    if (pcg.random_float() >= 0.5f) {
+      return RED;
+    } else {
+      return BLACK;
+    }
   };
 
   tracer.fire_all_rays(trace_ray);
@@ -212,5 +215,5 @@ TEST(TestAntialiasing, test_mean) {
   // Expected red compoent of the pixel's color is 0.5
   // Standard deviation is 0.5/sqrt(# of rays) = 5e-3 by the central limit theorem
   // Check that the value of the r component of the pixel is within 5 sigma from the expected value
-  EXPECT_TRUE(are_close(tracer.image->get_pixel(0, 0).r, 0.5f, 5*5e-3));
+  EXPECT_TRUE(are_close(tracer.image->get_pixel(0, 0).r, 0.5f, 5 * 5e-3f));
 }

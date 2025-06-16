@@ -66,17 +66,26 @@ enum class KeywordEnum {
 };
 
 /// @brief map of keywords to their enum values (analogue of Python dictionaries)
-const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {
-    {"material", KeywordEnum::MATERIAL},       {"plane", KeywordEnum::PLANE},
-    {"sphere", KeywordEnum::SPHERE},           {"diffuse", KeywordEnum::DIFFUSE},
-    {"specular", KeywordEnum::SPECULAR},       {"uniform", KeywordEnum::UNIFORM},
-    {"checkered", KeywordEnum::CHECKERED},     {"image", KeywordEnum::IMAGE},
-    {"identity", KeywordEnum::IDENTITY},       {"translation", KeywordEnum::TRANSLATION},
-    {"rotation_x", KeywordEnum::ROTATION_X},   {"rotation_y", KeywordEnum::ROTATION_Y},
-    {"rotation_z", KeywordEnum::ROTATION_Z},   {"scaling", KeywordEnum::SCALING},
-    {"camera", KeywordEnum::CAMERA},           {"orthogonal", KeywordEnum::ORTHOGONAL},
-    {"perspective", KeywordEnum::PERSPECTIVE}, {"exact_asp_ratio", KeywordEnum::EXACT_ASP_RATIO}, {"float", KeywordEnum::FLOAT},
-    {"point_light", KeywordEnum::POINT_LIGHT}};
+const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", KeywordEnum::MATERIAL},
+                                                               {"plane", KeywordEnum::PLANE},
+                                                               {"sphere", KeywordEnum::SPHERE},
+                                                               {"diffuse", KeywordEnum::DIFFUSE},
+                                                               {"specular", KeywordEnum::SPECULAR},
+                                                               {"uniform", KeywordEnum::UNIFORM},
+                                                               {"checkered", KeywordEnum::CHECKERED},
+                                                               {"image", KeywordEnum::IMAGE},
+                                                               {"identity", KeywordEnum::IDENTITY},
+                                                               {"translation", KeywordEnum::TRANSLATION},
+                                                               {"rotation_x", KeywordEnum::ROTATION_X},
+                                                               {"rotation_y", KeywordEnum::ROTATION_Y},
+                                                               {"rotation_z", KeywordEnum::ROTATION_Z},
+                                                               {"scaling", KeywordEnum::SCALING},
+                                                               {"camera", KeywordEnum::CAMERA},
+                                                               {"orthogonal", KeywordEnum::ORTHOGONAL},
+                                                               {"perspective", KeywordEnum::PERSPECTIVE},
+                                                               {"exact_asp_ratio", KeywordEnum::EXACT_ASP_RATIO},
+                                                               {"float", KeywordEnum::FLOAT},
+                                                               {"point_light", KeywordEnum::POINT_LIGHT}};
 
 /// @brief convert a keyword enum to its string representation (for debugging and printing)
 std::string to_string(KeywordEnum kw) {
@@ -627,8 +636,7 @@ public:
       }
       return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
     } else {
-      throw GrammarError(token.source_location,
-                         "expected LITERAL_NUMBER or IDENTIFIER instead of " + token.type_to_string());
+      throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of " + token.type_to_string());
     }
   }
 
@@ -907,9 +915,11 @@ public:
   // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
 
   /// @brief Parse a scene from a stream
-  /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from command line
+  /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from
+  /// command line
   void parse_scene(InputStream &input_stream) {
-    // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float, material, sphere, plane, camera, point_light
+    // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float,
+    // material, sphere, plane, camera, point_light
     while (true) {
       Token new_token = input_stream.read_token();
       if (new_token.type == TokenKind::STOP_TOKEN) {
@@ -985,11 +995,12 @@ public:
     }
   }
 
-  void initialize_float_variables_with_priority(std::unordered_map<std::string, float>&& variables_from_cl) {
-    assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to be parsed and added to float_variables before parsing the scene file
+  void initialize_float_variables_with_priority(std::unordered_map<std::string, float> &&variables_from_cl) {
+    assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to
+                                     // be parsed and added to float_variables before parsing the scene file
 
     float_variables = std::move(variables_from_cl);
-    for (const auto& name : float_variables) {
+    for (const auto &name : float_variables) {
       overwritten_variables.insert(name.first);
     }
   }

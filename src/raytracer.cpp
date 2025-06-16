@@ -7,20 +7,19 @@
 #include <fstream>
 #include <iostream>
 
-
 //---------------------------------------------
 //---------- FORWARD DECLARATIONS ----------
 //---------------------------------------------
 // generate demo image with on off rendering
-std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation, int samples_per_pixel_edge);
+std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance,
+                                                const Transformation &obs_transformation, int samples_per_pixel_edge);
 // generate demo image with Monte Carlo path tracing rendering
-std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation, int samples_per_pixel_edge);
-
+std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance,
+                                               const Transformation &obs_transformation, int samples_per_pixel_edge);
 
 //-------------------------------------------------------------------
 //---------- MAIN FUNCTION ----------
 //-------------------------------------------------------------------
-
 
 int main(int argc, char **argv) {
   CLI::App app{"Raytracer"};    // Define the main CLI11 App
@@ -74,7 +73,6 @@ int main(int argc, char **argv) {
       ->check(CLI::PositiveNumber)
       ->default_val(960); // reject negative values
 
-
   // Add option for perspective or orthogonal projection
   bool orthogonal = false;
   auto orthogonal_flag = demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
@@ -83,22 +81,24 @@ int main(int argc, char **argv) {
   // Default value is "demo"
   demo_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
 
-  // Add option for observer transformation: rotation around the scene and camera-screen distance (only for perspective camera). Angles phi and theta: longitude and colatitude (theta=0 -> north pole). Default position along the negative x direction: theta = 90, phi = 180.
+  // Add option for observer transformation: rotation around the scene and camera-screen distance (only for perspective camera).
+  // Angles phi and theta: longitude and colatitude (theta=0 -> north pole). Default position along the negative x direction:
+  // theta = 90, phi = 180.
   float distance = 1.f;
-  float theta = std::numbers::pi / 2.f;
-  float phi = std::numbers::pi;
+  float theta = std::numbers::pi_v<float> / 2.f;
+  float phi = std::numbers::pi_v<float>;
 
   demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")->excludes(orthogonal_flag)->default_val(1.f);
 
   demo_subc
       ->add_option_function<float>(
-          "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi; },
+          "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi_v<float>; },
           "Specify observer's colatitude angle theta (0 degree is north pole)")
       ->default_val(90.f);
 
   demo_subc
       ->add_option_function<float>(
-          "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi; },
+          "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi_v<float>; },
           "Specify observer's longitude angle phi (default is 180 degrees, observer alogn negative direction of x-axis)")
       ->default_val(180.f);
 
@@ -156,7 +156,9 @@ int main(int argc, char **argv) {
 
   // Option to decide which rendering algorithm to use
   std::string render_mode_str = "flat"; // Default is flat tracing
-  render_subc->add_option("-m,--mode", render_mode_str, "Rendering mode: on/off tracing, flat tracing (default), point light tracing or path tracing")
+  render_subc
+      ->add_option("-m,--mode", render_mode_str,
+                   "Rendering mode: on/off tracing, flat tracing (default), point light tracing or path tracing")
       ->check(CLI::IsMember({"onoff", "flat", "point_light", "path"}))
       ->default_val("flat");
 
@@ -164,12 +166,20 @@ int main(int argc, char **argv) {
   int n_rays = 10;
   int russian_roulette_lim = 3;
   int max_depth = 5;
-  render_subc->add_option("--n_rays", n_rays, "Specify number of rays scattered at every hit (requires path tracing)")->default_val(10);
-  render_subc->add_option("--roulette", russian_roulette_lim, "Specify ray depth reached before russian roulette starts applying (requires path tracing)")->default_val(3);
+  render_subc->add_option("--n_rays", n_rays, "Specify number of rays scattered at every hit (requires path tracing)")
+      ->default_val(10);
+  render_subc
+      ->add_option("--roulette", russian_roulette_lim,
+                   "Specify ray depth reached before russian roulette starts applying (requires path tracing)")
+      ->default_val(3);
   render_subc->add_option("--max-depth", max_depth, "Specify maximum ray depth (requires path tracing)")->default_val(5);
 
-  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of HdrImage::normalize_image() used in tone mapping (i. e. exposure)
-  render_subc->add_flag("--dark", dark_mode, "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")->default_val(false);
+  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
+  // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
+  render_subc
+      ->add_flag("--dark", dark_mode,
+                 "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
+      ->default_val(false);
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -186,8 +196,12 @@ int main(int argc, char **argv) {
   pfm2png_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
       ->check(CLI::PositiveNumber); // reject negative values
 
-  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of HdrImage::normalize_image() used in tone mapping (i. e. exposure)
-  pfm2png_subc->add_flag("--dark", dark_mode, "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")->default_val(false);
+  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
+  // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
+  pfm2png_subc
+      ->add_flag("--dark", dark_mode,
+                 "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
+      ->default_val(false);
 
   // -----------------------------------------------------------
   // Procedure
@@ -205,10 +219,10 @@ int main(int argc, char **argv) {
 
     if (mode_str == "onoff") {
       observer_transformation =
-        rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-VEC_X);
+          rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) * translation(-VEC_X);
     } else if (mode_str == "path") {
-      observer_transformation =
-         rotation_z(phi - std::numbers::pi) * rotation_y(std::numbers::pi / 2.f - theta) * translation(-3.f*VEC_X);
+      observer_transformation = rotation_z(phi - std::numbers::pi_v<float>) *
+                                rotation_y(std::numbers::pi_v<float> / 2.f - theta) * translation(-3.f * VEC_X);
     }
 
     // Generate the demo image accordingly
@@ -248,18 +262,18 @@ int main(int argc, char **argv) {
 
     std::shared_ptr<Renderer> renderer;
     if (render_mode_str == "onoff") {
-        renderer = make_shared<OnOffTracer>(scene.world);
+      renderer = make_shared<OnOffTracer>(scene.world);
     } else if (render_mode_str == "flat") {
-        renderer = make_shared<FlatTracer>(scene.world, BLACK);
+      renderer = make_shared<FlatTracer>(scene.world, BLACK);
     } else if (render_mode_str == "point_light") {
-        renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
-    } else if (render_mode_str == "path"){
-        auto pcg = std::make_shared<PCG>();
-        renderer = make_shared<PathTracer>(scene.world, pcg, n_rays, russian_roulette_lim, max_depth, BLACK);
+      renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
+    } else if (render_mode_str == "path") {
+      auto pcg = std::make_shared<PCG>();
+      renderer = make_shared<PathTracer>(scene.world, pcg, n_rays, russian_roulette_lim, max_depth, BLACK);
     }
 
     std::cout << "Rendering image in " << source_file_name << "... " << std::flush;
-    tracer.fire_all_rays([&](const Ray& ray) { return (*renderer)(ray); });
+    tracer.fire_all_rays([&](const Ray &ray) { return (*renderer)(ray); });
     std::cout << "Done." << std::endl;
 
     // Save PFM image
@@ -298,15 +312,14 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
-
 //-------------------------------------------------------------------
 //-------------- HELPER FUNCTIONS --------------
 //-------------------------------------------------------------------
 
 //------------- OnOff Tracing Demo Image -------------
 
-std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height,
-                                                float distance, const Transformation &obs_transformation, int samples_per_pixel_edge) {
+std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance,
+                                                const Transformation &obs_transformation, int samples_per_pixel_edge) {
 
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
@@ -337,7 +350,6 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
     world->add_object(sphere);
   }
 
-
   // Perform on/off tracing
   tracer.fire_all_rays(OnOffTracer(world));
 
@@ -345,11 +357,10 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
   return std::move(tracer.image);
 }
 
-
-
 //--------------------- Path tracing demo image ---------------------
 
-std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance, const Transformation &obs_transformation, int samples_per_pixel_edge) {
+std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance,
+                                               const Transformation &obs_transformation, int samples_per_pixel_edge) {
   // 1. Create World
   std::shared_ptr<World> world = std::make_shared<World>();
 
@@ -378,7 +389,7 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   // 4. Setup camera
   std::unique_ptr<Camera> camera;
 
-  if (orthogonal) { 
+  if (orthogonal) {
     camera = std::make_unique<OrthogonalCamera>(static_cast<float>(width) / height, obs_transformation);
   } else {
     camera = std::make_unique<PerspectiveCamera>(distance, static_cast<float>(width) / height, obs_transformation);
@@ -387,7 +398,7 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   // 5. Render image with Montecarlo path tracing
   auto pcg = std::make_shared<PCG>();
   PathTracer tracer(world, pcg, 10, 2, 6); // n_rays, roulette limit, max_depth
-  //FlatTracer tracer(world);
+  // FlatTracer tracer(world);
 
   // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);

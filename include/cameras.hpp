@@ -72,18 +72,19 @@ public:
 class Camera {
 public:
   //-------Properties--------
-  std::optional<float> asp_ratio;               // aspect ratio
-  Transformation transformation; // transformation that takes into account camera orientation
+  std::optional<float> asp_ratio; // aspect ratio
+  Transformation transformation;  // transformation that takes into account camera orientation
 
   //-----------Constructors-----------
 
   /// @brief Constructor with parameters
   /// @param aspect ratio
   /// @param tranformation encoding observer's orientation
-  Camera(std::optional<float> asp_ratio, Transformation transformation = Transformation()) : asp_ratio(asp_ratio), transformation(transformation) {};
+  Camera(std::optional<float> asp_ratio, Transformation transformation = Transformation())
+      : asp_ratio(asp_ratio), transformation(transformation) {};
 
-  Camera(float asp_ratio, Transformation transformation) : asp_ratio(std::make_optional<float>(asp_ratio)), transformation(transformation) {};
-
+  Camera(float asp_ratio, Transformation transformation)
+      : asp_ratio(std::make_optional<float>(asp_ratio)), transformation(transformation) {};
 
   virtual ~Camera() {}
 
@@ -100,7 +101,8 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, Transformation transformation = Transformation()) : Camera(asp_ratio, transformation) {}
+  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, Transformation transformation = Transformation())
+      : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
@@ -120,7 +122,8 @@ public:
   /// Default constructor
 
   /// Constructor with parameters
-  PerspectiveCamera(float distance = 1.f, std::optional<float> asp_ratio = std::nullopt, Transformation transformation = Transformation())
+  PerspectiveCamera(float distance = 1.f, std::optional<float> asp_ratio = std::nullopt,
+                    Transformation transformation = Transformation())
       : Camera(asp_ratio, transformation), distance(distance) {}
 
   //--------------------Methods----------------------
@@ -145,8 +148,8 @@ public:
   // pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
   std::shared_ptr<Camera> camera; // use shared_ptr for camera to allow sharing with Scene::camera
-  int samples_per_pixel_edge; // total samples per pixel = samples_per_pixel_side^2
-  std::shared_ptr<PCG> pcg;   // random number generator, for antialiasing (stratified sampling)
+  int samples_per_pixel_edge;     // total samples per pixel = samples_per_pixel_side^2
+  std::shared_ptr<PCG> pcg;       // random number generator, for antialiasing (stratified sampling)
 
   //-----------Constructors-----------
 
@@ -161,7 +164,7 @@ public:
     }
 
     if (!camera->asp_ratio.has_value()) {
-      camera->asp_ratio.emplace(static_cast<float>(this->image->width)/static_cast<float>(this->image->height));
+      camera->asp_ratio.emplace(static_cast<float>(this->image->width) / static_cast<float>(this->image->height));
     }
   }
   // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to
@@ -208,7 +211,7 @@ public:
               cum_color += func(ray);
             }
           }
-          cum_color /= (spp * spp);
+          cum_color /= static_cast<float>((spp * spp));
 
         } else {
           ray = fire_ray(col, row);

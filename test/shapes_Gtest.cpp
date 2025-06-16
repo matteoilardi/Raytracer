@@ -182,7 +182,7 @@ TEST(PlaneTest, test_hit) {
 
 // test intersections with rotated plane
 TEST(PlaneTest, test_rotation) {
-  auto rotated_plane = std::make_shared<Plane>(rotation_y(std::numbers::pi / 2.f));
+  auto rotated_plane = std::make_shared<Plane>(rotation_y(std::numbers::pi_v<float> / 2.f));
 
   Ray ray1 = Ray(Point(1.f, 0.f, 0.f), -VEC_X);
   std::optional<HitRecord> hit1 = rotated_plane->ray_intersection(ray1);
@@ -248,8 +248,8 @@ TEST(WorldTest, test_ray_intersection) {
 TEST(WorldTest, test_offset_if_visible) {
   World world = World();
 
-  auto sphere1 = std::make_shared<Sphere>(translation(2.f*VEC_X));
-  auto sphere2 = std::make_shared<Sphere>(translation(8.f*VEC_X));
+  auto sphere1 = std::make_shared<Sphere>(translation(2.f * VEC_X));
+  auto sphere2 = std::make_shared<Sphere>(translation(8.f * VEC_X));
   world.add_object(sphere1);
   world.add_object(sphere2);
 
@@ -262,13 +262,13 @@ TEST(WorldTest, test_offset_if_visible) {
 
   std::optional<Vec> v2 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.5f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f));
   EXPECT_TRUE(v2.has_value());
-  EXPECT_TRUE(v2.value().is_close(0.5f*VEC_X));
+  EXPECT_TRUE(v2.value().is_close(0.5f * VEC_X));
 
   std::optional<Vec> v3 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.f, 10.f, 0.f), Normal(0.f, -1.f, 0.f));
   EXPECT_TRUE(v3.has_value());
-  EXPECT_TRUE(v3.value().is_close(10.f*VEC_Y));
+  EXPECT_TRUE(v3.value().is_close(10.f * VEC_Y));
 
   std::optional<Vec> v4 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.f, 0.f, 10.f), Normal(0.f, 0.f, -1.f));
   EXPECT_TRUE(v4.has_value());
-  EXPECT_TRUE(v4.value().is_close(10.f*VEC_Z));
+  EXPECT_TRUE(v4.value().is_close(10.f * VEC_Z));
 }
