@@ -478,7 +478,7 @@ public:
     }
   }
 
-  void _apply_csg_transformation_and_material(std::vector<HitRecord> hits) const {
+  void _apply_csg_transformation_and_material(std::vector<HitRecord>& hits) const {
     // Apply CSGObject global Transformation to all hits if transformation is defined
     for (auto& hit : hits) {
       hit.world_point = transformation * hit.world_point;

@@ -44,6 +44,7 @@ enum class KeywordEnum {
   NONE = 0, // default fallback
   NEW,
   MATERIAL,
+  INFER,
   PLANE,
   SPHERE,
   CSG,
@@ -51,6 +52,7 @@ enum class KeywordEnum {
   INTERSECTION,
   DIFFERENCE,
   FUSION,
+  NORENDER,
   DIFFUSE,
   SPECULAR,
   UNIFORM,
@@ -70,10 +72,10 @@ enum class KeywordEnum {
   POINT_LIGHT
 };
 
-/// @brief map of keywords to their enum values (analogue of Python dictionaries)
+/// @brief map of keywords to their enum values
 const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {
-    {"material", KeywordEnum::MATERIAL},       {"plane", KeywordEnum::PLANE},
-    {"sphere", KeywordEnum::SPHERE},      {"csg", KeywordEnum::CSG},  {"union", KeywordEnum::UNION}, {"intersection", KeywordEnum::INTERSECTION}, {"difference", KeywordEnum::DIFFERENCE}, {"fusion", KeywordEnum::FUSION},  {"diffuse", KeywordEnum::DIFFUSE},
+    {"material", KeywordEnum::MATERIAL},    {"infer", KeywordEnum::INFER},    {"plane", KeywordEnum::PLANE},
+    {"sphere", KeywordEnum::SPHERE},      {"csg", KeywordEnum::CSG},  {"union", KeywordEnum::UNION}, {"intersection", KeywordEnum::INTERSECTION}, {"difference", KeywordEnum::DIFFERENCE}, {"fusion", KeywordEnum::FUSION}, {"norender", KeywordEnum::NORENDER}, {"diffuse", KeywordEnum::DIFFUSE},
     {"specular", KeywordEnum::SPECULAR},       {"uniform", KeywordEnum::UNIFORM},
     {"checkered", KeywordEnum::CHECKERED},     {"image", KeywordEnum::IMAGE},
     {"identity", KeywordEnum::IDENTITY},       {"translation", KeywordEnum::TRANSLATION},
@@ -88,6 +90,8 @@ std::string to_string(KeywordEnum kw) {
   switch (kw) {
   case KeywordEnum::MATERIAL:
     return "material";
+  case KeywordEnum::INFER:
+    return "infer";
   case KeywordEnum::PLANE:
     return "plane";
   case KeywordEnum::SPHERE:
@@ -102,6 +106,8 @@ std::string to_string(KeywordEnum kw) {
     return "difference";
   case KeywordEnum::FUSION:
     return "fusion";
+  case KeywordEnum::NORENDER:
+    return "norender";
   case KeywordEnum::DIFFUSE:
     return "diffuse";
   case KeywordEnum::SPECULAR:
@@ -897,6 +903,8 @@ public:
 
   std::shared_ptr<CSGObject> parse_csg(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
+
+    // Parse object 1 and object 2
     auto object1 = parse_object(input_stream);
     expect_symbol(input_stream, ',');
     auto object2 = parse_object(input_stream);
@@ -923,12 +931,32 @@ public:
       throw GrammarError(location, "unknown CSG operation type");
     }
 
+    // Parse transformation
     expect_symbol(input_stream, ',');
     Transformation transformation = parse_transformation(input_stream);
-    // TODO add parse material...
+
+    // Parse material
+    expect_symbol(input_stream, ',');
+    std::shared_ptr<Material> material;
+    Token new_token = input_stream.read_token();
+    if (new_token.type == TokenKind::KEYWORD && std::get<KeywordEnum>(new_token.value) == KeywordEnum::INFER) {
+      material = nullptr;
+    } else { // TODO code in this block was copied from parse_sphere() and parse_plane(): refatcor in helper method
+      input_stream.unread_token(new_token);
+
+      SourceLocation source_location =
+        input_stream.location; // Save location of the material identifier token in case an exception needs to be raised
+      std::string material_identifier = expect_identifier(input_stream);
+      auto materials_it = materials.find(material_identifier); // Look for the material in the material map
+      if (materials_it == materials.end()) {                   // If not found, throw an error
+        throw GrammarError(source_location, "unknown material \"" + material_identifier + "\"");
+      }
+      material = materials_it->second;
+    }
+
     expect_symbol(input_stream, ')');
 
-    return std::make_shared<CSGObject>(object1, object2, operation, transformation);
+    return std::make_shared<CSGObject>(object1, object2, operation, transformation, material);
   }
 
   /// @brief parse the description of a Camera from the input stream
@@ -996,16 +1024,26 @@ public:
   void parse_scene(InputStream &input_stream) {
     // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float, material, sphere, plane, camera, point_light
     while (true) {
+      // Check for end of stream or norender keyword
       Token new_token = input_stream.read_token();
+      bool norender = false;
       if (new_token.type == TokenKind::STOP_TOKEN) {
         break;
+      } else if (new_token.type == TokenKind::KEYWORD && std::get<KeywordEnum>(new_token.value) == KeywordEnum::NORENDER) {
+        norender = true;
       } else {
         input_stream.unread_token(new_token);
       }
 
       SourceLocation source_location = input_stream.location;
-      KeywordEnum keyword = expect_keywords(input_stream, {KeywordEnum::FLOAT, KeywordEnum::MATERIAL, KeywordEnum::SPHERE,
+      KeywordEnum keyword;
+      if (norender) {
+        keyword = expect_keywords(input_stream, {KeywordEnum::SPHERE, KeywordEnum::PLANE, KeywordEnum::CSG});
+      } else {
+        keyword = expect_keywords(input_stream, {KeywordEnum::FLOAT, KeywordEnum::MATERIAL, KeywordEnum::SPHERE,
                                                            KeywordEnum::PLANE, KeywordEnum::CSG, KeywordEnum::CAMERA, KeywordEnum::POINT_LIGHT});
+      }
+
       switch (keyword) {
       case KeywordEnum::FLOAT: {
         std::string float_name = expect_identifier(input_stream);
@@ -1043,7 +1081,9 @@ public:
         if (new_token.type == TokenKind::SYMBOL) {
           // Unread token '('
           input_stream.unread_token(new_token);
-          world->add_object(parse_sphere(input_stream));
+          if (!norender) {
+            world->add_object(parse_sphere(input_stream));
+          }
         } else { // Otherwise parse definition with name
           // Unread token '('
           input_stream.unread_token(new_token);
@@ -1058,8 +1098,10 @@ public:
 
           // Add Sphere to World
           auto sphere = parse_sphere(input_stream);
-          world->add_object(sphere);
           objects[sphere_name] = sphere;
+          if (!norender) {
+            world->add_object(sphere);
+          }
         }
         break;
       }
@@ -1071,7 +1113,9 @@ public:
         if (new_token.type == TokenKind::SYMBOL) {
           // Unread token '('
           input_stream.unread_token(new_token);
-          world->add_object(parse_plane(input_stream));
+          if (!norender) {
+            world->add_object(parse_plane(input_stream));
+          }
         } else { // Otherwise parse definition with name
           // Unread token '('
           input_stream.unread_token(new_token);
@@ -1086,8 +1130,10 @@ public:
 
           // Add Plane to World
           auto plane = parse_plane(input_stream);
-          world->add_object(plane);
           objects[plane_name] = plane;
+          if (!norender) {
+            world->add_object(plane);
+          }
         }
         break;
       }
@@ -1099,7 +1145,9 @@ public:
         if (new_token.type == TokenKind::SYMBOL) {
           // Unread token '('
           input_stream.unread_token(new_token);
-          world->add_object(parse_csg(input_stream));
+          if (!norender) {
+            world->add_object(parse_csg(input_stream));
+          }
         } else { // Otherwise parse definition with name
           // Unread token '('
           input_stream.unread_token(new_token);
@@ -1114,8 +1162,10 @@ public:
 
           // Add CSGObject to World
           auto csg = parse_csg(input_stream);
-          world->add_object(csg);
           objects[csg_name] = csg;
+          if (!norender) {
+            world->add_object(csg);
+          }
         }
         break;
       }
