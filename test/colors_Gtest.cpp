@@ -28,8 +28,6 @@ TEST(ColorTest, test_is_close) {
   EXPECT_TRUE(color1.is_close(Color(1.f, 2.f, 3.f)));
   EXPECT_FALSE(color1.is_close(Color(2.f, 1.f, 3.f)));
   EXPECT_FALSE(color1.is_close(Color(1.f, 2.f, 3.0001f)));
-
-  EXPECT_TRUE(false);
 }
 
 // test +, *, scalar multiplication
