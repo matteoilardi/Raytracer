@@ -64,9 +64,10 @@ jobs:
       if: failure()
       shell: bash
       run: |
-        cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log" || echo "Log file not found"
+        cat "$(cygpath -u "${{ steps.strings.outputs.build-output-dir }}")/Testing/Temporary/LastTest.log" || echo "Log file not found"
+  
 
-# below is the provisional linter we are having issues with, will fix it later
+  # below is the provisional linter we are having issues with, will fix it later
 
   # run-lint:
   #   runs-on: ubuntu-latest
