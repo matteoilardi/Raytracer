@@ -60,8 +60,14 @@ jobs:
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       run: ctest --build-config ${{ matrix.build_type }}
 
-    - name: Print test log on failure
-      if: failure()
+    - name: Print test log on failure (Linux/Mac)
+      if: failure() && runner.os != 'Windows'
+      shell: bash
+      run: |
+          cat "${{ steps.strings.outputs.build-output-dir }}/Testing/Temporary/LastTest.log" || echo "Log file not found"
+
+    - name: Print test log on failure (Windows)
+      if: failure() && runner.os == 'Windows'
       shell: bash
       run: |
         cat "$(cygpath -u "${{ steps.strings.outputs.build-output-dir }}")/Testing/Temporary/LastTest.log" || echo "Log file not found"
