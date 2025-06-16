@@ -46,6 +46,11 @@ enum class KeywordEnum {
   MATERIAL,
   PLANE,
   SPHERE,
+  CSG,
+  UNION,
+  INTERSECTION,
+  DIFFERENCE,
+  FUSION,
   DIFFUSE,
   SPECULAR,
   UNIFORM,
@@ -68,7 +73,7 @@ enum class KeywordEnum {
 /// @brief map of keywords to their enum values (analogue of Python dictionaries)
 const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {
     {"material", KeywordEnum::MATERIAL},       {"plane", KeywordEnum::PLANE},
-    {"sphere", KeywordEnum::SPHERE},           {"diffuse", KeywordEnum::DIFFUSE},
+    {"sphere", KeywordEnum::SPHERE},      {"csg", KeywordEnum::CSG},  {"union", KeywordEnum::UNION}, {"intersection", KeywordEnum::INTERSECTION}, {"difference", KeywordEnum::DIFFERENCE}, {"fusion", KeywordEnum::FUSION},  {"diffuse", KeywordEnum::DIFFUSE},
     {"specular", KeywordEnum::SPECULAR},       {"uniform", KeywordEnum::UNIFORM},
     {"checkered", KeywordEnum::CHECKERED},     {"image", KeywordEnum::IMAGE},
     {"identity", KeywordEnum::IDENTITY},       {"translation", KeywordEnum::TRANSLATION},
@@ -87,6 +92,16 @@ std::string to_string(KeywordEnum kw) {
     return "plane";
   case KeywordEnum::SPHERE:
     return "sphere";
+  case KeywordEnum::CSG:
+    return "csg";
+  case KeywordEnum::UNION:
+    return "union";
+  case KeywordEnum::INTERSECTION:
+    return "intersection";
+  case KeywordEnum::DIFFERENCE:
+    return "difference";
+  case KeywordEnum::FUSION:
+    return "fusion";
   case KeywordEnum::DIFFUSE:
     return "diffuse";
   case KeywordEnum::SPECULAR:
@@ -852,6 +867,70 @@ public:
     return std::make_shared<Plane>(plane_transformation, materials_it->second);
   }
 
+
+  /// @brief parse a general object, which may be specified by an indentifier or an inline definition
+  std::shared_ptr<Shape> parse_object(InputStream &input_stream) {
+    Token new_token = input_stream.read_token();
+    if (new_token.type == TokenKind::IDENTIFIER) {
+      const std::string& object_name = std::get<std::string>(new_token.value);
+      if (objects.contains(object_name)) {
+        return objects[object_name];
+      } else {
+        throw GrammarError(new_token.source_location, "unknown object \"" + object_name + "\"");
+      }
+    } else {
+      input_stream.unread_token(new_token);
+      SourceLocation location = input_stream.location;
+      KeywordEnum object_keyword = expect_keywords(input_stream, {KeywordEnum::SPHERE, KeywordEnum::PLANE, KeywordEnum::CSG});
+      switch (object_keyword) {
+      case KeywordEnum::SPHERE:
+        return parse_sphere(input_stream);
+      case KeywordEnum::PLANE:
+        return parse_plane(input_stream);
+      case KeywordEnum::CSG:
+        return parse_csg(input_stream);
+      default:
+        throw GrammarError(location, "unknown object type");
+      }
+    }
+  }
+
+  std::shared_ptr<CSGObject> parse_csg(InputStream &input_stream) {
+    expect_symbol(input_stream, '(');
+    auto object1 = parse_object(input_stream);
+    expect_symbol(input_stream, ',');
+    auto object2 = parse_object(input_stream);
+    expect_symbol(input_stream, ',');
+
+    // Parse CSG operation
+    CSGObject::Operation operation;
+    SourceLocation location = input_stream.location;
+    KeywordEnum operation_keyword = expect_keywords(input_stream, {KeywordEnum::UNION, KeywordEnum::INTERSECTION, KeywordEnum::DIFFERENCE, KeywordEnum::FUSION});
+    switch (operation_keyword) {
+    case KeywordEnum::UNION:
+      operation = CSGObject::Operation::UNION;
+      break;
+    case KeywordEnum::INTERSECTION:
+      operation = CSGObject::Operation::INTERSECTION;
+      break;
+    case KeywordEnum::DIFFERENCE:
+      operation = CSGObject::Operation::DIFFERENCE;
+      break;
+    case KeywordEnum::FUSION:
+      operation = CSGObject::Operation::FUSION;
+      break;
+    default:
+      throw GrammarError(location, "unknown CSG operation type");
+    }
+
+    expect_symbol(input_stream, ',');
+    Transformation transformation = parse_transformation(input_stream);
+    // TODO add parse material...
+    expect_symbol(input_stream, ')');
+
+    return std::make_shared<CSGObject>(object1, object2, operation, transformation);
+  }
+
   /// @brief parse the description of a Camera from the input stream
   std::shared_ptr<Camera> parse_camera(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
@@ -926,7 +1005,7 @@ public:
 
       SourceLocation source_location = input_stream.location;
       KeywordEnum keyword = expect_keywords(input_stream, {KeywordEnum::FLOAT, KeywordEnum::MATERIAL, KeywordEnum::SPHERE,
-                                                           KeywordEnum::PLANE, KeywordEnum::CAMERA, KeywordEnum::POINT_LIGHT});
+                                                           KeywordEnum::PLANE, KeywordEnum::CSG, KeywordEnum::CAMERA, KeywordEnum::POINT_LIGHT});
       switch (keyword) {
       case KeywordEnum::FLOAT: {
         std::string float_name = expect_identifier(input_stream);
@@ -1013,6 +1092,34 @@ public:
         break;
       }
 
+      case KeywordEnum::CSG: {
+        new_token = input_stream.read_token();
+
+        // If the next token is '(', parse a definition that doesn't assign a name to the csg
+        if (new_token.type == TokenKind::SYMBOL) {
+          // Unread token '('
+          input_stream.unread_token(new_token);
+          world->add_object(parse_csg(input_stream));
+        } else { // Otherwise parse definition with name
+          // Unread token '('
+          input_stream.unread_token(new_token);
+
+          // Parse CSGObject name
+          std::string csg_name = expect_identifier(input_stream);
+
+          // Throw if an object with the same name has already been defined
+          if (objects.count(csg_name)) {
+            throw GrammarError(source_location, "object with name \"" + csg_name + "\" already declared elsewhere in the file");
+          }
+
+          // Add CSGObject to World
+          auto csg = parse_csg(input_stream);
+          world->add_object(csg);
+          objects[csg_name] = csg;
+        }
+        break;
+      }
+
       case KeywordEnum::CAMERA: {
         // Throw if a Camera was already defined
         if (camera) {
@@ -1036,6 +1143,7 @@ public:
   }
 
   void initialize_float_variables_with_priority(std::unordered_map<std::string, float>&& variables_from_cl) {
+    // Actually to be fair the *priority* which we refer to is enforced by the method parse_scene(): case KeywordEnum::FLOAT
     assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to be parsed and added to float_variables before parsing the scene file
 
     float_variables = std::move(variables_from_cl);

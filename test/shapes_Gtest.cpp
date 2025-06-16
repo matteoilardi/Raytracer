@@ -361,6 +361,10 @@ TEST(CSGTest, test_csg_transformation) {
   ASSERT_EQ(hits2.size(), 2);
   EXPECT_TRUE(are_close(hits2[0].t, 1.f));
   EXPECT_TRUE(are_close(hits2[1].t, 2.f));
+
+  ASSERT_FALSE(hemisphere->is_point_inside(Point(0.f, 0.f, 0.5f)));
+  ASSERT_TRUE(hemisphere->is_point_inside(Point(2.f, 0.f, 0.5f)));
+  ASSERT_FALSE(hemisphere->is_point_inside(Point(2.f, 0.f, -0.5f)));
 }
 
 // TODO refactor tests for CSG

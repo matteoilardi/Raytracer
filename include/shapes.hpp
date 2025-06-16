@@ -465,17 +465,16 @@ public:
   }
 
   virtual bool is_point_inside(const Point& point_world_frame) const override {
-    Point point_csg_frame = point_world_frame;
-    // Point point_csg_frame = transformation.inverse() * point_world_frame;
+    Point point_csg_frame = transformation.inverse() * point_world_frame;
     switch (operation) {
     case Operation::UNION:
-      return object1->is_point_inside(point_world_frame) || object2->is_point_inside(point_world_frame);
+      return object1->is_point_inside(point_csg_frame) || object2->is_point_inside(point_csg_frame);
     case Operation::INTERSECTION:
-      return object1->is_point_inside(point_world_frame) && object2->is_point_inside(point_world_frame);
+      return object1->is_point_inside(point_csg_frame) && object2->is_point_inside(point_csg_frame);
     case Operation::DIFFERENCE:
-      return object1->is_point_inside(point_world_frame) && !object2->is_point_inside(point_world_frame);
+      return object1->is_point_inside(point_csg_frame) && !object2->is_point_inside(point_csg_frame);
     case Operation::FUSION:
-      return object1->is_point_inside(point_world_frame) || object2->is_point_inside(point_world_frame); // same as union
+      return object1->is_point_inside(point_csg_frame) || object2->is_point_inside(point_csg_frame); // same as union
     }
   }
 
