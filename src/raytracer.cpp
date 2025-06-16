@@ -47,6 +47,9 @@ int main(int argc, char **argv) {
   // Antialisasing parameter
   int samples_per_pixel_edge = 3;
 
+  // Flag for dark image tone mapping
+  bool dark_mode = false;
+
   // -----------------------------------------------------------
   // Command line parsing for demo mode
   // -----------------------------------------------------------
@@ -165,6 +168,9 @@ int main(int argc, char **argv) {
   render_subc->add_option("--roulette", russian_roulette_lim, "Specify ray depth reached before russian roulette starts applying (requires path tracing)")->default_val(3);
   render_subc->add_option("--max-depth", max_depth, "Specify maximum ray depth (requires path tracing)")->default_val(5);
 
+  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of HdrImage::normalize_image() used in tone mapping (i. e. exposure)
+  render_subc->add_flag("--dark", dark_mode, "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")->default_val(false);
+
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
   // -----------------------------------------------------------
@@ -179,6 +185,9 @@ int main(int argc, char **argv) {
       ->check(CLI::PositiveNumber); // reject negative values
   pfm2png_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
       ->check(CLI::PositiveNumber); // reject negative values
+
+  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of HdrImage::normalize_image() used in tone mapping (i. e. exposure)
+  pfm2png_subc->add_flag("--dark", dark_mode, "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")->default_val(false);
 
   // -----------------------------------------------------------
   // Procedure
@@ -270,7 +279,11 @@ int main(int argc, char **argv) {
   // Note that these are the only possibilities, since the user is required to run a subcommand
 
   // 3. Process the image (normalize and clamp)
-  img->normalize_image(alpha);
+  if (!dark_mode) {
+    img->normalize_image(alpha);
+  } else {
+    img->normalize_image(alpha, DEFAULT_AVG_LUMINOSITY_DARK_MODE);
+  }
   img->clamp_image();
 
   // 4. Save the output image

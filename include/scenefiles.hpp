@@ -703,13 +703,8 @@ public:
     }
     case KeywordEnum::IMAGE: {
       std::string file_name = expect_string(input_file);
-      std::ifstream image_file(
-          file_name, std::ios::binary); // ios::binary is to open the file in binary mode (for non text files, like images)
-      if (!image_file) {
-        throw GrammarError(input_file.location, "could not open image file: " + file_name);
-      }
-      auto image = std::make_shared<HdrImage>(image_file);
-      result = std::make_shared<ImagePigment>(*image);
+      HdrImage image{file_name};
+      result = std::make_shared<ImagePigment>(image);
       break;
     }
     default:

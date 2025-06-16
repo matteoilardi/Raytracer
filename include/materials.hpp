@@ -124,14 +124,11 @@ public:
     // Clamp indices to avoid potential out-of-bounds (only needed if u or v == 1.0)
     // TODO Technically, uv should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes u
     // or v=1 We should check if these 'if checks' slow down the code significantly, if so, we can remove them
-    if (col >= image.width)
+    if (col >= image.width) {
       col = image.width - 1;
-    if (row >= image.height)
+    }
+    if (row >= image.height) {
       row = image.height - 1;
-
-    // TODO remove this debug print, I am using it to make sure pixels are visited and the right colors are returned
-    if (118<col<120 && 118<row < 120) {
-      (image.get_pixel(col, row)).display(); 
     }
 
     // Return the corresponding pixel color from the image

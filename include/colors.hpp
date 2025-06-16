@@ -37,9 +37,12 @@
 class Color;
 
 constexpr float DEFAULT_ERROR_TOLERANCE = 1e-5f; // Default tolerance to decide if two float numbers are close
-
-constexpr float DEFAULT_DELTA_LOG = 1e-10f; // Default quantity added to the argument to prevent caluculating the
-                                            // logarithm of zero
+constexpr float DEFAULT_DELTA_LOG = 1e-10f;      // Default quantity added to the argument to prevent caluculating the
+                                                 // logarithm of zero
+constexpr float DEFAULT_AVG_LUMINOSITY_DARK_MODE =
+    0.1; // Default value replacing the average luminosity of the HDR image in tone mapping (reciprocal of exposure): to be used
+         // for dark (almost-black) images. THe default value here provided (0.1) is fine as long as the non-dark portions of the
+         // image have average luminosity of the same order of magnitude, which is often the case.
 
 /// @brief endianness is order you read floats with (recall 32_bit_float =4
 /// bytes) (left to right or right to left)
@@ -146,7 +149,7 @@ public:
   friend Color operator*(float scalar, const Color &my_color) {
     return my_color * scalar; // Reuse the member function
   }
-  
+
   // Helper method to display the color in a readable format.
   std::string to_string() const {
     std::ostringstream oss;
@@ -487,8 +490,8 @@ public:
 
   // NOTE you might want to add a check to ensure that the image is not normalized already before
   //  normalizing again
-  void normalize_image(float alpha, std::optional<float> avg_lum_opt = std::nullopt) {
-    float avg_lum = avg_lum_opt.value_or(average_luminosity());
+  void normalize_image(float alpha, std::optional<float> avg_luminosity = std::nullopt) {
+    float avg_lum = avg_luminosity.value_or(average_luminosity());
 
     for (auto &pixel : pixels) {
       pixel.r = pixel.r * (alpha / avg_lum);
