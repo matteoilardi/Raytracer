@@ -407,5 +407,3 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
 
   return std::move(image_tracer.image);
 }
-
-I'm an error
