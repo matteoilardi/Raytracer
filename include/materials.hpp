@@ -83,8 +83,8 @@ struct CheckeredPigment : public Pigment {
     float subinterval = 1.f / n_intervals; // length of u and v subintervals
 
     // get the column and row of the subinterval in which the (u, v) coordinates fall
-    int col = std::floorf(uv.u / subinterval);
-    int row = std::floorf(uv.v / subinterval);
+    int col = static_cast<int>(uv.u / subinterval);
+    int row = static_cast<int>(uv.v / subinterval);
     if ((col + row) % 2 == 0) { // entry has color1 if col and row have same parity
       return color1;
     } else {
