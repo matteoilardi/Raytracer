@@ -55,7 +55,7 @@ public:
       : shape(shape), world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
 
   //------------Methods-----------
-  bool is_close(HitRecord other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+  bool is_close(const HitRecord& other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return (this->shape == other.shape) && world_point.is_close(other.world_point, error_tolerance) &&
            normal.is_close(other.normal, error_tolerance) && surface_point.is_close(other.surface_point, error_tolerance) &&
            ray.is_close(other.ray, error_tolerance) && are_close(t, other.t, error_tolerance);

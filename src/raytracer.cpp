@@ -88,7 +88,9 @@ int main(int argc, char **argv) {
   float theta = std::numbers::pi_v<float> / 2.f;
   float phi = std::numbers::pi_v<float>;
 
-  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance")->excludes(orthogonal_flag)->default_val(1.f);
+  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance from screen")
+      ->excludes(orthogonal_flag)
+      ->default_val(1.f);
 
   demo_subc
       ->add_option_function<float>(
@@ -99,7 +101,7 @@ int main(int argc, char **argv) {
   demo_subc
       ->add_option_function<float>(
           "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi_v<float>; },
-          "Specify observer's longitude angle phi (default is 180 degrees, observer alogn negative direction of x-axis)")
+          "Specify observer's longitude angle phi (default is 180 degrees, observer along negative direction of x-axis)")
       ->default_val(180.f);
 
   demo_subc
@@ -215,22 +217,26 @@ int main(int argc, char **argv) {
 
   if (*demo_subc) {
     // A. (DEMO) Compute the demo image and save PFM file
-    Transformation observer_transformation;
+    Transformation screen_transformation;
+    // Default position of the screen is the origin, while the parameter distance (that actually matters only for a perspective
+    // camera) offsets the position of the observer along the negative direction of the x-axis.
 
     if (mode_str == "onoff") {
-      observer_transformation =
+      screen_transformation =
           rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) * translation(-VEC_X);
+      // Default is translation(-VEC_X)
     } else if (mode_str == "path") {
-      observer_transformation = rotation_z(phi - std::numbers::pi_v<float>) *
-                                rotation_y(std::numbers::pi_v<float> / 2.f - theta) * translation(-3.f * VEC_X);
+      screen_transformation = rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) *
+                              translation(-3.f * VEC_X);
+      // Default is translation(-3.f * VEC_X)
     }
 
     // Generate the demo image accordingly
     std::cout << "Rendering demo image... " << std::flush;
     if (mode_str == "onoff") {
-      img = make_demo_image_onoff(orthogonal, width, height, distance, observer_transformation, samples_per_pixel_edge);
+      img = make_demo_image_onoff(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
     } else if (mode_str == "path") {
-      img = make_demo_image_path(orthogonal, width, height, distance, observer_transformation, samples_per_pixel_edge);
+      img = make_demo_image_path(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
     }
     std::cout << "Done." << std::endl;
 
@@ -319,7 +325,7 @@ int main(int argc, char **argv) {
 //------------- OnOff Tracing Demo Image -------------
 
 std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance,
-                                                const Transformation &obs_transformation, int samples_per_pixel_edge) {
+                                                const Transformation &screen_transformation, int samples_per_pixel_edge) {
 
   // Initialize ImageTracer
   auto img = std::make_unique<HdrImage>(width, height);
@@ -329,10 +335,10 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
   std::shared_ptr<Camera> cam;
   if (orthogonal) {
     // provide aspect ratio and observer transformation
-    cam = std::make_shared<OrthogonalCamera>(aspect_ratio, obs_transformation);
+    cam = std::make_shared<OrthogonalCamera>(aspect_ratio, screen_transformation);
   } else {
     // provide default *origin-screen* distance, aspect ratio and observer transformation
-    cam = std::make_unique<PerspectiveCamera>(distance, aspect_ratio, obs_transformation);
+    cam = std::make_unique<PerspectiveCamera>(distance, aspect_ratio, screen_transformation);
   }
   ImageTracer tracer(std::move(img), cam, samples_per_pixel_edge);
 
@@ -360,7 +366,7 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
 //--------------------- Path tracing demo image ---------------------
 
 std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance,
-                                               const Transformation &obs_transformation, int samples_per_pixel_edge) {
+                                               const Transformation &screen_transformation, int samples_per_pixel_edge) {
   // 1. Create World
   std::shared_ptr<World> world = std::make_shared<World>();
 
@@ -390,12 +396,12 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   std::unique_ptr<Camera> camera;
 
   if (orthogonal) {
-    camera = std::make_unique<OrthogonalCamera>(static_cast<float>(width) / height, obs_transformation);
+    camera = std::make_unique<OrthogonalCamera>(static_cast<float>(width) / height, screen_transformation);
   } else {
-    camera = std::make_unique<PerspectiveCamera>(distance, static_cast<float>(width) / height, obs_transformation);
+    camera = std::make_unique<PerspectiveCamera>(distance, static_cast<float>(width) / height, screen_transformation);
   }
 
-  // 5. Render image with Montecarlo path tracing
+  // 5. Render image with path tracing
   auto pcg = std::make_shared<PCG>();
   PathTracer tracer(world, pcg, 10, 2, 6); // n_rays, roulette limit, max_depth
   // FlatTracer tracer(world);
