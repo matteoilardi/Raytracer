@@ -97,13 +97,64 @@ TEST(PointLightTracer, test_example) {
   world->add_light_source(std::make_shared<PointLightSource>(Point(0.f, -2.f, 0.f)));
   world->add_light_source(std::make_shared<PointLightSource>(Point(0.f, -3.f, 0.f)));
 
-  PointLightTracer renderer{world, Color(0.f, 0.f, 0.1f)}; // provided ambient color, default background color is black
+  PointLightTracer renderer{world, Color(0.f, 0.f, 0.1f)}; // Provided ambient color, default background color is black
   tracer.fire_all_rays(renderer);
 
   // Expected r component: cos_theta * brdf_r_component * light_source_color (= 1) / pi for each visible source
   Color expected_color = Color(0.f, 0.3f, 0.1f) +
                          (1.f / std::sqrtf(5.f) + 1.f / std::sqrtf(10.f)) * Color(0.2f, 0.f, 0.f) / std::numbers::pi_v<float>;
   EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(expected_color));
+}
+
+// Test reflective BRDFs are handled corrctly in point light tracing
+TEST(PointLightTracer, test_reflections) {
+  auto black_pigment = std::make_shared<UniformPigment>(BLACK);
+  auto grey_pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
+
+  // Material mirror
+  auto mirror_brdf = std::make_shared<SpecularBRDF>(grey_pigment);
+  auto mirror_material = std::make_shared<Material>(mirror_brdf, black_pigment);
+
+  // Material for grey surface
+  auto grey_brdf = std::make_shared<DiffusiveBRDF>(grey_pigment);
+  auto grey_material = std::make_shared<Material>(grey_brdf, black_pigment);
+
+  // Material for the non-reflective and non-emitting sphere
+  auto sphere_brdf = std::make_shared<DiffusiveBRDF>(black_pigment);
+  auto sphere_material = std::make_shared<Material>(sphere_brdf, black_pigment);
+
+  Ray ray{Point(), VEC_X};
+  auto light_source = std::make_shared<PointLightSource>(Point(-1.f, 0.f, 0.f));
+  auto sphere = std::make_shared<Sphere>(translation(Vec(-0.5f, 0.f, 0.f)) * scaling({0.1f, 0.1f, 0.1f}), sphere_material);
+  auto world = std::make_shared<World>();
+  world->add_object(sphere);
+  world->add_light_source(light_source);
+  Color ambient_color = Color(0.f, 0.f, 0.1f);
+  PointLightTracer renderer{world, ambient_color}; // Provided ambient color, default background color is black
+
+  // First screen, facing south, hit expected at (2, 0, 0): light source not visible
+  auto screen1 = std::make_shared<Plane>(translation(2.f * VEC_X) * rotation_y(-std::numbers::pi_v<float> / 2.f), grey_material);
+  world->add_object(screen1);
+  Color color1 = renderer(ray);
+
+  EXPECT_TRUE(color1.is_close(ambient_color));
+
+  // Mirror facing south-west in the x-y plane, hit expected at (1, 0, 0) and second screen facing east, hit expected at (1, 2, 0)
+  // after reflection o the mirror: light source is visile
+  auto mirror = std::make_shared<Plane>(translation(VEC_X) * rotation_z(-std::numbers::pi_v<float> / 4.f) *
+                                            rotation_y(-std::numbers::pi_v<float> / 2.f),
+                                        mirror_material);
+  world->add_object(mirror);
+  auto screen2 = std::make_shared<Plane>(translation(2.f * VEC_Y) * rotation_x(std::numbers::pi_v<float> / 2.f), grey_material);
+  world->add_object(screen2);
+  Color color2 = renderer(ray);
+
+  Color screen_brdf_attenuation =
+      (Color(0.5f, 0.5f, 0.5f) / std::numbers::pi_v<float>)*std::cosf(std::numbers::pi_v<float> / 4.f);
+  Color mirror_brdf_attenuation = Color(0.5f, 0.5f, 0.5f);
+  Color expected_color = (ambient_color + WHITE * screen_brdf_attenuation) * mirror_brdf_attenuation;
+
+  EXPECT_TRUE(color2.is_close(expected_color));
 }
 
 // Test path tracing

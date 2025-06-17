@@ -119,8 +119,10 @@ public:
     std::optional<HitRecord> hit;
     std::shared_ptr<Material> hit_material;
     std::shared_ptr<BRDF> brdf;
+    Color reflection_attenuation =
+        Color(1.f, 1.f, 1.f); // Attenuation factor due to Specular BRDFs that reflect the incoming ray (if any)
 
-    do {
+    while (true) {
       // 1. Save the closest hit or return background Color if no object gets hit
       hit = world->ray_intersection(ray);
       if (!hit.has_value()) {
@@ -139,10 +141,10 @@ public:
         break;
       }
 
+      reflection_attenuation *= (*brdf->pigment)(hit->surface_point);
       Vec new_dir = ray.direction - 2 * hit->normal.to_vector() * (hit->normal.to_vector() * ray.direction);
       ray = Ray(hit->world_point, new_dir);
-
-    } while (true);
+    }
 
     // 4. Initialize pixel color with ambient color and its own emitted radiance
     Color cum_radiance = ambient_color + (*(hit_material->emitted_radiance))(hit->surface_point);
@@ -161,7 +163,7 @@ public:
                         brdf->eval(hit->normal, *in_dir, -hit->ray.direction, hit->surface_point);
       }
     }
-    return cum_radiance;
+    return cum_radiance * reflection_attenuation;
   };
 };
 
