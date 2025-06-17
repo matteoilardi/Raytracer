@@ -28,7 +28,7 @@ class PathTracer;
 // --------------- RENDERER ABSTRACT CLASS -------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-/// @brief abstract functor that associates a Color to a Ray
+/// @brief Abstract functor that associates a Color to a Ray
 class Renderer {
 public:
   //------------Properties-----------
@@ -46,7 +46,7 @@ public:
 // --------------- ON_OFF RENDERER -------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-/// @brief functor performing ON/OFF tracing: returns white if the ray hits any object, black otherwise
+/// @brief Functor performing ON/OFF tracing: returns white if the ray hits any object, black otherwise
 class OnOffTracer : public Renderer {
 public:
   //------------Properties-----------
@@ -71,7 +71,7 @@ public:
 // --------------- FLAT RENDERER -------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------
 
-/// @brief functor performing flat tracing, i. e. returning for each ray just the plain color of the closest object hit
+/// @brief Functor performing flat tracing, i. e. returning for each ray just the plain color of the closest object hit
 class FlatTracer : public Renderer {
 public:
   //------------Properties-----------
@@ -132,7 +132,7 @@ public:
       brdf = hit_material->brdf;
 
       auto specular = std::dynamic_pointer_cast<SpecularBRDF>(
-          brdf); // returns nullptr if brdf is not a pointer to an object of the derived class SpecularBRDF
+          brdf); // Returns nullptr if brdf is not a pointer to an object of the derived class SpecularBRDF
       // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by the
       // reflection law; otherwise go ahead with color evaluation
       if (!specular) {
@@ -150,14 +150,13 @@ public:
     // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
     for (auto source : world->light_sources) {
       std::optional<Vec> in_dir = world->offset_if_visible(source->point, hit->world_point, hit->normal);
-      // in offset_if_visible(..) the `viewer' is the light source and in_dir is the direction from it to the hit point
+      // In offset_if_visible(..) the `viewer' is the light source and in_dir is the direction from it to the hit point
 
       if (in_dir.has_value()) {
         float distance = in_dir->norm();
         float distance_factor = (source->emission_radius > 0.f) ? std::powf((source->emission_radius / distance), 2) : 1.f;
         // angle between normal at hitting point and incoming direction (from light source)
-        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) *
-                          (hit->normal); // QUESTION why the minus sign? and why we multiply by costheta?
+        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) * (hit->normal);
         cum_radiance += source->color * distance_factor * cos_theta *
                         brdf->eval(hit->normal, *in_dir, -hit->ray.direction, hit->surface_point);
       }
@@ -170,7 +169,7 @@ public:
 // --------------- PATH TRACER -------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-/// @brief functor performing the path tracing algorithm
+/// @brief Functor performing the path tracing algorithm
 /// @details importance sampling in MC integration based on the scatter_ray method of the BRDF
 class PathTracer : public Renderer {
 public:
@@ -182,7 +181,7 @@ public:
 
   //-----------Constructors-----------
 
-  /// @brief constructor with parameters
+  /// @brief Constructor with parameters
   /// @param world to render
   /// @param pcg random number generator
   /// @param number of rays recursively scattered
@@ -221,9 +220,9 @@ public:
     float hit_lum = std::max({reflected_color.r, reflected_color.g, reflected_color.b});
     if (ray.depth > russian_roulette_lim) {
       float q = std::max(1.f - hit_lum, 0.05f);
-      // according to Shirley & Morley, use max reflectance of hit color as Russian roulette probability
+      // Following Shirley & Morley, use max reflectance of hit color as Russian roulette probability
       if (pcg->random_float() > q) {
-        // stop with higher probability if the hit point has low reflactance: this improves efficiency without increasing variance
+        // Stop with higher probability if the hit point has low reflactance: this improves efficiency without increasing variance
         // too much Keep a finite stopping probability 0.05 even if hit_lum is close to 1
         reflected_color = reflected_color * (1.f / (1.f - q));
       } else {
@@ -238,14 +237,12 @@ public:
     // distribution. A further multiplicative factor should probably be supplied for other BRDFs: remember to do the
     // maths ad check.
     Color cum_radiance = Color();
-    if (hit_lum > 0.f) { // proceed with recursion only if hit object is not perfectly absorbing (i.e. hit_lum==0)
+    if (hit_lum > 0.f) { // Proceed with recursion only if hit object is not perfectly absorbing (i.e. hit_lum==0)
       for (int i_ray = 0; i_ray < n_rays; i_ray++) {
         Ray new_ray = hit_material->brdf->scatter_ray(
             pcg, ray.direction, hit->world_point, hit->normal,
             ray.depth + 1); // Scatter a new ray by sampling the solid angle distribution proportional to the BRDF
-        cum_radiance =
-            cum_radiance +
-            (*this)(new_ray); // dereference pointer `this' to the PathTracer class object and recurively call its operator()
+        cum_radiance = cum_radiance + (*this)(new_ray); // Call this recursively
       }
     }
     cum_radiance = cum_radiance * (1.f / n_rays) * reflected_color;

@@ -35,7 +35,7 @@ class Material;
 // -----------PIGMENT ABSTRACT STRUCT ------------------
 // ------------------------------------------------------------------------------------------------------------
 
-/// @brief abstract functor that associates a Color to a Vec2d
+/// @brief Abstract functor that associates a Color to a Vec2d
 struct Pigment {
 
   //------------Methods-----------
@@ -45,7 +45,7 @@ struct Pigment {
 //-------------------------------------------------------------------------
 //---------------------- UNIFORM PIGMENT STRUCT ------------------
 //-------------------------------------------------------------------------
-/// @brief returns constant Color
+/// @brief Returns constant Color
 struct UniformPigment : public Pigment {
 
   //-------Properties--------
@@ -67,12 +67,12 @@ struct UniformPigment : public Pigment {
 //---------------------- CHECKERED PIGMENT STRUCT ------------------
 //-------------------------------------------------------------------------
 
-/// @brief return checkered pattern of two Colors
+/// @brief Return checkered pattern of two Colors
 struct CheckeredPigment : public Pigment {
 
   //-------Properties--------
   Color color1, color2;
-  int n_intervals; // number of intervals into which the range [0, 1] is divided for u and v cohordinates
+  int n_intervals; // number of intervals into which the range [0, 1] is divided for u and v coordinates
 
   //-----------Constructor-----------
   CheckeredPigment(Color color1 = Color(), Color color2 = Color(), int n_intervals = 10)
@@ -82,7 +82,7 @@ struct CheckeredPigment : public Pigment {
   virtual Color operator()(Vec2d uv) const {
     float subinterval = 1.f / n_intervals; // length of u and v subintervals
 
-    // get the column and row of the subinterval in which the (u, v) coordinates fall
+    // Get the column and row of the subinterval in which the (u, v) coordinates fall
     int col = static_cast<int>(uv.u / subinterval);
     int row = static_cast<int>(uv.v / subinterval);
     if ((col + row) % 2 == 0) { // entry has color1 if col and row have same parity
@@ -96,7 +96,7 @@ struct CheckeredPigment : public Pigment {
 //-------------------------------------------------------------------------------------------------------------
 // -----------IMAGE PIGMENT ------------------
 // ------------------------------------------------------------------------------------------------------------
-/// @brief pigment obtained by wrapping an HDR image (pfm format) around the given shape
+/// @brief Pigment obtained by wrapping an HDR image (pfm format) around the given shape
 /// @brief uv coordinates on the surface are mapped to column and row of the image and the corresponding pixel color is returned
 class ImagePigment : public Pigment {
 public:
@@ -113,17 +113,17 @@ public:
   ImagePigment(const std::string &filename) : image(filename) {}
 
   // ------- Methods -------
-  /// @brief Given surface UV coordinates, return the corresponding Color from the texture
+  /// @brief Given surface uv coordinates, return the corresponding Color from the texture
   /// @param uv coordinates in [0, 1)^2 identifying a point on the surface
   /// @return color extracted from the HDR image at that position
   virtual Color operator()(Vec2d uv) const override {
-    // Convert UV ∈ [0,1) to pixel indices in the image (truncating to floor integer)
+    // Convert u, v ∈ [0,1) to pixel indices in the image (truncating to floor integer)
     int col = static_cast<int>(uv.u * image.width);
     int row = static_cast<int>(uv.v * image.height);
 
     // Clamp indices to avoid potential out-of-bounds (only needed if u or v == 1.0)
-    // TODO Technically, uv should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes u
-    // or v=1 We should check if these 'if checks' slow down the code significantly, if so, we can remove them
+    // Technically, u and v should be in [0, 1) so this is just a safety check, but it might be that some rounding error makes
+    // u == 1 or v == 1
     if (col >= image.width) {
       col = image.width - 1;
     }
@@ -151,22 +151,21 @@ public:
 
   //------------Methods-----------
 
-  /// @brief returns the BRDF integrated over r, g, b bands, that is 3 scalar values as a color object
+  /// @brief Returns the BRDF integrated over r, g, b bands, that is 3 scalar values as a color object
   /// @param normal at hitting point
   /// @param incident direction
   /// @param outgoing direction
   /// @param uv coordinates of the point on the surface
-  virtual Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const = 0;
-  // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
-  // pass them by const reference?
+  virtual Color eval(const Normal &normal, const Vec &in_dir, const Vec &out_dir, const Vec2d &uv) const = 0;
 
-  /// @brief scatters ray in random direction using BRDF-based importance sampling
+  /// @brief Scatters ray in random direction using BRDF-based importance sampling
   /// @param pcg used to generate random numbers for importance sampling MC
   /// @param direction of the incoming ray
   /// @param point world point where the incoming ray hits the surface
   /// @param normal to the surface at that point
   /// @param depth value for the newly scattered ray, counting how many times it has been reflected
-  virtual Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal,
+  /// @details Actually this method will not be used for path tracing since the BRDF simplifies because of importance sampling
+  virtual Ray scatter_ray(std::shared_ptr<PCG> pcg, const Vec &incoming_dir, const Point &intersection_point, Normal normal,
                           int depth) const = 0;
 };
 
@@ -188,22 +187,21 @@ public:
 
   //------------Methods-----------
 
-  /// @brief evaluate the BRDF at the given point, by definition diffusive BRDF is just the color/pigment divided by pi
-  // in fact this method will not be used since BRDF simplifies in importance sampling for MC pathtracing
-  Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
-    // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
-    // pass them by const reference?
-    return (*pigment)(uv) *
-           (1.f / std::numbers::pi_v<float>); // dereference pigment pointer, get color at uv coordinates, divide by pi
+  /// @brief Evaluate the BRDF at the given point: diffusive BRDF is just the color/pigment divided by pi
+  Color eval(const Normal &normal, const Vec &in_dir, const Vec &out_dir, const Vec2d &uv) const override {
+    return (*pigment)(uv) * (1.f / std::numbers::pi_v<float>);
   }
 
-  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    normal = normal.normalize(); // QUESTION is it necessary?
+  Ray scatter_ray(std::shared_ptr<PCG> pcg, const Vec &incoming_dir, const Point &intersection_point, Normal normal,
+                  int depth) const override {
+    normal =
+        normal.normalize(); // Note that scatter_ray() are the only functions in the code that require a normalized normal (except
+                            // for SpecularBRDF::eval(), which is never used), so it makes sens to enforce normalization here.
     ONB onb{normal.to_vector()};
-    auto [theta, phi] = pcg->random_phong(1); // uniform BRDF makes the integrand of the rendering equation proportional to
+    auto [theta, phi] = pcg->random_phong(1); // Uniform BRDF makes the integrand of the rendering equation proportional to
                                               // cos(theta), hence we perform importance sampling using Phong n=1 distribution
     Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
-                     onb.e3 * std::cos(theta)}; // get outgoing direction from the local ONB basis
+                     onb.e3 * std::cos(theta)}; // Get outgoing direction from the local ONB basis
 
     return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth);
   };
@@ -229,10 +227,7 @@ public:
   //------------Methods-----------
 
   /// @brief Evaluate the BRDF at the given point
-  // in fact this method will not be used since BRDF simplifies in importance sampling for MC pathtracing
-  Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const override {
-    // TODO the virtual method implemented in BRDF parent class passes arguments by direct value, wouldn't it be better to
-    // pass them by const reference?
+  Color eval(const Normal &normal, const Vec &in_dir, const Vec &out_dir, const Vec2d &uv) const override {
     Normal n = normal.normalize();
     Vec in = in_dir.normalize();
     Vec out = out_dir.normalize();
@@ -240,19 +235,22 @@ public:
     float theta_in = std::acos(n * -in);  // incidence angle
     float theta_out = std::acos(n * out); // reflection angle
 
-    // check the reflection law (both angles equal and lie in the reflection plane)
+    // Apply reflection law (both angles equal and lie in the reflection plane)
     if (are_close(theta_in, theta_out) && are_close((in ^ n) * out, 0) && theta_in < std::numbers::pi * 0.5f) {
-      return (*pigment)(uv); // if incidence and reflection angles agree and if ray hits the surface from outside (theta_in <
+      return (*pigment)(uv); // If incidence and reflection angles agree and if ray hits the surface from outside (theta_in <
                              // pi/2) return the color of the pigment at the given uv coordinates
     } else {
-      return Color(0.f, 0.f, 0.f); // otherwise return black
+      return Color(0.f, 0.f, 0.f); // Otherwise return black
     }
   }
 
-  /// @brief deterministic perfect mirror reflection
-  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec incoming_dir, Point intersection_point, Normal normal, int depth) const override {
-    Vec in = incoming_dir.normalize(); // TODO just like for diffusiveBRDF scatter ray, make sure we normalize only once be it
-                                       // here or somewhereelse
+  /// @brief Deterministic perfect mirror reflection
+  Ray scatter_ray(std::shared_ptr<PCG> pcg, const Vec &incoming_dir, const Point &intersection_point, Normal normal,
+                  int depth) const override {
+    Vec in =
+        incoming_dir
+            .normalize(); // Note that scatter_ray() are the only functions in the code that require a normalized normal (except
+                          // for SpecularBRDF::eval(), which is never used), so it makes sens to enforce normalization here.
     Vec n = (normal.to_vector()).normalize();
     // n.normalize();
 
@@ -266,7 +264,7 @@ public:
 // -----------MATERIAL CLASS------------------
 // ------------------------------------------------------------------------------------------------------------
 
-/// @brief light emissive and reflective properties of a shape object as a function of (u, v) coordinates on the surface
+/// @brief Light emissive and reflective properties of a shape object as a function of (u, v) coordinates on the surface
 class Material {
 public:
   //-------Properties--------
@@ -277,15 +275,15 @@ public:
   Material(std::shared_ptr<BRDF> brdf = nullptr, std::shared_ptr<Pigment> emitted_radiance = nullptr)
       : brdf(brdf), emitted_radiance(emitted_radiance) {
     if (!this->brdf) {
-      this->brdf = std::make_shared<DiffusiveBRDF>(); // if no BRDF is provided, set diffusive BRDF with uniform pigment black
+      this->brdf = std::make_shared<DiffusiveBRDF>(); // If no BRDF is provided, set diffusive BRDF with uniform pigment black
     }
     if (!this->emitted_radiance) {
       this->emitted_radiance =
-          std::make_shared<UniformPigment>(); // if no emitted radiance is provided, set uniform pigment black
+          std::make_shared<UniformPigment>(); // If no emitted radiance is provided, set uniform pigment black
     }
   }
 
-  // Costructor with only emitted radiance
+  // Costructor accepting only emitted radiance
   Material(std::shared_ptr<Pigment> emitted_radiance) : Material(nullptr, emitted_radiance) {}
 
   //------------Methods-----------

@@ -12,6 +12,7 @@
 #include "colors.hpp"
 #include "geometry.hpp"
 #include "random.hpp" // random numbers for antialiasing
+#include <cassert>
 #include <functional> // library for std::function
 #include <limits>     // library to have infinity as a float
 #include <memory>
@@ -162,17 +163,19 @@ public:
     if (!pcg) {
       this->pcg = std::make_shared<PCG>();
     }
-
     if (!camera->asp_ratio.has_value()) {
       camera->asp_ratio.emplace(static_cast<float>(this->image->width) / static_cast<float>(this->image->height));
     }
+
+    // Ensure image and camera are not dangling or null
+    assert(this->image && this->camera);
   }
-  // note it is ok for image and camera to stay in the heap, since they will be created once and after that access to
-  // heap memory is as fast as access to stack NOTE pay attention to dangling pointers inside the main
+  // Note that it is ok for image and camera to stay in the heap, since they will be created once and after that access to
+  // heap memory is as fast as access to stack
 
   //--------------------Methods----------------------
 
-  ///@brief returns a ray originating from the camera hitting the pixel (col, row) of the image
+  /// @brief returns a ray originating from the camera hitting the pixel (col, row) of the image
   /// @param col column of the pixel
   /// @param row row of the pixel
   /// @param u_pixel (optional) x-coordinate of the pixel (default value is 0.5, meaning the ray hits the x-center of
@@ -189,7 +192,7 @@ public:
     return camera->fire_ray(u, v);
   }
 
-  // note we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own,
+  // Note that we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own,
   // rather than creating a parent class with a virtual method to be implemented by derived classes)
   using RaySolver = std::function<Color(Ray)>; // General function that takes a Ray as input and returns a Color
 

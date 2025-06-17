@@ -16,7 +16,7 @@
 // -------------------------TESTS FOR RAY-----------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test is_close
+// Test is_close
 TEST(RayTest, test_is_close) {
   Ray ray1 = Ray(Point(1.f, 2.f, 3.f), Vec(5.f, 4.f, -1.f));
   Ray ray2 = Ray(Point(1.f, 2.f, 3.f), Vec(5.f, 4.f, -1.f));
@@ -26,7 +26,7 @@ TEST(RayTest, test_is_close) {
   EXPECT_FALSE(ray1.is_close(ray3));
 }
 
-// test at method
+// Test at method
 TEST(RayTest, test_at) {
   Ray ray4 = Ray(Point(1.f, 2.f, 4.f), Vec(4.f, 2.f, 1.f));
 
@@ -35,7 +35,7 @@ TEST(RayTest, test_at) {
   EXPECT_TRUE(ray4.at(2.f).is_close(Point(9.f, 6.f, 6.f)));
 }
 
-// test transform method
+// Test transform method
 TEST(RayTest, test_ray_transformation) {
   Ray ray = Ray(Point(1.f, 2.f, 3.f), Vec(6.f, 5.f, 4.f));
   Transformation T = translation(Vec(10.f, 11.f, 12.f)) *
@@ -50,7 +50,7 @@ TEST(RayTest, test_ray_transformation) {
 // -------------------------TESTS FOR CAMERA-----------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test firing rays from orthogonal camera
+// Test firing rays from orthogonal camera
 TEST(CameraTest, test_orthogonal_camera) {
   OrthogonalCamera cam1(2.f); // aspect ratio 2, transformation set to identity by default constructor
   Ray ray1 = cam1.fire_ray(0.f, 0.f);
@@ -58,12 +58,12 @@ TEST(CameraTest, test_orthogonal_camera) {
   Ray ray3 = cam1.fire_ray(0.f, 1.f);
   Ray ray4 = cam1.fire_ray(1.f, 1.f);
 
-  // verify rays from orthogonal camera are all parallel by checking that cross products of directions vanish
+  // Verify rays from orthogonal camera are all parallel by checking that cross products of directions vanish
   EXPECT_TRUE(are_close((ray1.direction ^ ray2.direction).squared_norm(), 0.f));
   EXPECT_TRUE(are_close((ray1.direction ^ ray3.direction).squared_norm(), 0.f));
   EXPECT_TRUE(are_close((ray1.direction ^ ray4.direction).squared_norm(), 0.f));
 
-  // verify that rays hitting the corners of the screen have the right coordinates
+  // Verify that rays hitting the corners of the screen have the right coordinates
   // (orthogonal camera is at distance -1 from the screen and ray directions have x-component 1 by default)
   EXPECT_TRUE(ray1.at(1.f).is_close(Point(0.f, 2.f, -1.f)));
   EXPECT_TRUE(ray2.at(1.f).is_close(Point(0.f, -2.f, -1.f)));
@@ -71,17 +71,17 @@ TEST(CameraTest, test_orthogonal_camera) {
   EXPECT_TRUE(ray4.at(1.f).is_close(Point(0.f, -2.f, 1.f)));
 }
 
-// test transformation to orient orthogonal camera according to the observer
+// Test transformation to orient orthogonal camera according to the observer
 TEST(CameraTest, test_orthogonal_camera_transformation) {
   OrthogonalCamera cam2{1.f, translation(-VEC_Y * 2.f) * rotation_z(0.5f * (float)std::numbers::pi)};
   Ray ray5 = cam2.fire_ray(0.5f, 0.5f);
 
-  // check ray fired after transformation is at the expected coordinates
+  // Check ray fired after transformation is at the expected coordinates
   // (orthogonal camera is at distance -1 from the screen by default)
   EXPECT_TRUE(ray5.at(1.0f).is_close(Point(0.f, -2.f, 0.f)));
 }
 
-// test firing rays from perspective camera
+// Test firing rays from perspective camera
 TEST(CameraTest, test_perspective_camera) {
   PerspectiveCamera cam1(1.f, 2.f); // distance 1, aspect ratio 2, identity transformation by default
   Ray ray1 = cam1.fire_ray(0.f, 0.f);
@@ -89,12 +89,12 @@ TEST(CameraTest, test_perspective_camera) {
   Ray ray3 = cam1.fire_ray(0.f, 1.f);
   Ray ray4 = cam1.fire_ray(1.f, 1.f);
 
-  // verify rays from perspective camera all start from the same point (cf. case of orthogonal camera)
+  // Verify rays from perspective camera all start from the same point (cf. case of orthogonal camera)
   EXPECT_TRUE(ray1.origin.is_close(ray2.origin));
   EXPECT_TRUE(ray1.origin.is_close(ray3.origin));
   EXPECT_TRUE(ray1.origin.is_close(ray4.origin));
 
-  // verify rays hitting the corners of the screen have the right coordinates
+  // Verify rays hitting the corners of the screen have the right coordinates
   // (perspective camera is at distance -d from screen, but ray directions have x-component equal to d)
   EXPECT_TRUE(ray1.at(1.f).is_close(Point(0.f, 2.f, -1.f)));
   EXPECT_TRUE(ray2.at(1.f).is_close(Point(0.f, -2.f, -1.f)));
@@ -102,14 +102,14 @@ TEST(CameraTest, test_perspective_camera) {
   EXPECT_TRUE(ray4.at(1.f).is_close(Point(0.f, -2.f, 1.f)));
 }
 
-// test transformation to orient perspective camera according to the observer
+// Test transformation to orient perspective camera according to the observer
 TEST(CameraTest, test_perspective_camera_transformation) {
   PerspectiveCamera cam2{1.f, 1.f, translation(-VEC_Y * 2.f) * rotation_z(0.5f * (float)std::numbers::pi)};
   Ray ray5 = cam2.fire_ray(0.5f, 0.5f);
   PerspectiveCamera cam3{1.f, 1.f, translation(-VEC_Z * 3.f) * rotation_y(0.5f * (float)std::numbers::pi)};
   Ray ray6 = cam3.fire_ray(0.5f, 0.5f);
 
-  // check ray fired after transformation is at the expected coordinates
+  // Check ray fired after transformation is at the expected coordinates
   //  (perspective camera is at distance -d from the screen, but ray directions have x-component equal to d)
   EXPECT_TRUE(ray5.at(1.f).is_close(Point(0.f, -2.f, 0.f)));
   EXPECT_TRUE(ray6.at(1.f).is_close(Point(0.f, 0.f, -3.f)));
@@ -130,19 +130,19 @@ protected:
   }
 };
 
-// test u_pixel and v_pixel correctly offset the point at which the ray hits the screen with respect to the top left
+// Test u_pixel and v_pixel correctly offset the point at which the ray hits the screen with respect to the top left
 // corner of the pixel
 TEST_F(ImageTracerTest, test_uv_submapping) {
-  // choose on purpose to fire the first ray at the pixel (0,0), not at the center coordinates (0.5,0.5)
+  // Choose on purpose to fire the first ray at the pixel (0,0), not at the center coordinates (0.5,0.5)
   // but rather well outside the pixel boundaries so as to hit the center of the pixel (2,1)
   Ray ray1 = tracer->fire_ray(0, 0, 2.5f, 1.5f);
 
-  // fire the second ray at the center of the pixel (2,1)
+  // Fire the second ray at the center of the pixel (2,1)
   Ray ray2 = tracer->fire_ray(2, 1);
   EXPECT_TRUE(ray1.is_close(ray2));
 }
 
-// test all pixel are hit by method fire_all_rays
+// Test all pixel are hit by method fire_all_rays
 TEST_F(ImageTracerTest, test_pixel_coverage) {
   tracer->fire_all_rays([](Ray ray) -> Color { return Color(1.f, 2.f, 3.f); });
 
@@ -153,15 +153,15 @@ TEST_F(ImageTracerTest, test_pixel_coverage) {
   }
 }
 
-// test image orientation (see issue #4)
+// Test image orientation (see issue #4)
 TEST_F(ImageTracerTest, test_image_orientation) {
-  // fire a ray against top left corner of the screen
+  // Fire a ray against top left corner of the screen:
   // you expect this ray to hit the screen at (x=0, y=2, z=1) but using the original code it would hit (x=0, y=2, z=-1)
   // (see issue #4) since v coordinates increase upwards while HdrImage rows are ordered top to bottom
   Ray top_left_ray = tracer->fire_ray(0, 0, 0.f, 0.f);
   EXPECT_TRUE(Point(0.f, 2.f, 1.f).is_close(top_left_ray.at(1.f)));
 
-  // fire a ray against bottom right corner of the screen
+  // Fire a ray against bottom right corner of the screen:
   // you expect this ray to hit the screen at (x=0, y=-2, z=-1) but with original code it hits (x=0, y=-3.333, z=3)
   // (see issue #4) since we divided by width-1/height-1 rather than width/height
   // & since coordinates increase upwards while HdrImage rows are ordered top to bottom
@@ -169,7 +169,7 @@ TEST_F(ImageTracerTest, test_image_orientation) {
   EXPECT_TRUE(Point(0.f, -2.f, -1.f).is_close(bottom_right_ray.at(1.f)));
 }
 
-// test stratified sampling for a small 1-pixel image
+// Test stratified sampling for a small 1-pixel image
 TEST(TestAntialiasing, test_stratified_sampling) {
   auto small_img = std::make_unique<HdrImage>(1, 1);
   auto cam = std::make_shared<OrthogonalCamera>();
@@ -177,7 +177,7 @@ TEST(TestAntialiasing, test_stratified_sampling) {
 
   int n_rays = 0; // number of traced rays
 
-  // lambda that returns the same color for every ray after checking that it lands inside the screen
+  // Lambda returning the same color for every ray after checking that it lands inside the screen
   auto trace_ray = [&n_rays](Ray ray) -> Color {
     Point point = ray.at(1.f);
     EXPECT_TRUE(are_close(point.x, 0.f));
@@ -191,8 +191,8 @@ TEST(TestAntialiasing, test_stratified_sampling) {
 
   tracer.fire_all_rays(trace_ray);
 
-  EXPECT_EQ(n_rays, 100); // check that the total number of traced rays is the expected one
-  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color(1.f, 2.f, 3.f))); // check color normalization
+  EXPECT_EQ(n_rays, 100); // Check that the total number of traced rays is the expected one
+  EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(Color(1.f, 2.f, 3.f))); // Check color normalization
 }
 
 TEST(TestAntialiasing, test_mean) {
@@ -201,7 +201,7 @@ TEST(TestAntialiasing, test_mean) {
   ImageTracer tracer{std::move(small_img), cam, 100}; // 100 samples per pixel edge, 10000 samples in total
 
   PCG pcg{};
-  // lambda that returns BLACK or RED with equal probability
+  // Lambda returning BLACK or RED with equal probability
   auto trace_ray = [&pcg](Ray ray) -> Color {
     if (pcg.random_float() >= 0.5f) {
       return RED;

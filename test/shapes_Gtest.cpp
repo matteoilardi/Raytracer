@@ -18,7 +18,7 @@
 // -------------TESTS FOR SPHERE-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test two hits from outside the sphere
+// Test two hits from outside the sphere
 TEST(SphereTest, test_outer_hit) {
   auto unit_sphere = std::make_shared<Sphere>();
 
@@ -35,7 +35,7 @@ TEST(SphereTest, test_outer_hit) {
   EXPECT_TRUE(hit2.value().is_close(expected2));
 }
 
-// test hit from the inside
+// Test hit from the inside
 TEST(SphereTest, test_inner_hit) {
   auto unit_sphere = std::make_shared<Sphere>();
 
@@ -46,7 +46,7 @@ TEST(SphereTest, test_inner_hit) {
   EXPECT_TRUE(hit1.value().is_close(expected1));
 }
 
-// test hits on a translated sphere, ensuring that there are no intersections with the untranslated sphere
+// Test hits on a translated sphere, ensuring that there are no intersections with the untranslated sphere
 TEST(SphereTest, test_translation) {
   auto translated_sphere = std::make_shared<Sphere>(translation(Vec(10.f, 0.f, 0.f)));
 
@@ -69,9 +69,7 @@ TEST(SphereTest, test_translation) {
   EXPECT_FALSE(hit4);
 }
 
-// test normals, which are non-trivial when a scaling is performed on the sphere
-// NOTE in this and the following tests it is absoluteley necessary to create the shapes with shared pointers, otherwise
-// if Sphere is on the stack an exception is raised.
+// Test normals, which are non-trivial when a scaling is performed on the sphere
 TEST(SphereTest, test_normals) {
   auto sphere1 = std::make_shared<Sphere>(scaling({2.f, 1.f, 1.f}));
 
@@ -84,9 +82,9 @@ TEST(SphereTest, test_normals) {
   EXPECT_TRUE(computed_normal.is_close(expected_normal));
 }
 
-// test normal flipping
+// Test normal flipping
 TEST(SphereTest, test_normal_flipping) {
-  // this scaling flips the sphere about the z-x plane, so that in the standard sphere's reference frame the ray is
+  // This scaling flips the sphere about the z-x plane, so that in the standard sphere's reference frame the ray is
   // incoming from the left
   auto sphere1 = std::make_shared<Sphere>(scaling({1.f, -1.f, 1.f}));
 
@@ -97,7 +95,7 @@ TEST(SphereTest, test_normal_flipping) {
   EXPECT_TRUE(hit1->normal.is_close(VEC_Y.to_normal()));
 }
 
-// test surface coordinates for non-trivial rays
+// Test surface coordinates for non-trivial rays
 TEST(SphereTest, test_surface_coordinates) {
   auto unit_sphere = std::make_shared<Sphere>();
 
@@ -156,7 +154,7 @@ TEST(SphereTest, test_surface_coordinates) {
 // -------------TESTS FOR PLANE-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test intersections between default plane and orthogonal and parallel rays
+// Test intersections between default plane and orthogonal and parallel rays
 TEST(PlaneTest, test_hit) {
   auto default_plane = std::make_shared<Plane>();
 
@@ -180,7 +178,7 @@ TEST(PlaneTest, test_hit) {
   EXPECT_FALSE(hit4);
 }
 
-// test intersections with rotated plane
+// Test intersections with rotated plane
 TEST(PlaneTest, test_rotation) {
   auto rotated_plane = std::make_shared<Plane>(rotation_y(std::numbers::pi_v<float> / 2.f));
 
@@ -204,7 +202,7 @@ TEST(PlaneTest, test_rotation) {
   EXPECT_FALSE(hit4);
 }
 
-// test periodic surface coordinates parametrization
+// Test periodic surface coordinates parametrization
 TEST(PlaneTest, test_surface_coordinates) {
   auto default_plane = std::make_shared<Plane>();
 
@@ -224,7 +222,7 @@ TEST(PlaneTest, test_surface_coordinates) {
 // -------------TESTS FOR WORLD-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test ray_intersection method
+// Test ray_intersection method
 TEST(WorldTest, test_ray_intersection) {
   World world = World();
 

@@ -10,7 +10,7 @@
 #pragma once
 
 #include "colors.hpp"
-#include <cmath> // Necesary for copysignf function
+#include <cmath> // For copysignf function
 #include <numbers>
 
 // ------------------------------------------------------------------------------------------------------------
@@ -38,25 +38,25 @@ public:
 
   //-----------Constructors-----------
 
-  /// Default constructor initializes to (0, 0)
+  /// @brief Default constructor initializes to (0, 0)
   Vec2d() : u(0), v(0) {}
 
-  /// Constructor with parameters
+  /// @brief Constructor with parameters
   Vec2d(float u, float v) : u(u), v(v) {}
 
   //--------------------Methods----------------------
 
-  /// convert 2D vector to string
+  /// @brief Convert 2D vector to string
   std::string to_string() const {
     std::ostringstream oss;
     oss << "(" << u << ", " << v << ")";
     return oss.str();
   }
 
-  /// print vector to screen
+  /// @brief Print vector to screen
   void print() const { std::cout << to_string() << std::endl; }
 
-  /// check if two 2D vectors are close
+  /// @brief Check if two 2D vectors are close
   bool is_close(const Vec2d &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return are_close(u, other.u, error_tolerance) && are_close(v, other.v, error_tolerance);
   }
@@ -73,44 +73,45 @@ public:
 
   //-----------Constructors-----------
 
-  /// Default constructor initializes to (0, 0, 0)
+  /// @brief Default constructor initializes to (0, 0, 0)
   Vec() : x(0.f), y(0.f), z(0.f) {}
 
-  /// Constructor accepting cartesian coordinates
+  /// @brief Constructor accepting cartesian coordinates
   Vec(float x, float y, float z) : x(x), y(y), z(z) {}
 
-  /// Constructor for a normalized Vec accepting polar coordinates
+  /// @brief Constructor for a normalized Vec accepting polar coordinates
   Vec(float theta, float phi) : x(std::sin(theta) * std::cos(phi)), y(std::sin(theta) * std::sin(phi)), z(std::cos(theta)) {}
 
   //--------------------Methods----------------------
 
-  /// convert vector to string
+  /// @brief Convert vector to string
   std::string to_string() const {
     std::ostringstream oss;
     oss << "(" << x << ", " << y << ", " << z << ")";
     return oss.str();
   }
 
-  /// print vector to screen
+  /// @brief Print vector to screen
   void print() const { std::cout << to_string() << std::endl; }
 
-  /// check if two vectors are close
+  /// @brief Check if two vectors are close
   bool is_close(const Vec &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return are_close(x, other.x, error_tolerance) && are_close(y, other.y, error_tolerance) &&
            are_close(z, other.z, error_tolerance);
   }
 
-  /// return negative vector
+  /// @brief Return negative vector
   Vec operator-() const { return Vec(-x, -y, -z); }
 
-  /// return squared norm of vector
+  /// @brief Return squared norm of vector
   float squared_norm() const { return x * x + y * y + z * z; }
 
-  /// return norm of vector
+  /// @brief Return norm of vector
   float norm() const { return std::sqrt(squared_norm()); }
 
-  /// normalize the vector
-  [[nodiscard]] Vec normalize() const {
+  /// @brief Normalize vector
+  [[nodiscard]]
+  Vec normalize() const {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero vector");
@@ -118,10 +119,10 @@ public:
     return Vec(x / n, y / n, z / n);
   }
 
-  /// convert vector to a normal
+  /// @brief Convert vector to a normal
   Normal to_normal() const;
 
-  /// convert vector to a point
+  /// @brief Convert vector to a point
   Point to_point() const;
 };
 
@@ -137,31 +138,31 @@ public:
 
   //-----------Constructors-----------
 
-  /// Default constructor initializes to (0, 0, 0)
+  /// @brief Default constructor: initialize to (0, 0, 0)
   Point() : x(0.f), y(0.f), z(0.f) {}
 
-  /// Constructor with parameters
+  /// @brief Constructor with parameters
   Point(float x, float y, float z) : x(x), y(y), z(z) {}
 
   //------------Methods-----------
 
-  /// convert point to string
+  /// @brief Convert point to string
   std::string to_string() const {
     std::ostringstream oss;
     oss << "(" << x << ", " << y << ", " << z << ")";
     return oss.str();
   }
 
-  /// print point to screen
+  /// @brief Print point to screen
   void print() const { std::cout << to_string() << std::endl; }
 
-  /// check if two points are close
+  /// @brief Check if two points are close
   bool is_close(const Point &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return are_close(x, other.x, error_tolerance) && are_close(y, other.y, error_tolerance) &&
            are_close(z, other.z, error_tolerance);
   }
 
-  /// convert point to a vector
+  /// @brief Convert point to a vector
   Vec to_vector() const;
 };
 
@@ -177,41 +178,42 @@ public:
 
   //-----------Constructors-----------
 
-  /// Default constructor initializes to (0, 0, 0)
+  /// @brief Default constructor: initialize to (0, 0, 0)
   Normal() : x(0.f), y(0.f), z(0.f) {}
 
-  /// Constructor with parameters
+  /// @brief Constructor with parameters
   Normal(float x, float y, float z) : x(x), y(y), z(z) {}
 
   //------------Methods-----------
 
-  /// convert normal to string
+  /// @brief Convert normal to string
   std::string to_string() const {
     std::ostringstream oss;
     oss << "(" << x << ", " << y << ", " << z << ")";
     return oss.str();
   }
 
-  /// print normal to screen
+  /// @brief Print normal to screen
   void print() const { std::cout << to_string() << std::endl; }
 
-  /// check if two normals are close
+  /// @brief Check if two normals are close
   bool is_close(const Normal &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return are_close(x, other.x, error_tolerance) && are_close(y, other.y, error_tolerance) &&
            are_close(z, other.z, error_tolerance);
   }
 
-  /// return negative normal
+  /// @brief Return opposite normal
   Normal operator-() const { return Normal(-x, -y, -z); }
 
-  /// return squared norm of normal
+  /// @brief Return squared norm of normal
   float squared_norm() const { return x * x + y * y + z * z; }
 
-  /// return norm of normal
+  /// @brief Return norm of normal
   float norm() const { return std::sqrt(squared_norm()); }
 
-  /// normalize the normal
-  [[nodiscard]] Normal normalize() const {
+  /// @brief Normalize normal
+  [[nodiscard]]
+  Normal normalize() const {
     float n = norm();
     if (n == 0) {
       throw std::runtime_error("Cannot normalize a zero normal");
@@ -219,7 +221,7 @@ public:
     return Normal(x / n, y / n, z / n);
   }
 
-  /// convert normal to a vector
+  /// @brief Convert normal to a vector
   Vec to_vector() const;
 };
 
@@ -234,10 +236,10 @@ public:
 
   //-----------Constructors-----------
 
-  ///@brief copy constructor
+  /// @brief copy constructor
   HomMatrix(const HomMatrix &other) : linear_part(other.linear_part), translation_vec(other.translation_vec) {}
 
-  ///@brief default constructor (initializes to identity)
+  /// @brief default constructor (initializes to identity)
   HomMatrix() {
     // Fill linear part (identity)
     for (int i = 0; i < 3; ++i)
@@ -248,14 +250,14 @@ public:
     translation_vec.x = translation_vec.y = translation_vec.z = 0.f;
   }
 
-  /// @brief constructor accepting linear part and translation vector
+  /// @brief Constructor accepting linear part and translation vector
   HomMatrix(const std::array<std::array<float, 3>, 3> &linear_part, const Vec &translation_vec)
       : linear_part(linear_part), translation_vec(translation_vec) {}
 
-  /// @brief constructor accepting linear part only
+  /// @brief Constructor accepting linear part only
   HomMatrix(const std::array<std::array<float, 3>, 3> &linear_part) : linear_part(linear_part), translation_vec() {}
 
-  /// @brief constructor accepting translation vector only
+  /// @brief Constructor accepting translation vector only
   HomMatrix(const Vec &translation_vec) : translation_vec(translation_vec) {
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 3; ++j)
@@ -264,7 +266,7 @@ public:
 
   //------------Methods-----------
 
-  ///@brief check if two matrices are close
+  ///@brief Check if two matrices are close
   bool is_close(const HomMatrix &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     // check if the two linear parts are close
     for (int i = 0; i < 3; ++i) {
@@ -274,7 +276,7 @@ public:
         }
       }
     }
-    // check if the two translation vectors are close
+    // Check if the two translation vectors are close
     if (!translation_vec.is_close(other.translation_vec, error_tolerance)) {
       return false;
     }
@@ -294,16 +296,16 @@ public:
 
   //-----------Constructors-----------
 
-  // the following constructors always build the inverse matrix too
+  // The following constructors always build the inverse matrix too
 
-  ///@brief default constructor (initializes to identity)
+  /// @brief Default constructor: initializes to identity
   Transformation() : hom_matrix(), inverse_hom_matrix() {}
 
-  ///@brief constructor with assigned homogeneous matrix and its inverse
+  /// @brief Constructor accepting assigned homogeneous matrix and its inverse
   Transformation(HomMatrix hom_matrix, HomMatrix inverse_hom_matrix)
       : hom_matrix(hom_matrix), inverse_hom_matrix(inverse_hom_matrix) {}
 
-  /// @brief constructor with assigned linear_part, inverse_linear_part and translation
+  /// @brief Constructor accepting assigned linear_part, inverse_linear_part and translation
   /// @param linear_part linear part as std::array<std::array<float, 3>, 3>
   /// @param inverse_linear_part inverse linear part as std::array<std::array<float, 3>, 3>
   /// @param translation_vec translation vector as Vec
@@ -312,13 +314,12 @@ public:
                  const Vec &inverse_translation_vec)
       : hom_matrix(linear_part, translation_vec), inverse_hom_matrix(inverse_linear_part, inverse_translation_vec) {}
 
-  /// @brief constructor for translations
+  /// @brief Constructor for translations
   /// @param translation_vec translation vector as Vec
   Transformation(const Vec &translation_vec) : hom_matrix(translation_vec), inverse_hom_matrix((-translation_vec)) {}
 
-  /// @brief constructor for rotations
-  /// @param rotation_matrix rotation matrix as std::array<std::array<float, 3>,
-  /// 3>
+  /// @brief Constructor for rotations
+  /// @param rotation_matrix rotation matrix as std::array<std::array<float, 3>, 3>
   Transformation(const std::array<std::array<float, 3>, 3> &rotation_matrix) {
     hom_matrix = HomMatrix(rotation_matrix);
     inverse_hom_matrix = HomMatrix();
@@ -328,7 +329,7 @@ public:
         inverse_hom_matrix.linear_part[i][j] = rotation_matrix[j][i]; // Transpose for rotation matrix
   }
 
-  ///@brief constructor for scalings and reflections (diagonal only)
+  /// @brief constructor for scalings and reflections (diagonal only)
   /// @param diagonal diagonal of the linear part as std::array<float, 3>
   Transformation(const std::array<float, 3> &diagonal) {
     hom_matrix = HomMatrix();
@@ -341,7 +342,7 @@ public:
 
   //------------Methods-----------
 
-  /// @brief check if hom_matrix and inverse_hom_matrix are indeed inverse
+  /// @brief Check if hom_matrix and inverse_hom_matrix are indeed inverse
   bool is_consistent() const {
     // Check if product of linear parts of hom_matrix and inverse_hom_matrix is the identity
     for (int i = 0; i < 3; ++i) {
@@ -357,7 +358,7 @@ public:
         }
       }
     }
-    // check if product of translation vectors is the identity
+    // Check if product of translation vectors is the identity
     Vec vec = (hom_matrix * (inverse_hom_matrix.translation_vec)) + hom_matrix.translation_vec;
     if (!are_close(vec.x, 0.f, DEFAULT_ERROR_TOLERANCE) || !are_close(vec.y, 0.f, DEFAULT_ERROR_TOLERANCE) ||
         !are_close(vec.z, 0.f, DEFAULT_ERROR_TOLERANCE)) {
@@ -367,13 +368,13 @@ public:
     }
   }
 
-  ///@brief check if transformation is close to another transformation
+  /// @brief check if transformation is close to another transformation
   bool is_close(const Transformation &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return hom_matrix.is_close(other.hom_matrix, error_tolerance) &&
            inverse_hom_matrix.is_close(other.inverse_hom_matrix, error_tolerance);
   }
 
-  ///@brief return the inverse transofrmation
+  /// @brief return the inverse transofrmation
   Transformation inverse() const { return Transformation(inverse_hom_matrix, hom_matrix); }
 };
 
@@ -381,114 +382,114 @@ public:
 //--- IMPLEMENTATION OF CONVERSION BETWEEN GEOM OBJECTS-------
 //-------------------------------------------------------------------------------------------------------------
 
-/// convert a vector to a point
+/// @brief Convert a vector to a point
 Point Vec::to_point() const { return Point(x, y, z); }
 
-// convert a vector to a normal
+// @brief Convert a vector to a normal
 Normal Vec::to_normal() const { return Normal(x, y, z); }
 
-/// convert normal to a vector
+/// @brief Convert normal to a vector
 Vec Normal::to_vector() const { return Vec(x, y, z); }
 
-/// convert a point to a vector
+/// @brief Convert a point to a vector
 Vec Point::to_vector() const { return Vec(x, y, z); }
 
 //---------------------------------------------------------------
 //--------OPERATIONS with VEC, NORMAL and POINT ----------------------
 //---------------------------------------------------------------
 
-/// Generic sum operation `In1 + In2 → Out`
+/// @brief General sum operation `In1 + In2 → Out`
 template <typename In1, typename In2, typename Out> Out _sum(const In1 &a, const In2 &b) {
   return Out{a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
-/// sum of two vectors, returning a vector
+/// @brief Sum of two vectors, returning a vector
 Vec operator+(const Vec &a, const Vec &b) { return _sum<Vec, Vec, Vec>(a, b); }
 
-/// sum of a point and a vector, returning a point
+/// @brief Sum of a point and a vector, returning a point
 Point operator+(const Point &a, const Vec &b) { return _sum<Point, Vec, Point>(a, b); }
 
-/// Generic difference operation `In1 - In2 → Out`
+/// @brief General difference operation `In1 - In2 → Out`
 template <typename In1, typename In2, typename Out> Out _difference(const In1 &a, const In2 &b) {
   return Out{a.x - b.x, a.y - b.y, a.z - b.z};
 }
 
-/// difference of two vectors, returning a vector
+/// @brief Difference of two vectors, returning a vector
 Vec operator-(const Vec &a, const Vec &b) { return _difference<Vec, Vec, Vec>(a, b); }
 
-/// difference of a point and a vector, returning a point
+/// @brief Difference of a point and a vector, returning a point
 Point operator-(const Point &a, Vec &b) { return _difference<Point, Vec, Point>(a, b); }
 
-/// difference of a point and a point, returning a vector
+/// @brief Difference of a point and a point, returning a vector
 Vec operator-(const Point &a, const Point &b) { return _difference<Point, Point, Vec>(a, b); }
 
-/// Generic dot product operation `In1 - In2 → Out`
+/// @brief General dot product operation `In1 - In2 → Out`
 template <typename In1, typename In2, typename Out> Out _dot_product(const In1 &a, const In2 &b) {
   return Out{a.x * b.x + a.y * b.y + a.z * b.z};
 }
 
-/// dot product of two vectors
+/// @brief Dot product of two vectors
 float operator*(const Vec &a, const Vec &b) { return _dot_product<Vec, Vec, float>(a, b); }
 
-/// dot product of a vector and a normal
+/// @brief Dot product of a vector and a normal
 float operator*(const Vec &a, const Normal &b) { return _dot_product<Vec, Normal, float>(a, b); }
 
-/// dot product of a normal and a vector
+/// @brief Dot product of a normal and a vector
 float operator*(const Normal &a, const Vec &b) { return _dot_product<Normal, Vec, float>(a, b); }
 
-/// dot product of two normals
+/// @brief Dot product of two normals
 float operator*(const Normal &a, const Normal &b) { return _dot_product<Normal, Normal, float>(a, b); }
 
-/// Generic cross product operation `In1 x In2 → Out`
+/// @brief General cross product operation `In1 x In2 → Out`
 template <typename In1, typename In2, typename Out> Out _cross_product(const In1 &a, const In2 &b) {
   return Out{a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 
-/// cross product of two vectors, returning a vector
+/// @brief Cross product of two vectors, returning a vector
 Vec operator^(const Vec &a, const Vec &b) { return _cross_product<Vec, Vec, Vec>(a, b); }
 
-/// cross product of a vector and a normal, returning a vector
+/// @brief Cross product of a vector and a normal, returning a vector
 Vec operator^(const Vec &a, const Normal &b) { return _cross_product<Vec, Normal, Vec>(a, b); }
 
-/// cross product of a normal and a vector, returning a vector
+/// @brief Cross product of a normal and a vector, returning a vector
 Vec operator^(const Normal &a, const Vec &b) { return _cross_product<Normal, Vec, Vec>(a, b); }
 
-/// cross product of two normals, returning a vector
+/// @brief Cross product of two normals, returning a vector
 Vec operator^(const Normal &a, const Normal &b) { return _cross_product<Normal, Normal, Vec>(a, b); }
 
-/// Generic right scalar multiplication operation `In * scalar → Out`
+/// @brief General right scalar multiplication operation `In * scalar → Out`
 template <typename In1, typename In2, typename Out> Out right_scalar_multiplication(const In1 &a, const In2 &b) {
   return Out{a.x * b, a.y * b, a.z * b};
 }
 
-/// left scalar multiplication operation `scalar * In→ Out`
+/// @brief General left scalar multiplication operation `scalar * In → Out`
 template <typename In1, typename In2, typename Out> Out left_scalar_multiplication(const In1 &a, const In2 &b) {
   return Out{a * b.x, a * b.y, a * b.z};
 }
 
-/// right scalar multiplication `Vec * scalar → Vec`
+/// @brief Right scalar multiplication `Vec * scalar → Vec`
 Vec operator*(const Vec &a, float b) { return right_scalar_multiplication<Vec, float, Vec>(a, b); }
 
-/// left scalar multiplication `scalar * Vec → Vec`
+/// @brief Left scalar multiplication `scalar * Vec → Vec`
 Vec operator*(float a, const Vec &b) { return left_scalar_multiplication<float, Vec, Vec>(a, b); }
 
-/// right scalar multiplication `Point * scalar → Point`
+/// @brief Right scalar multiplication `Point * scalar → Point`
 Point operator*(const Point &a, float b) { return right_scalar_multiplication<Point, float, Point>(a, b); }
 
-/// left scalar multiplication `scalar * Point → Point`
+/// @brief Left scalar multiplication `scalar * Point → Point`
 Point operator*(float a, const Point &b) { return left_scalar_multiplication<float, Point, Point>(a, b); }
 
-/// right scalar multiplication of a normal and a float, returning a normal
+/// @brief Right scalar multiplication of a normal and a float, returning a normal
 Normal operator*(const Normal &a, float b) { return right_scalar_multiplication<Normal, float, Normal>(a, b); }
 
-/// left scalar multiplication of a float and a normal, returning a normal
+/// @brief Left scalar multiplication of a float and a normal, returning a normal
 Normal operator*(float a, const Normal &b) { return left_scalar_multiplication<float, Normal, Normal>(a, b); }
 
 //----------------------------------------------------------------------
 //-------------OPERATIONS with TRANSFORMATIONS and POINT,VEC,NORMAL--------------------
 //----------------------------------------------------------------------
 
-/// @brief product between a HomMatrix and a vector
+/// @brief Product between a HomMatrix and a vector
 Vec operator*(const HomMatrix &a, const Vec &b) {
   // NOTE check if implementation is consistent with other operations transformation/hom_matrix * smth
   //  vector transforms with linear part only, translation is not applied
@@ -499,23 +500,23 @@ Vec operator*(const HomMatrix &a, const Vec &b) {
   return result;
 }
 
-/// @brief product between a transformation and a vector
+/// @brief Product between a transformation and a vector
 Vec operator*(const Transformation &a, const Vec &b) {
   // OPT compiler should optimize this wrapping, but maybe check with benchmark in the future
   // vector transforms with linear part only, translation is not applied
   return a.hom_matrix * b;
 }
 
-/// @brief product between a transformation and a point
+/// @brief Product between a transformation and a point
 Point operator*(const Transformation &a, const Point &b) {
   // OPT compiler should optimize this wrapping, but maybe check with benchmark in the future
   // point transforms with linear part + translation
   return (a * b.to_vector() + a.hom_matrix.translation_vec).to_point();
 }
 
-/// @brief product between a transformation and a normal
+/// @brief Product between a transformation and a normal
 Normal operator*(const Transformation &a, const Normal &b) {
-  // normal transforms with inverse transpose of the linear part
+  // Note that a normal transforms with inverse transpose of the linear part
   Normal result;
   result.x = a.inverse_hom_matrix.linear_part[0][0] * b.x + a.inverse_hom_matrix.linear_part[1][0] * b.y +
              a.inverse_hom_matrix.linear_part[2][0] * b.z;
@@ -523,23 +524,22 @@ Normal operator*(const Transformation &a, const Normal &b) {
              a.inverse_hom_matrix.linear_part[2][1] * b.z;
   result.z = a.inverse_hom_matrix.linear_part[0][2] * b.x + a.inverse_hom_matrix.linear_part[1][2] * b.y +
              a.inverse_hom_matrix.linear_part[2][2] * b.z;
-  // normalize the normal after transformation
-  // NOTE normalizing the result after the transformation might slow down code in iterative processes computing normals
-  // several times, you might want to normalize just once at the end
-  // result.normalize();
   return result;
 }
 
-/// @brief product between two transformations
+/// @brief Product between two transformations
 Transformation operator*(const Transformation &a, const Transformation &b) {
   std::array<std::array<float, 3>, 3> linear_part;
   std::array<std::array<float, 3>, 3> inverse_linear_part;
-  // define translation vector (A.lin*B.trans+A.trans)
+
+  // Define translation vector (A.lin*B.trans+A.trans)
   Vec translation_vec = a.hom_matrix * b.hom_matrix.translation_vec + a.hom_matrix.translation_vec;
-  // define inverse translation vector (A^-1*w+v)
+
+  // Define inverse translation vector (A^-1*w+v)
   Vec inverse_translation_vec =
       b.inverse_hom_matrix * a.inverse_hom_matrix.translation_vec + b.inverse_hom_matrix.translation_vec;
-  // define linear part A.lin*B.lin and inverse linear part (B.lin^-1)(A.lin^-1)
+
+  // Define linear part A.lin*B.lin and inverse linear part (B.lin^-1)(A.lin^-1)
   for (int i = 0; i < 3; ++i) {
     for (int j = 0; j < 3; ++j) {
       linear_part[i][j] = a.hom_matrix.linear_part[i][0] * b.hom_matrix.linear_part[0][j] +
@@ -551,7 +551,7 @@ Transformation operator*(const Transformation &a, const Transformation &b) {
     };
   };
   return Transformation(linear_part, inverse_linear_part, translation_vec,
-                        inverse_translation_vec); // call constructor (which aslo defines translation vector of inverse)
+                        inverse_translation_vec); // Call constructor (which aslo defines translation vector of inverse)
 }
 
 //------------------------------------------------------------------------
@@ -560,39 +560,39 @@ Transformation operator*(const Transformation &a, const Transformation &b) {
 
 class rotation_x : public Transformation {
 public:
-  // Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
-  ///@param rotation angle (rads)
+  /// @brief Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
+  /// @param rotation angle (rads)
   rotation_x(const float &theta)
       : Transformation({{{1.f, 0.f, 0.f}, {0.f, std::cos(theta), -std::sin(theta)}, {0.f, std::sin(theta), std::cos(theta)}}}) {}
 };
 
 class rotation_y : public Transformation {
 public:
-  // Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
-  ///@param rotation angle (rads)
+  /// @brief Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
+  /// @param rotation angle (rads)
   rotation_y(const float &theta)
       : Transformation({{{std::cos(theta), 0.f, std::sin(theta)}, {0.f, 1.f, 0.f}, {-std::sin(theta), 0.f, std::cos(theta)}}}) {}
 };
 
 class rotation_z : public Transformation {
 public:
-  // Constructor builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
-  ///@param rotation angle (rads)
+  /// @brief Constructor builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
+  /// @param rotation angle (rads)
   rotation_z(const float &theta)
       : Transformation({{{std::cos(theta), -std::sin(theta), 0.f}, {std::sin(theta), std::cos(theta), 0.f}, {0.f, 0.f, 1.f}}}) {}
 };
 
 class translation : public Transformation {
 public:
-  // Constructor: calls Transformation constructor that accepts Vec
-  ///@param translation Vec
+  /// @brief Constructor: calls Transformation constructor that accepts Vec
+  /// @param translation Vec
   translation(Vec vec) : Transformation(vec) {}
 };
 
 class scaling : public Transformation {
 public:
-  // Contructor: calls Transformation constructor that accepts the diagonal of the linear part
-  ///@param array of length 3 representing diagonal of linear part
+  /// @brief Contructor: calls Transformation constructor that accepts the diagonal of the linear part
+  /// @param array of length 3 representing diagonal of linear part
   scaling(std::array<float, 3> diagonal) : Transformation(diagonal) {}
 };
 

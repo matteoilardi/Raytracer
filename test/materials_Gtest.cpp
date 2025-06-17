@@ -14,7 +14,7 @@
 // -------------TESTS FOR PIGMENTS-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test UniformPigment
+// Test UniformPigment
 TEST(PigmentsTest, test_uniform_pigment) {
   Color color = Color(1.f, 2.f, 3.f);
   UniformPigment pigment = UniformPigment(color);
@@ -25,7 +25,7 @@ TEST(PigmentsTest, test_uniform_pigment) {
   EXPECT_TRUE(pigment(Vec2d(1.f, 1.f)).is_close(color));
 }
 
-// test CheckeredPigment
+// Test CheckeredPigment
 TEST(PigmentsTest, test_checkered_pigment) {
   Color color1 = Color(1.f, 2.f, 3.f);
   Color color2 = Color(10.f, 20.f, 30.f);
@@ -52,7 +52,7 @@ TEST(PigmentsTest, test_checkered_pigment) {
   EXPECT_TRUE(pigment(Vec2d(0.75f, 0.75f)).is_close(color1));
 }
 
-// test ImagePigment
+// Test ImagePigment
 TEST(PigmentsTest, test_image_pigment) {
   HdrImage image(2, 2);
   image.set_pixel(0, 0, Color(1.f, 2.f, 3.f));
@@ -71,7 +71,7 @@ TEST(PigmentsTest, test_image_pigment) {
 // -------------TESTS FOR BRDF -------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test SpecularBRDF
+// Test SpecularBRDF
 
 TEST(BRDFTest, test_specular_brdf_reflection) {
   // Setup: incident direction and surface normal

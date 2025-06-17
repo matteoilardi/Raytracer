@@ -36,8 +36,8 @@ public:
   //-----------Constructors-----------
 
   /// Constructor with parameters
-  ///@param initial state of the generator
-  ///@param sequence number of the generator (sets initial increment)
+  /// @param initial state of the generator
+  /// @param sequence number of the generator (sets initial increment)
   PCG(uint64_t init_state = 42ull, uint64_t init_seq = 54ull) {
     state = 0ull;
     inc = (init_seq << 1ull) | 1ull; // shift 1 bit to the left and replace least significant bit with 1, forcing inc to be odd
@@ -48,14 +48,14 @@ public:
 
   //------------Methods-----------
 
-  ///@brief generate random uint32 and advance internal state
+  /// @brief Generate random uint32 and advance internal state
   uint32_t random() {
     uint64_t old_state = state;
 
-    // advance internal state with linear congruential generator (state*multiplier + increment) mod 2^64
+    // Advance internal state with linear congruential generator (state*multiplier + increment) mod 2^64
     state = old_state * 6364136223846793005ull + inc;
 
-    // generate the random number with PCG algorithm
+    // Generate the random number with PCG algorithm
     uint32_t xorshifted = static_cast<uint32_t>(((old_state >> 18ull) ^ old_state) >> 27ull); // scramble the bits
     uint32_t rot = static_cast<uint32_t>(old_state >> 59ull); // pick the 5 most significant bits (64-59=5)
 
@@ -63,33 +63,33 @@ public:
                                                                     // to an unsigned type, which may trigger a compiler warning
   };
 
-  ///@brief generate random float uniformly distributed in [0, 1)
+  /// @brief Generate random float uniformly distributed in [0, 1)
   float random_float() {
     uint32_t ran = random();
     return static_cast<float>(ran) / std::powf(2.f, 32);
   }
 
-  ///@brief Generate random (theta, phi) sampling Phong distribution on hemiphere
-  ///@param n exponent cos^n(theta) in the Phong distribution
-  ///@details Phong: p(Omega) d_Omega = (n+1)/2pi * cos^n(theta)
+  /// @brief Generate random (theta, phi) sampling Phong distribution on hemiphere
+  /// @param n exponent cos^n(theta) in the Phong distribution
+  /// @details Phong: p(Omega) d_Omega = (n+1)/2pi * cos^n(theta)
   std::pair<float, float> random_phong(int n) {
-    // sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
+    // Sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
     float x = random_float();
     float theta = std::acosf(std::powf(x, 1.f / (n + 1)));
 
-    // sample phi: the conditional distribution for phi is actually independent of the theta value you pick
+    // Sample phi: the conditional distribution for phi is actually independent of the theta value you pick
     float phi = random_float() * 2 * std::numbers::pi_v<float>;
 
     return {theta, phi};
   }
 
-  ///@brief random (theta, phi) sampling from uniform distribution on hemisphere
+  /// @brief Random (theta, phi) sampling from uniform distribution on hemisphere
   std::pair<float, float> random_unif_hemisphere() {
     return random_phong(0); // Phong distribution for n = 0 is the uniform distribution
   }
 
-  ///@brief extract random numbers and discard them, used to advance the internal state of the generator
-  ///@param n how many numbers to discard
+  /// @brief Extract random numbers and discard them, used to advance the internal state of the generator
+  /// @param n how many numbers to discard
   void discard(int n) {
     while (n > 0) {
       random(); // Intentionally discard the return value of random(); calling it advances the RNG state, which is the

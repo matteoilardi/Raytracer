@@ -9,16 +9,16 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include <cassert> // C++ library for assert (for debugging)
-#include <cctype>  // C++ library for character classification functions (isalpha, isdigit, etc.)
+#include <cassert>
+#include <cctype> // constains character classification functions (isalpha, isdigit, etc.)
 #include <iostream>
 #include <istream>
-#include <memory>   // C++ library for std::shared_ptr (used for pushback token)
-#include <optional> // C++ library for std::optional (used for pushback character and token)
+#include <memory>
+#include <optional>
 #include <string>
-#include <unordered_map> // C++ library for unordered maps (analogous to Python dictionaries) much faster than std::map
-#include <unordered_set> // C++ library for unordered sets (necessary for command line overwriting of variables)
-#include <variant>       // C++17 library for type-safe tagged union replacement (used for TokenValue)
+#include <unordered_map>
+#include <unordered_set>
+#include <variant> // type-safe tagged union replacement (used for TokenValue)
 
 #include "cameras.hpp"
 #include "colors.hpp"
@@ -32,17 +32,15 @@
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
 // ----------------------------------------------------------------------------------------
 
-const std::string SYMBOLS = "()[]<>,*"; // declare our symbols // NOTE adjust as needed
-enum class KeywordEnum;                 // forward declare our keywords (see section below)
+const std::string SYMBOLS = "()[]<>,*"; // Declare our symbols
+enum class KeywordEnum;                 // Forward declare our keywords (see section below)
 
 //----------------------------------------------------------------------------------------------------
 //------------------- KEYWORDS and related HELPERS -------------------------
 //----------------------------------------------------------------------------------------------------
 
-/// @brief Enum class representing the keywords used in the scene files
+/// @brief Enum class for the keywords used in the scene files
 enum class KeywordEnum {
-  NONE = 0, // default fallback
-  NEW,
   MATERIAL,
   PLANE,
   SPHERE,
@@ -65,7 +63,7 @@ enum class KeywordEnum {
   POINT_LIGHT
 };
 
-/// @brief map of keywords to their enum values (analogue of Python dictionaries)
+/// @brief String to keyword map
 const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", KeywordEnum::MATERIAL},
                                                                {"plane", KeywordEnum::PLANE},
                                                                {"sphere", KeywordEnum::SPHERE},
@@ -87,7 +85,7 @@ const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", Keyw
                                                                {"float", KeywordEnum::FLOAT},
                                                                {"point_light", KeywordEnum::POINT_LIGHT}};
 
-/// @brief convert a keyword enum to its string representation (for debugging and printing)
+/// @brief Convert a keyword enum to its string representation
 std::string to_string(KeywordEnum kw) {
   switch (kw) {
   case KeywordEnum::MATERIAL:
@@ -131,7 +129,7 @@ std::string to_string(KeywordEnum kw) {
   case KeywordEnum::POINT_LIGHT:
     return "point_light";
   default:
-    return "unknown";
+    throw std::logic_error("Unreachable code: unknown KEYWORD");
   }
 }
 
@@ -143,16 +141,16 @@ std::string to_string(KeywordEnum kw) {
 
 struct SourceLocation {
   //------- Properties --------
-  std::string file; // File name (or empty string if not applicable e.g. source code was provided as a memory stream)
-  int line;         // Line number (starting from 1)
-  int column;       // Column number (starting from 1)
+  std::string file; // file name (or empty string if not applicable e.g. source code was provided as a memory stream)
+  int line;         // line number (starting from 1)
+  int column;       // column number (starting from 1)
 
   //----------- Constructors -----------
-  /// Default constructor initializes to empty file name, line one and column one
+  /// @brief Default constructor initializing to empty file name, line one and column one
   SourceLocation(const std::string &file = "", int line = 1, int column = 1) : file(file), line(line), column(column) {}
 
   //----------- Methods -----------
-  ///@brief convert source location to string (for debugging)
+  /// @brief Convert source location to string (for debugging)
   std::string to_string() const {
     return "File: " + file + ", Line: " + std::to_string(line) + ", Column: " + std::to_string(column);
   }
@@ -162,12 +160,12 @@ struct SourceLocation {
 
 enum class TokenKind {
   // these are the 6 types of token implemented in Pytracer
-  STOP_TOKEN,     // A token signalling the end of a file
-  KEYWORD,        // A token containing a keyword
-  SYMBOL,         // A token containing a symbol
-  IDENTIFIER,     // A token containing an identifier (i.e. a variable name)
-  LITERAL_STRING, // A token containing a literal string
-  LITERAL_NUMBER  // A token containing a literal number (i.e. a float)
+  STOP_TOKEN,     // token signalling the end of a file
+  KEYWORD,        // token containing a keyword
+  SYMBOL,         // token containing a symbol
+  IDENTIFIER,     // token containing an identifier (i.e. a variable name)
+  LITERAL_STRING, // token containing a literal string
+  LITERAL_NUMBER  // token containing a literal number (i.e. a float)
 };
 
 // ------------ TOKEN VALUE: variant for possible token values ---------------
@@ -177,73 +175,52 @@ using TokenValue = std::variant<std::monostate, KeywordEnum, char, std::string, 
 class Token {
 public:
   //------- Properties --------
-  SourceLocation source_location; // The source location
-  TokenKind type;                 // The "tag"
-  TokenValue value;               // The type-safe tagged union
+  SourceLocation source_location; // source location
+  TokenKind type;                 // tag
+  TokenValue value;               // type-safe tagged union
 
   //----------- Constructors -----------
-  Token(const SourceLocation &loc, TokenKind type) : source_location(loc), type(type), value(std::monostate{}) {
-    switch (type) {
-    case TokenKind::STOP_TOKEN:
-      // No value needed for STOP_TOKEN
-      break;
-    case TokenKind::KEYWORD:
-      value = KeywordEnum::NONE;
-      break;
-    case TokenKind::SYMBOL:
-      value = '\0';
-      break;
-    case TokenKind::IDENTIFIER:
-      value = std::string("");
-      break;
-    case TokenKind::LITERAL_STRING:
-      value = std::string("");
-      break;
-    case TokenKind::LITERAL_NUMBER:
-      value = 0.f;
-      break;
-    }
-  }
+  Token(const SourceLocation &loc, TokenKind type) : source_location(loc), type(type), value(std::monostate{}) {};
 
   //----------- Methods -----------
 
-  ///@brief assign a stop token (signals EndOfFile)
+  /// @brief Assign a stop token (signals EndOfFile)
   void assign_stop_token() {
     type = TokenKind::STOP_TOKEN;
     value = std::monostate{}; // No value needed for STOP_TOKEN
   }
 
-  ///@brief assign a keyword token
+  /// @brief Assign a keyword token
   void assign_keyword(KeywordEnum kw) {
     type = TokenKind::KEYWORD;
     value = kw;
   }
 
-  ///@brief assign a single character symbol token
+  /// @brief Assign a single character symbol token
   void assign_symbol(char c) {
     type = TokenKind::SYMBOL;
     value = c;
   }
 
-  ///@brief assign an identifier token (e.g. variable name)
+  /// @brief Assign an identifier token (e.g. variable name)
   void assign_identifier(const std::string &name) {
     type = TokenKind::IDENTIFIER;
     value = name;
   }
 
-  ///@brief assign a string token value
+  /// @brief Assign a string token value
   void assign_string(const std::string &s) {
     type = TokenKind::LITERAL_STRING;
     value = s;
   }
 
-  ///@brief assign a numeric token value
+  /// @brief Assign a numeric token value
   void assign_number(float val) {
     type = TokenKind::LITERAL_NUMBER;
     value = val;
   }
 
-  ///@brief print token information
+  /// @brief Print token information
   void print() const {
     std::cout << "Token Type: " + type_to_string();
     switch (type) {
@@ -269,7 +246,7 @@ public:
     std::cout << ", Source Location: " << source_location.to_string() << std::endl;
   }
 
-  ///@brief get the token value as a string
+  /// @brief Get string corresponding to the token value
   std::string type_to_string() const {
     switch (type) {
     case TokenKind::STOP_TOKEN:
@@ -285,7 +262,7 @@ public:
     case TokenKind::LITERAL_NUMBER:
       return "LITERAL_NUMBER";
     default:
-      return "UNKNOWN_TOKEN_KIND";
+      throw std::logic_error("Unreachable code: unknown TokenKind");
     }
   }
 };
@@ -295,10 +272,6 @@ public:
 //----------------------------------------------------------------------------------------------------
 
 /// @brief An error found by the lexer/parser while reading a scene file
-///
-/// The fields of this class are:
-/// - `location`: the source location where the error was discovered
-/// - `message`: a user-friendly error message
 class GrammarError : public std::exception {
 public:
   //----------- Properties -----------
@@ -325,15 +298,16 @@ public:
   //----------- Properties -----------
   std::istream &stream;                   // underlying input stream
   SourceLocation location;                // current location in the file (filename, line, column)
-  std::optional<char> saved_char;         // Character "pushback" buffer (std::optional since possibly empty)
+  std::optional<char> saved_char;         // character "pushback" buffer (std::optional since possibly empty)
   SourceLocation saved_location;          // SourceLocation corresponding to the saved_char; not an std::optional: it has a very
                                           // different role from that of saved_char
-  int tabulations;                        // Number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 4)
+  int tabulations;                        // number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 4)
   std::optional<Token> saved_token;       // Token "pushback" buffer (nullptr if unused)
-  SourceLocation last_on_stream_location; // ......
+  SourceLocation last_on_stream_location; // most recent location of a token *in the stream* (as opposed to the location of the
+                                          // saved token): needed after after reading consuming the saved token
 
   //----------- Constructor -----------
-  /// @brief deafult constructor for InputStream (does not take ownership of the stream)
+  /// @brief Deafult constructor for InputStream (does not take ownership of the stream)
   InputStream(std::istream &stream, const std::string &file_name = "", int tabulations = 4)
       : stream(stream), location(file_name), // Start at line 1, column 1
         saved_char(std::nullopt), saved_location(file_name), tabulations(tabulations), saved_token(std::nullopt) {}
@@ -349,12 +323,12 @@ public:
     if (ch == 0) {
       // Do nothing if you reach end of the stream (read_char() returns '\0' in this case)
       return;
-    } else if (ch == '\n') { // new line: increment line number and reset column
+    } else if (ch == '\n') { // New line: increment line number and reset column
       location.line += 1;
       location.column = 1;
-    } else if (ch == '\t') { // tabulation: increment column by number of spaces a tab is worth
+    } else if (ch == '\t') { // Tabulation: increment column by number of spaces a tab is worth
       location.column += tabulations;
-    } else { // any other character: just increment column
+    } else { // Any other character: just increment column
       location.column += 1;
     }
   }
@@ -399,13 +373,13 @@ public:
       if (ch == '#') { // It's a comment: Skip until end of line or EOF
         while (true) {
           char next = read_char();
-          if (next == '\n' || next == '\r' || next == 0) // if we reach end of line or end of file break
+          if (next == '\n' || next == '\r' || next == 0) // If we reach end of line or end of file break
             break;
         }
       }
-      ch = read_char(); // read the first non-whitespace, non-comment character
+      ch = read_char(); // Read the first non-whitespace, non-comment character
       if (ch == 0) {
-        return; // we got to the End of file, just return
+        return; // If end of file is reached, just return
       }
     }
     // Put back the first non-whitespace, non-comment char
@@ -421,7 +395,6 @@ public:
   }
 
   // --- PARSE A STRING TOKEN (between double quotes) -----------------------------------------------------------
-  // QUESTION should we support also single quotes? (e.g. 'string' instead of "string", Tomasi said we could)
 
   /// @brief Parse a string  from the input stream, expected to be enclosed in double quotes
   Token parse_string_token(const SourceLocation &token_location) {
@@ -438,7 +411,7 @@ public:
       token_str += ch; // Append character to the string
     }
 
-    // create the token with the parsed string and the appropriate constructor/methods
+    // Create the token with the parsed string and the appropriate constructor/methods
     Token token(token_location, TokenKind::LITERAL_STRING);
     token.assign_string(token_str);
     return token;
@@ -450,7 +423,7 @@ public:
   Token parse_float_token(char first_char, const SourceLocation &token_location) {
     std::string token_str(1, first_char);
 
-    // read stream characters until we reach a non-digit character
+    // Read stream characters until we reach a non-digit character
     while (true) {
       char ch = read_char();
       if (!std::isdigit(ch) && ch != '.' && ch != 'e' && ch != 'E') { // Allow digits, '.', 'e', 'E' for scientific notation
@@ -514,7 +487,7 @@ public:
 
   // ----------- READ A TOKEN FROM THE STREAM ----------------------------------------------
 
-  /// @brief read a token from the input stream, skipping whitespace and comments
+  /// @brief Read a token from the input stream, skipping whitespace and comments
   /// @return token read from the stream, or a STOP_TOKEN if end of file is reached
   Token read_token() {
     if (saved_token.has_value()) { // Use saved token if available
@@ -524,13 +497,13 @@ public:
       return result;
     }
 
-    _skip_whitespaces_and_comments(); // get rid of whitespace and comments, then start reading the next token
+    _skip_whitespaces_and_comments(); // Get rid of whitespace and comments, then start reading the next token
 
     // Save current location for token start
     // (do it BEFORE reading the character: we want error location to be at the start of the token)
     SourceLocation token_location = location;
 
-    char ch = read_char(); // read the first character
+    char ch = read_char(); // Read the first character
 
     if (ch == 0) { // You got to the end of file: create and return a STOP_TOKEN
       Token token(token_location, TokenKind::STOP_TOKEN);
@@ -541,26 +514,22 @@ public:
     if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
       Token token(token_location, TokenKind::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);
-      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
-      _skip_whitespaces_and_comments(); // NOT SURE!
+      _skip_whitespaces_and_comments();
       return token;
     } else if (ch == '"') {
       // If it starts with a double quote, parse a string token
       Token token = parse_string_token(token_location);
-      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
-      _skip_whitespaces_and_comments(); // NOT SURE!
+      _skip_whitespaces_and_comments();
       return token;
     } else if (std::isdigit(ch) || ch == '+' || ch == '-' || ch == '.') {
       // If it starts with a digit or a sign, parse a float token
       Token token = parse_float_token(ch, token_location);
-      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
-      _skip_whitespaces_and_comments(); // NOT SURE!
+      _skip_whitespaces_and_comments();
       return token;
     } else if (std::isalpha(static_cast<unsigned char>(ch)) || ch == '_') {
       // If it starts with an alphabetic character or '_', parse a keyword or identifier token
       Token token = parse_keyword_or_identifier_token(ch, token_location);
-      // NOTE this is redundant (I think): _skip_whitespaces_and_comments() is called at the start of read_token()
-      _skip_whitespaces_and_comments(); // NOT SURE!
+      _skip_whitespaces_and_comments();
       return token;
     } else {
       // If it is an invalid character (all valid cases are ruled out already), throw a GrammarError
@@ -660,7 +629,7 @@ public:
 
   //-----------------PARSER METHODS-----------------
 
-  ///@brief parse a vector from the input stream (expected format in our grammar: [x, y, z])
+  ///@brief Parse a vector from the input stream (expected format in our grammar: [x, y, z])
   Vec parse_vector(InputStream &input_stream) {
     expect_symbol(input_stream, '[');
     float x = expect_number(input_stream);
@@ -672,7 +641,7 @@ public:
     return Vec(x, y, z);
   }
 
-  /// @brief parse a color from the input stream (expected format in our grammar: <r, g, b>)
+  /// @brief Parse a color from the input stream (expected format in our grammar: <r, g, b>)
   Color parse_color(InputStream &input_stream) {
     expect_symbol(input_stream, '<');
     float red = expect_number(input_stream);
@@ -684,7 +653,7 @@ public:
     return Color(red, green, blue);
   }
 
-  ///@brief parse a pigment from the input stream according to the expected format
+  ///@brief Parse a pigment from the input stream according to the expected format
   std::shared_ptr<Pigment> parse_pigment(InputStream &input_file) {
     std::shared_ptr<Pigment> result;
 
@@ -716,17 +685,14 @@ public:
       break;
     }
     default:
-      throw GrammarError(input_file.location, "unknown pigment type");
+      throw std::logic_error("Unreachable code: unknown pigment type");
     }
 
     expect_symbol(input_file, ')');
     return result;
   }
-  // TODO 1) throw different exception if !file, 2) does it work for images?, 3) check that number is indeed an integer, 4) even
-  // the default case of the switch should not throw a GrammarError to be fair (same problem in parse brdf and parse
-  // transformation)
 
-  /// @brief parse a BRDF from the input stream according to the expected format
+  /// @brief Parse a BRDF from the input stream according to the expected format
   std::shared_ptr<BRDF> parse_brdf(InputStream &input_stream) {
 
     // Make sure the BRDF type is one of those expected (and currently implemented)
@@ -742,11 +708,11 @@ public:
     case KeywordEnum::SPECULAR:
       return std::make_shared<SpecularBRDF>(pigment);
     default:
-      throw GrammarError(input_stream.location, "unknown BRDF type");
+      throw std::logic_error("Unreachable code: unknown BRDF type");
     }
   }
 
-  /// @brief parse a Material from the input stream according to the expected format
+  /// @brief Parse a Material from the input stream according to the expected format
   std::shared_ptr<Material> parse_material(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
     auto brdf = parse_brdf(input_stream);
@@ -757,7 +723,7 @@ public:
     return std::make_shared<Material>(brdf, emitted_radiance);
   }
 
-  /// @brief parse a Transformation from the input stream: lookahead of one token required
+  /// @brief Parse a Transformation from the input stream: lookahead of one token required
   Transformation parse_transformation(InputStream &input_stream) {
     Transformation result{}; // Initialize with identity
 
@@ -801,7 +767,7 @@ public:
         break;
       }
       default:
-        throw GrammarError(input_stream.location, "unknown transformation type");
+        throw std::logic_error("Unreachable code: unknown transformation type");
       }
 
       Token next_token = input_stream.read_token();
@@ -814,7 +780,7 @@ public:
     return result;
   }
 
-  /// @brief parse the description of a Sphere from the input stream
+  /// @brief Parse the description of a Sphere from the input stream
   std::shared_ptr<Sphere> parse_sphere(InputStream &input_stream) {
     // Parse transformation
     expect_symbol(input_stream, '(');
@@ -834,7 +800,7 @@ public:
     return std::make_shared<Sphere>(sphere_transformation, materials_it->second);
   }
 
-  /// @brief parse the description of a Plane from the input stream
+  /// @brief Parse the description of a Plane from the input stream
   std::shared_ptr<Plane> parse_plane(InputStream &input_stream) {
     // Parse transformation
     expect_symbol(input_stream, '(');
@@ -854,7 +820,7 @@ public:
     return std::make_shared<Plane>(plane_transformation, materials_it->second);
   }
 
-  /// @brief parse the description of a Camera from the input stream
+  /// @brief Parse the description of a Camera from the input stream
   std::shared_ptr<Camera> parse_camera(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
 
@@ -894,7 +860,7 @@ public:
     }
   }
 
-  /// @brief parse the description of a PointLightSource from the input stream
+  /// @brief Parse the description of a PointLightSource from the input stream
   std::shared_ptr<PointLightSource> parse_point_light(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
 
@@ -912,7 +878,6 @@ public:
     expect_symbol(input_stream, ')');
     return std::make_shared<PointLightSource>(position.to_point(), emitted_radiance, emission_radius);
   }
-  // TODO perhaps you want to allow the user to provide arguments in a different order and to omit emission_radius
 
   /// @brief Parse a scene from a stream
   /// @details It is meant to be called after initialize_float_variables_with_priority() if you want to overwrite float vars from

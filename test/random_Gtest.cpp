@@ -14,7 +14,7 @@
 // -------------TESTS FOR PCG-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// test the default sequence is the expected one
+// Test the default sequence is the expected one
 TEST(PCGTest, test_default_sequence) {
   PCG pcg = PCG();
 

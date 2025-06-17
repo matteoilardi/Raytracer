@@ -48,7 +48,7 @@ TEST(FlatTracerTest, test_example) {
   auto brdf = std::make_shared<DiffusiveBRDF>(pigment);
   auto material = std::make_shared<Material>(brdf);
 
-  // move the sphere to the center of the screen and make it small enough to cover only the central pixel
+  // Move the sphere to the center of the screen and make it small enough to cover only the central pixel
   auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
 
   auto world = std::make_shared<World>();

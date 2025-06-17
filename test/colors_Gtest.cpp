@@ -22,7 +22,7 @@ bool is_little_endian() {
 //----------------- TESTS FOR COLOR -----------------
 //-------------------------------------------------------------------------------------------------------------
 
-// test constructor, is_close_to
+// Test constructor, is_close_to
 TEST(ColorTest, test_is_close) {
   Color color1(1.f, 2.f, 3.f);
   EXPECT_TRUE(color1.is_close(Color(1.f, 2.f, 3.f)));
@@ -30,7 +30,7 @@ TEST(ColorTest, test_is_close) {
   EXPECT_FALSE(color1.is_close(Color(1.f, 2.f, 3.0001f)));
 }
 
-// test +, *, scalar multiplication
+// Test +, *, scalar multiplication
 TEST(ColorTest, test_color_operations) {
   Color color1(4.f, 5.f, 6.f);
   Color color2(1.f, 12.f, 7.f);
@@ -45,7 +45,7 @@ TEST(ColorTest, test_color_operations) {
   EXPECT_TRUE(are_close(color1 * f1, Color(6.f, 7.5f, 9.f)));
 }
 
-// test luminosity
+// Test luminosity
 TEST(ColorTest, test_luminosity) {
   Color col1 = Color(1.f, 2.f, 3.f);
   Color col2 = Color(9.f, 5.f, 7.f);
@@ -58,7 +58,7 @@ TEST(ColorTest, test_luminosity) {
 //----------------- TESTS FOR HDRIMAGE -----------------
 //-------------------------------------------------------------------------------------------------------------
 
-// test basic constructor, get_pixel, set_pixel, _valid_indexes, _pixel_offset
+// Test basic constructor, get_pixel, set_pixel, _valid_indexes, _pixel_offset
 TEST(HdrImageTest, test_basic_HdrImage) {
   HdrImage image1(20, 30);
 
@@ -81,7 +81,7 @@ TEST(HdrImageTest, test_basic_HdrImage) {
   EXPECT_TRUE(are_close(color1, color2));
 }
 
-// test helper function _read_line
+// Test helper function _read_line
 TEST(PfmTest, test_pfm_read_line) {
   std::stringstream ss("Hello\nworld");
 
@@ -90,7 +90,7 @@ TEST(PfmTest, test_pfm_read_line) {
   EXPECT_EQ(_read_line(ss), "");
 }
 
-// test helper function _parse_endianness
+// Test helper function _parse_endianness
 TEST(PfmTest, test_pfm_parse_endianness) {
   EXPECT_EQ(_parse_endianness("1.0"), Endianness::big_endian);
   EXPECT_EQ(_parse_endianness("-1.0"), Endianness::little_endian);
@@ -101,7 +101,7 @@ TEST(PfmTest, test_pfm_parse_endianness) {
   EXPECT_THROW(assign_endianness("abc"), InvalidPfmFileFormat);
 }
 
-// test helper function _parse_img_size
+// Test helper function _parse_img_size
 TEST(PfmTest, test_pfm_parse_img_size) {
   EXPECT_EQ(_parse_img_size("3 4"), std::pair(3, 4));
 
@@ -112,7 +112,7 @@ TEST(PfmTest, test_pfm_parse_img_size) {
   EXPECT_THROW(assign_img_size("3 "), InvalidPfmFileFormat);
 }
 
-// test helper functions _write_float, _read_float
+// Test helper functions _write_float, _read_float
 TEST(PfmTest, test_pfm_read_write_float) {
   std::stringstream ss;
 
@@ -129,7 +129,7 @@ TEST(PfmTest, test_pfm_read_write_float) {
   EXPECT_NE(_read_float(ss, Endianness::big_endian), x);
 }
 
-// test write_pfm method
+// Test write_pfm method
 TEST(PfmTest, test_pfm_write) {
   // Fill in image as depicted in slide 15, lab lesson 3
   HdrImage image(3, 2);
@@ -166,16 +166,16 @@ TEST(PfmTest, test_pfm_write) {
                                   0x00, 0x42, 0x8c, 0x00, 0x00, 0x42, 0xa0, 0x00, 0x00, 0x42, 0xb4, 0x00, 0x00};
   unsigned int reference_be_len = 83;
 
-  // check size
+  // Check size
   EXPECT_EQ(string_le.size(), reference_le_len);
   EXPECT_EQ(string_be.size(), reference_be_len);
 
-  // check that the bytes are the same
+  // Check that the bytes are the same
   EXPECT_EQ(memcmp(string_le.data(), reference_le, reference_le_len), 0);
   EXPECT_EQ(memcmp(string_be.data(), reference_be, reference_be_len), 0);
 }
 
-// test read_pfm constructor
+// Test read_pfm constructor
 TEST(PfmTest, test_pfm_read) {
   HdrImage image_from_le("../samples/reference_le.pfm");
   HdrImage image_from_be("../samples/reference_be.pfm");
@@ -201,7 +201,7 @@ TEST(PfmTest, test_pfm_read) {
   // appears.
 }
 
-// test read_pfm constructor on an invalid input stream
+// Test read_pfm constructor on an invalid input stream
 TEST(PfmTest, test_pfm_read_wrong) {
   std::stringstream sstream;
   sstream << "PF\n4 5\n1.0\nstop";
@@ -209,7 +209,7 @@ TEST(PfmTest, test_pfm_read_wrong) {
   EXPECT_THROW([&]() -> void { HdrImage image_from_corrupted(sstream); }(), InvalidPfmFileFormat);
 }
 
-// test average_luminosity
+// Test average_luminosity
 TEST(HdrImageTest, test_average_luminosity) {
   HdrImage img(2, 1);
   img.set_pixel(0, 0, Color(5.f, 10.f, 15.f));
@@ -223,7 +223,7 @@ TEST(HdrImageTest, test_average_luminosity) {
   EXPECT_TRUE(are_close(img_with_black.average_luminosity(), DEFAULT_DELTA_LOG));
 }
 
-// test normalize_image
+// Test normalize_image
 TEST(HdrImageTest, test_normalize_image) {
   HdrImage img(2, 1);
   img.set_pixel(0, 0, Color(5.f, 10.f, 15.f));
@@ -235,7 +235,7 @@ TEST(HdrImageTest, test_normalize_image) {
   EXPECT_TRUE(img.get_pixel(1, 0).is_close(Color(5.0e1f, 10.0e1f, 15.0e1f)));
 }
 
-// test clamp_image
+// Test clamp_image
 TEST(HdrImageTest, test_clamp_image) {
   HdrImage img(2, 1);
   img.set_pixel(0, 0, Color(2e3f, 4e5f, 6e1f));

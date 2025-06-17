@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
 
   // 4. Save the output image
   try {
-    img->write_ldr_image(output_file_name + ".png", gamma, "png");
+    img->write_ldr_image(output_file_name + ".png", gamma);
     std::cout << "File \"" << output_file_name + ".png" << "\" has been written to disk.\n";
   } catch (const std::exception &err) {
     std::cerr << "Error writing image. " << err.what() << '\n';

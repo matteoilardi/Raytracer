@@ -48,16 +48,16 @@ TEST(InputStreamTest, test_input_file) {
   std::istringstream ss("abc   \nd\nef"); // Create a string stream to simulate an input file
   InputStream stream(ss);                 // Create an InputStream object with the string stream
 
-  // initial position (we start at line 1, column 1)
+  // Initial position (we start at line 1, column 1)
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 1);
 
-  // read first character
+  // Read first character
   EXPECT_EQ(stream.read_char(), 'a');
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 2);
 
-  // change on purpose from 'a' to 'X': you can unread any char X, not necessarily the one you just read
+  // Change on purpose from 'a' to 'X': you can unread any char X, not necessarily the one you just read
   stream.unread_char('X');
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 1);
@@ -72,40 +72,40 @@ TEST(InputStreamTest, test_input_file) {
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 3);
 
-  // keep reading characters
+  // Keep reading characters
   EXPECT_EQ(stream.read_char(), 'c');
   EXPECT_EQ(stream.location.line, 1);
   EXPECT_EQ(stream.location.column, 4);
 
-  // skip whitespaces and comments and check if reading continues correctly
+  // Skip whitespaces and comments and check if reading continues correctly
   stream._skip_whitespaces_and_comments();
   EXPECT_EQ(stream.read_char(), 'd');
   EXPECT_EQ(stream.location.line, 2);
   EXPECT_EQ(stream.location.column, 2);
 
-  // check if you read break line correctly and if the location is updated
+  // Check if you read break line correctly and if the location is updated
   EXPECT_EQ(stream.read_char(), '\n');
   EXPECT_EQ(stream.location.line, 3);
   EXPECT_EQ(stream.location.column, 1);
 
-  // keep reading characters
+  // Keep reading characters
   EXPECT_EQ(stream.read_char(), 'e');
   EXPECT_EQ(stream.location.line, 3);
   EXPECT_EQ(stream.location.column, 2);
 
-  // keep reading characters
+  // Keep reading characters
   EXPECT_EQ(stream.read_char(), 'f');
   EXPECT_EQ(stream.location.line, 3);
   EXPECT_EQ(stream.location.column, 3);
 
-  // check if you read end of stream correctly
+  // Check if you read end of stream correctly
   EXPECT_EQ(stream.read_char(), 0); // 0 signals end of stream in InputStream
 }
 
 // -------------- Test lexer functionality (token recognition) in InputStream ----------------
 
 TEST(InputStreamTest, test_lexer) {
-  // create a string stream to simulate an input file (R "..." syntax is to allow breaking line in the string)
+  // Create a string stream to simulate an input file (R "..." syntax is to allow breaking line in the string)
   std::istringstream ss(R"(
         # This is a comment
         # This is another comment
@@ -114,7 +114,7 @@ TEST(InputStreamTest, test_lexer) {
             <1.0, .33, 0.7>
         ) # Comment at the end of the line
     )");
-  // create an InputStream object with the string stream
+  // Create an InputStream object with the string stream
   InputStream input_file(ss);
 
   expect_eq_keyword(input_file.read_token(), KeywordEnum::MATERIAL);
@@ -202,10 +202,8 @@ TEST(InputStreamTest, test_GrammarError) {
 }
 
 // -------------- Test parser (implemented in Scene) ----------------
-// TODO angles: degrees or rads???? //QUESTION Are you asking if we want to switch to radians?
-// TODO perhaps change name of parse_scene?
 
-// create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
+// Create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
 TEST(SceneTest, test_parse_scene) {
   std::istringstream ss(R"(
 		float clock(150)
@@ -251,7 +249,7 @@ TEST(SceneTest, test_parse_scene) {
   EXPECT_EQ(scene.materials.count("sky_material"), 1);
   EXPECT_EQ(scene.materials.count("ground_material"), 1);
 
-  // retrieve the pointers to the materials and the BRDFs
+  // Retrieve the pointers to the materials and the BRDFs
   auto sphere_material = scene.materials["sphere_material"];
   auto sky_material = scene.materials["sky_material"];
   auto ground_material = scene.materials["ground_material"];
@@ -263,7 +261,7 @@ TEST(SceneTest, test_parse_scene) {
 
   EXPECT_TRUE(sky_brdf);
   EXPECT_TRUE(sky_brdf_pigment);
-  EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // color is a member of UniformPigment only, not of the base class so
+  EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // Color is a member of UniformPigment only, not of the base class so
                                                           // dynamic_pointer_cast is required for this line to compile
 
   auto ground_brdf = dynamic_pointer_cast<DiffusiveBRDF>(ground_material->brdf);
