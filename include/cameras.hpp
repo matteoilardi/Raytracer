@@ -145,8 +145,6 @@ class ImageTracer {
 public:
   //-------Properties--------
 
-  // the pointers below can only point to objects in the heap, and if we define image/camera in the stack then we cannot
-  // pass them via (say) &image,&camera
   std::unique_ptr<HdrImage> image;
   std::shared_ptr<Camera> camera; // use shared_ptr for camera to allow sharing with Scene::camera
   int samples_per_pixel_edge;     // total samples per pixel = samples_per_pixel_side^2
@@ -154,9 +152,7 @@ public:
 
   //-----------Constructors-----------
 
-  /// Default constructor
-
-  /// Constructor with parameters
+  /// @brief Constructor with parameters
   ImageTracer(std::unique_ptr<HdrImage> image, std::shared_ptr<Camera> camera, int samples_per_pixel_edge = 1,
               std::shared_ptr<PCG> pcg = nullptr)
       : image(std::move(image)), camera(camera), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
@@ -192,19 +188,25 @@ public:
     return camera->fire_ray(u, v);
   }
 
+  // General function that takes a Ray as input and returns a Color
+  using RaySolver = std::function<Color(Ray)>;
   // Note that we use both OO polymorphism and PO polymorphism here (defining RaySolver as a generic function on its own,
   // rather than creating a parent class with a virtual method to be implemented by derived classes)
-  using RaySolver = std::function<Color(Ray)>; // General function that takes a Ray as input and returns a Color
 
-  void fire_all_rays(RaySolver func) {
+  // General function that takes as input a float ∈ [0.0, 1.0] representing progress with a given task and reports it to the main
+  // The method perfomrming the task should accept a function of type ProgressCallback as an argument
+  using ProgressCallback = std::function<void(float)>;
+
+  /// @brief Calls fire_ray on every pixel of the image (multiple times if antialiasing is set on) and reports progress to the main
+  void fire_all_rays(RaySolver func, ProgressCallback report_progress = [](float progress)->void{}) {
     for (int col = 0; col < image->width; ++col) {
       for (int row = 0; row < image->height; ++row) {
 
         Color cum_color = Color();
         Ray ray;
-        const int spp = samples_per_pixel_edge; // just for code readability
+        const int spp = samples_per_pixel_edge; // Just for code readability
 
-        if (spp > 1) {                      // perform antialiasing
+        if (spp > 1) {                      // Perform antialiasing
           for (int i = 0; i < spp; i++) {   // i: intra-pixel col
             for (int j = 0; j < spp; j++) { // j: intra-pixel row (as opposed to v, v_pixel increases downwards)
               float u_pixel = ((float)i + pcg->random_float()) / spp;
@@ -223,6 +225,8 @@ public:
 
         image->set_pixel(col, row, cum_color);
       }
+      // Report progress every time the end of the outer loop is reached
+      report_progress(static_cast<float>(col + 1) / image->width);
     }
   }
 };

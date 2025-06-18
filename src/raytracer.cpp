@@ -4,16 +4,26 @@
 #include "renderers.hpp"
 #include "scenefiles.hpp"
 #include "shapes.hpp"
+#include <chrono>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 
 //---------------------------------------------
 //---------- FORWARD DECLARATIONS ----------
 //---------------------------------------------
-// generate demo image with on off rendering
+
+// Function wrapper to calculate total elapsed time
+template<typename Func>
+void run_with_timer(Func func);
+
+// Callback for progress bar generation
+void show_progress(float progress);
+
+// Generate demo image with on off rendering
 std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance,
                                                 const Transformation &obs_transformation, int samples_per_pixel_edge);
-// generate demo image with Monte Carlo path tracing rendering
+// Generate demo image with Monte Carlo path tracing rendering
 std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance,
                                                const Transformation &obs_transformation, int samples_per_pixel_edge);
 
@@ -44,7 +54,7 @@ int main(int argc, char **argv) {
   int height = 960;
 
   // Antialisasing parameter
-  int samples_per_pixel_edge = 3;
+  int samples_per_pixel_edge = 1;
 
   // Flag for dark image tone mapping
   bool dark_mode = false;
@@ -68,10 +78,10 @@ int main(int argc, char **argv) {
   // Default values are 1280x960
   demo_subc->add_option("--width", width, "Specify image width")
       ->check(CLI::PositiveNumber)
-      ->default_val(1280); // reject negative values
+      ->default_val(1280); // Reject negative values
   demo_subc->add_option("--height", height, "Specify image height")
       ->check(CLI::PositiveNumber)
-      ->default_val(960); // reject negative values
+      ->default_val(960); // Reject negative values
 
   // Add option for perspective or orthogonal projection
   bool orthogonal = false;
@@ -107,7 +117,7 @@ int main(int argc, char **argv) {
   demo_subc
       ->add_option<int>("--antialiasing", samples_per_pixel_edge,
                         "Specify #samples per pixel edge (square root of #samples per pixel)")
-      ->default_val(3);
+      ->default_val(1);
 
   // -----------------------------------------------------------
   // Command line parsing for render mode
@@ -131,7 +141,7 @@ int main(int argc, char **argv) {
   render_subc
       ->add_option<int>("--antialiasing", samples_per_pixel_edge,
                         "Specify #samples per pixel edge (square root of #samples per pixel)")
-      ->default_val(3);
+      ->default_val(1);
 
   // Float variable definition from command line
   std::unordered_map<std::string, float> floats_from_cl;
@@ -232,13 +242,13 @@ int main(int argc, char **argv) {
     }
 
     // Generate the demo image accordingly
-    std::cout << "Rendering demo image... " << std::flush;
+    std::cout << "Rendering demo image... " << std::endl << std::flush;
     if (mode_str == "onoff") {
       img = make_demo_image_onoff(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
     } else if (mode_str == "path") {
       img = make_demo_image_path(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
     }
-    std::cout << "Done." << std::endl;
+    std::cout << std::endl;
 
     // Save PFM image
     img->write_pfm(output_file_name + ".pfm");
@@ -278,9 +288,10 @@ int main(int argc, char **argv) {
       renderer = make_shared<PathTracer>(scene.world, pcg, n_rays, russian_roulette_lim, max_depth, BLACK);
     }
 
-    std::cout << "Rendering image in " << source_file_name << "... " << std::flush;
-    tracer.fire_all_rays([&](const Ray &ray) { return (*renderer)(ray); });
-    std::cout << "Done." << std::endl;
+    std::cout << "Rendering image in " << source_file_name << "... " << std::endl << std::flush;
+    run_with_timer([&]() {
+      tracer.fire_all_rays([&](const Ray &ray) { return (*renderer)(ray); }, show_progress);
+    });
 
     // Save PFM image
     tracer.image->write_pfm(output_file_name + ".pfm");
@@ -322,6 +333,33 @@ int main(int argc, char **argv) {
 //-------------- HELPER FUNCTIONS --------------
 //-------------------------------------------------------------------
 
+//------------- Function wrapper to calculate total elapsed time -------------
+
+template<typename Func>
+void run_with_timer(Func func) {
+  auto start = std::chrono::steady_clock::now();
+  func();
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::duration<double> elapsed_seconds = end - start;
+  std::cout << std::endl;
+  std::cout << "Elapsed time: " << elapsed_seconds.count() << " s" << std::endl;
+}
+
+//------------- Callback for progress bar generation -------------
+
+void show_progress(float progress) {
+  const int bar_width = 50;
+  int pos = static_cast<int>(bar_width * progress);
+
+  std::cout << "\r["; // Carriage return
+  for (int i = 0; i < bar_width; ++i) {
+    if (i < pos) std::cout << "\033[1;32m█\033[0m";  // Green block
+    else std::cout << " ";
+  }
+  std::cout << "] " << std::fixed << std::setprecision(1) << (progress * 100.0f) << " %";
+  std::cout.flush();
+}
+
 //------------- OnOff Tracing Demo Image -------------
 
 std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int height, float distance,
@@ -357,7 +395,7 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
   }
 
   // Perform on/off tracing
-  tracer.fire_all_rays(OnOffTracer(world));
+  tracer.fire_all_rays(OnOffTracer(world), show_progress);
 
   // Return demo image
   return std::move(tracer.image);
@@ -409,7 +447,7 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);
   ImageTracer image_tracer(std::move(image), std::move(camera));
-  image_tracer.fire_all_rays(tracer);
+  image_tracer.fire_all_rays(tracer, show_progress);
 
   return std::move(image_tracer.image);
 }
