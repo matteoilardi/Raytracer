@@ -5,6 +5,7 @@
 #include "scenefiles.hpp"
 #include "shapes.hpp"
 #include <chrono>
+#include <filesystem> // Constains functions to extract file name stem from a path
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -42,35 +43,35 @@ int main(int argc, char **argv) {
   // Parameters that are common to at least two of the modes
   // -----------------------------------------------------------
 
-  // Default values of gamma and alpha for HDR to LDR image conversion (may be overwritten in pfm2png mode)
-  float gamma = 2.2f;
-  float alpha = 0.18f;
+  // Default values of gamma and alpha for HDR to LDR image conversion
+  float gamma;
+  float alpha;
 
   // Name of output file
   std::string output_file_name;
 
   // Image size (# pixels)
-  int width = 1280;
-  int height = 960;
+  int width;
+  int height;
 
   // Antialisasing parameter
-  int samples_per_pixel_edge = 1;
+  int samples_per_pixel_edge;
 
   // Flag for dark image tone mapping
-  bool dark_mode = false;
+  bool dark_mode;
 
   // -----------------------------------------------------------
-  // Command line parsing for demo mode
+  // Command line parsing for "demo" mode
   // -----------------------------------------------------------
 
   // Add a subcommand for the demo mode
   auto demo_subc =
       app.add_subcommand("demo", "Run demo rendering and save PFM and PNG files"); // Returns a pointer to an App object
 
-  // Add option for on_off tracing or path tracing rendering
+  // Add option for on/off tracing or path tracing rendering
   // Default is on/off tracing
-  std::string mode_str = "onoff";
-  demo_subc->add_option("-m,--mode", mode_str, "Rendering mode: on/off tracing (default) or path tracing")
+  std::string demo_mode_str;
+  demo_subc->add_option("-m,--mode", demo_mode_str, "Rendering mode: on/off tracing (default) or path tracing")
       ->check(CLI::IsMember({"onoff", "path"}))
       ->default_val("onoff");
 
@@ -78,10 +79,10 @@ int main(int argc, char **argv) {
   // Default values are 1280x960
   demo_subc->add_option("--width", width, "Specify image width")
       ->check(CLI::PositiveNumber)
-      ->default_val(1280); // Reject negative values
+      ->default_val("1280"); // Reject negative values
   demo_subc->add_option("--height", height, "Specify image height")
       ->check(CLI::PositiveNumber)
-      ->default_val(960); // Reject negative values
+      ->default_val("960"); // Reject negative values
 
   // Add option for perspective or orthogonal projection
   bool orthogonal = false;
@@ -89,7 +90,11 @@ int main(int argc, char **argv) {
 
   // Add option for output file name
   // Default value is "demo"
-  demo_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
+  std::string output_file_name_demo;
+  demo_subc->add_option("-o,--output-file", output_file_name_demo, "Insert name of the output PNG file")->default_val("demo");
+  demo_subc->callback([&]() {
+    output_file_name = output_file_name_demo;
+  });
 
   // Add option for observer transformation: rotation around the scene and camera-screen distance (only for perspective camera).
   // Angles phi and theta: longitude and colatitude (theta=0 -> north pole). Default position along the negative x direction:
@@ -98,50 +103,68 @@ int main(int argc, char **argv) {
   float theta = std::numbers::pi_v<float> / 2.f;
   float phi = std::numbers::pi_v<float>;
 
-  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance from screen")
-      ->excludes(orthogonal_flag)
-      ->default_val(1.f);
+  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance from screen (default is 1)")
+      ->excludes(orthogonal_flag);
 
   demo_subc
       ->add_option_function<float>(
           "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi_v<float>; },
-          "Specify observer's colatitude angle theta (0 degree is north pole)")
-      ->default_val(90.f);
+          "Specify observer's colatitude angle theta (0 degree is north pole, default is 90)");
 
   demo_subc
       ->add_option_function<float>(
           "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi_v<float>; },
-          "Specify observer's longitude angle phi (default is 180 degrees, observer along negative direction of x-axis)")
-      ->default_val(180.f);
+          "Specify observer's longitude angle phi (default is 180 degrees, observer along negative direction of x-axis)");
 
   demo_subc
       ->add_option<int>("--antialiasing", samples_per_pixel_edge,
                         "Specify #samples per pixel edge (square root of #samples per pixel)")
-      ->default_val(1);
+      ->default_val("1");
+
+  demo_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
+      ->check(CLI::PositiveNumber)->default_val("2.2"); // Reject negative values
+  demo_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
+      ->check(CLI::PositiveNumber)->default_val("0.18"); // Reject negative values
 
   // -----------------------------------------------------------
-  // Command line parsing for render mode
+  // Command line parsing for "render" mode
   // -----------------------------------------------------------
 
   auto render_subc =
       app.add_subcommand("render", "Render the scene encoded in an input file"); // Returns a pointer to an App object
 
+  // Option to decide which rendering algorithm to use
+  std::string render_mode_str;
+  render_subc
+      ->add_option("-m,--mode", render_mode_str,
+                   "Rendering mode: on/off tracing, flat tracing, point light tracing or path tracing")
+      ->check(CLI::IsMember({"onoff", "flat", "point_light", "path"}))
+      ->default_val("flat");
+
   // Image width and height (# pixels)
-  render_subc->add_option("--width", width, "Specify image width")->check(CLI::PositiveNumber)->default_val(1280);
-  render_subc->add_option("--height", height, "Specify image height")->check(CLI::PositiveNumber)->default_val(960);
+  render_subc->add_option("--width", width, "Specify image width")->check(CLI::PositiveNumber)->default_val("1280");
+  render_subc->add_option("--height", height, "Specify image height")->check(CLI::PositiveNumber)->default_val("960");
 
   // Input (source) file
   std::string source_file_name;
   render_subc->add_option("-s, --source", source_file_name, "Specify input (source) file.txt containing the scene to render");
 
   // Output file
-  render_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->default_val("demo");
+  std::string output_file_name_render;
+  render_subc->add_option("-o,--output-file", output_file_name_render, "Insert name of the output file name stem (default: <source>_<mode>)");
+  render_subc->callback([&]() {
+    if (output_file_name_render.empty()) {
+      std::filesystem::path source_path(source_file_name);
+      output_file_name_render = source_path.stem().string() + "_" + render_mode_str;
+    }
+    output_file_name = output_file_name_render;
+  });
 
   // Antialiasing
   render_subc
       ->add_option<int>("--antialiasing", samples_per_pixel_edge,
                         "Specify #samples per pixel edge (square root of #samples per pixel)")
-      ->default_val(1);
+      ->default_val("1");
 
   // Float variable definition from command line
   std::unordered_map<std::string, float> floats_from_cl;
@@ -166,32 +189,29 @@ int main(int argc, char **argv) {
       },
       "Define named float variables as name=value");
 
-  // Option to decide which rendering algorithm to use
-  std::string render_mode_str = "flat"; // Default is flat tracing
-  render_subc
-      ->add_option("-m,--mode", render_mode_str,
-                   "Rendering mode: on/off tracing, flat tracing (default), point light tracing or path tracing")
-      ->check(CLI::IsMember({"onoff", "flat", "point_light", "path"}))
-      ->default_val("flat");
-
   // Parameters for path tracing
-  int n_rays = 10;
-  int russian_roulette_lim = 3;
-  int max_depth = 5;
+  int n_rays;
+  int russian_roulette_lim;
+  int max_depth;
   render_subc->add_option("--n_rays", n_rays, "Specify number of rays scattered at every hit (requires path tracing)")
-      ->default_val(10);
+      ->default_val("10");
   render_subc
       ->add_option("--roulette", russian_roulette_lim,
                    "Specify ray depth reached before russian roulette starts applying (requires path tracing)")
-      ->default_val(3);
-  render_subc->add_option("--max-depth", max_depth, "Specify maximum ray depth (requires path tracing)")->default_val(5);
+      ->default_val("3");
+  render_subc->add_option("--max-depth", max_depth, "Specify maximum ray depth (requires path tracing)")->default_val("5");
 
   // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
   // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
   render_subc
       ->add_flag("--dark", dark_mode,
                  "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
-      ->default_val(false);
+      ->default_val("false");
+
+  render_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
+      ->check(CLI::PositiveNumber)->default_val("2.2"); // Reject negative values
+  render_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
+      ->check(CLI::PositiveNumber)->default_val("0.18"); // Reject negative values
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -204,16 +224,16 @@ int main(int argc, char **argv) {
   pfm2png_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->required();
 
   pfm2png_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber); // reject negative values
+      ->check(CLI::PositiveNumber)->default_val("2.2"); // Reject negative values
   pfm2png_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber); // reject negative values
+      ->check(CLI::PositiveNumber)->default_val("0.18"); // Reject negative values
 
   // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
   // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
   pfm2png_subc
       ->add_flag("--dark", dark_mode,
                  "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
-      ->default_val(false);
+      ->default_val("false");
 
   // -----------------------------------------------------------
   // Procedure
@@ -231,11 +251,11 @@ int main(int argc, char **argv) {
     // Default position of the screen is the origin, while the parameter distance (that actually matters only for a perspective
     // camera) offsets the position of the observer along the negative direction of the x-axis.
 
-    if (mode_str == "onoff") {
+    if (demo_mode_str == "onoff") {
       screen_transformation =
           rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) * translation(-VEC_X);
       // Default is translation(-VEC_X)
-    } else if (mode_str == "path") {
+    } else if (demo_mode_str == "path") {
       screen_transformation = rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) *
                               translation(-3.f * VEC_X);
       // Default is translation(-3.f * VEC_X)
@@ -243,9 +263,9 @@ int main(int argc, char **argv) {
 
     // Generate the demo image accordingly
     std::cout << "Rendering demo image... " << std::endl << std::flush;
-    if (mode_str == "onoff") {
+    if (demo_mode_str == "onoff") {
       img = make_demo_image_onoff(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
-    } else if (mode_str == "path") {
+    } else if (demo_mode_str == "path") {
       img = make_demo_image_path(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
     }
     std::cout << std::endl;
