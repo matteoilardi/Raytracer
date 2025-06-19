@@ -1,5 +1,8 @@
 # HEAD
 
+## 2025-06-19
+- Start supporting Constructive Solid Geometry [PR#15](https://github.com/matteoilardi/Raytracer/pull/15)
+
 ## 2025-06-09
 - Implement lexer and parser supporting scene description in a source file [PR#13](https://github.com/matteoilardi/Raytracer/pull/13)
 

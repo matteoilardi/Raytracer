@@ -96,10 +96,10 @@ Render a scene described in a custom text-based file format:
 The scene file uses a custom format supporting:
 - Camera orientation
 - Materials definition
-- Object creation and transformation
-- Variable substitution with command-line overrides (`--define-float`)
+- Object creation using base shapes (currently spheres and planes), with support for Constructive Solid Geometry (CSG) operations
+- Variable substitution with command-line overrides (via `--define-float`)
 
-See `samples/demo_scene.txt` for usage. A formal EBNF grammar description will be provided soon, along with more examples and use cases.
+See `samples/demo_scene.txt` and `samples/csg_example.txt` for usage. A formal EBNF grammar description will be provided soon, along with more examples and use cases.
 
 ---
 
