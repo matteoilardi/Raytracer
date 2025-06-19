@@ -24,9 +24,9 @@ TEST(FlatTracerTest, test_example) {
   auto brdf = std::make_shared<DiffusiveBRDF>(pigment);
   auto material = std::make_shared<Material>(brdf);
 
-  //move the sphere to the center of the screen and make it small enough to cover only the central pixel
-  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material); 
-  
+  // move the sphere to the center of the screen and make it small enough to cover only the central pixel
+  auto sphere = std::make_shared<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
+
   auto world = std::make_shared<World>();
   world->add_object(sphere);
   FlatTracer renderer{world, Color()};
@@ -94,7 +94,7 @@ TEST(PathTracerTest, test_furnace) {
   auto material = std::make_shared<Material>(brdf, emitted_radiance);
 
   // 2. Build enclosing sphere and world
-  auto enclosure = std::make_shared<Sphere>(Transformation(), material); //unit sphere at the origin with material above
+  auto enclosure = std::make_shared<Sphere>(Transformation(), material); // unit sphere at the origin with material above
   auto world = std::make_shared<World>();
   world->add_object(enclosure);
 

@@ -405,7 +405,7 @@ public:
       if (it2 == intersections2.end()) {
         break; // If you reach end of vector 2, perform final checks on vector 1 separately, outside of the loop
       }
-      if (it1->t < it2->t) { // Compare valid intersections with shae 1 and 2 and choose the one with smaller t
+      if (it1->t < it2->t) { // Compare valid intersections with shape 1 and 2 and choose the one with smaller t
         result.push_back(*it1);
         ++it1;
       } else {

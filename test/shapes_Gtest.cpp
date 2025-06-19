@@ -220,15 +220,9 @@ TEST(PlaneTest, test_surface_coordinates) {
   EXPECT_TRUE(hit2.value().surface_point.is_close(Vec2d(0.25f, 0.75f)));
 }
 
-
-
-
-
-
 // ------------------------------------------------------------------------------------------------------------
 // -------------TESTS FOR CSGOBJECT -------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
-
 
 class CSGSphereTest : public ::testing::Test {
 protected:
@@ -249,7 +243,6 @@ protected:
     ray3 = Ray(Point(1.f, 0.f, -2.f), VEC_Z);
   }
 };
-
 
 TEST_F(CSGSphereTest, test_union) {
   csg->operation = CSGObject::Operation::UNION;
@@ -302,7 +295,7 @@ TEST_F(CSGSphereTest, test_difference) {
 
   auto hits3 = csg->all_ray_intersections(ray3);
   ASSERT_EQ(hits3.size(), 0);
-  }
+}
 
 TEST_F(CSGSphereTest, test_fusion) {
   csg->operation = CSGObject::Operation::FUSION;
@@ -323,19 +316,25 @@ TEST_F(CSGSphereTest, test_fusion) {
   EXPECT_TRUE(are_close(hits3[1].t, 3.f));
 }
 
-TEST_F(CSGSphereTest, test_triple_csg) {
-  csg->operation = CSGObject::Operation::INTERSECTION;
-  auto plane = std::make_shared<Plane>(translation(-0.5f*VEC_Z), std::make_shared<Material>());
-  auto spearhead = std::make_shared<CSGObject>(csg, plane, CSGObject::Operation::DIFFERENCE);
+TEST(CSGTest, test_triple_csg) {
+  auto sphere1 = std::make_shared<Sphere>(Transformation(), std::make_shared<Material>());
+  auto sphere2 = std::make_shared<Sphere>(translation(VEC_X), std::make_shared<Material>());
+  auto plane = std::make_shared<Plane>(translation(-0.5f * VEC_Z), std::make_shared<Material>());
 
+  auto sphere_intersection = std::make_shared<CSGObject>(sphere1, sphere2, CSGObject::Operation::INTERSECTION);
+  auto spearhead = std::make_shared<CSGObject>(sphere_intersection, plane, CSGObject::Operation::DIFFERENCE);
+
+  Ray ray1 = Ray(Point(-2.f, 0.f, 0.f), VEC_X);
   auto hits1 = spearhead->all_ray_intersections(ray1);
   ASSERT_EQ(hits1.size(), 2);
   EXPECT_TRUE(are_close(hits1[0].t, 2.f));
   EXPECT_TRUE(are_close(hits1[1].t, 3.f));
 
+  Ray ray2 = Ray(Point(0.f, 0.f, -2.f), VEC_Z);
   auto hits2 = spearhead->all_ray_intersections(ray2);
   ASSERT_EQ(hits2.size(), 0);
 
+  Ray ray3 = Ray(Point(1.f, 0.f, -2.f), VEC_Z);
   auto hits3 = spearhead->all_ray_intersections(ray3);
   ASSERT_EQ(hits3.size(), 0);
 
@@ -343,14 +342,22 @@ TEST_F(CSGSphereTest, test_triple_csg) {
   auto hits4 = spearhead->all_ray_intersections(ray4);
   ASSERT_EQ(hits4.size(), 1);
   EXPECT_TRUE(are_close(hits4[0].t, 2.5f));
-
-  // TODO that this is problematic... the intersections are actually two! Decide how to handle intersections on the boundary of one of the objects
+  // Note that mathematically this is wrong: there is another intersection above the detected one at t = 2 - sqrt(3)/2, where the
+  // spheres intersect. However, the fact that the code doesn't detect it comes to no suprise: it is a consequence of the logic of
+  // _hit_on_1_is_valid() (and its tween method) and of how is_point_inside() is implemented in general. In fact, it returns true
+  // only if the point under consideration is inside the shape, surface excluded and does this check without allowing for any
+  // tollerance (r < 1 for the sphere). If we allowed for some small tollerance here, we would likely get duplicate hits... we
+  // could remove duplicates scanning the array once at the end. But even if we did so, the change would break the case
+  // Operation::FUSION and we would end up with a problem worse than the original one. The only solution we see is to keep
+  // is_point_inside() as is and define a new, very similar method alllowing points to be on the surface with some error
+  // tolerance. We could then call one or the other in different circumstances. However we think that the solution to the problem
+  // doesn't justify this added complexity.
 }
 
 TEST(CSGTest, test_csg_transformation) {
   auto sphere = std::make_shared<Sphere>();
   auto plane = std::make_shared<Plane>(scaling({1.f, 1.f, -1.f}));
-  auto hemisphere = std::make_shared<CSGObject>(sphere, plane, CSGObject::Operation::INTERSECTION, translation(2.f*VEC_X));
+  auto hemisphere = std::make_shared<CSGObject>(sphere, plane, CSGObject::Operation::INTERSECTION, translation(2.f * VEC_X));
 
   Ray ray1{Point(0.f, 0.f, 2.f), -VEC_Z};
   auto hits1 = hemisphere->all_ray_intersections(ray1);
@@ -366,8 +373,6 @@ TEST(CSGTest, test_csg_transformation) {
   ASSERT_TRUE(hemisphere->is_point_inside(Point(2.f, 0.f, 0.5f)));
   ASSERT_FALSE(hemisphere->is_point_inside(Point(2.f, 0.f, -0.5f)));
 }
-
-// TODO refactor tests for CSG
 
 // ------------------------------------------------------------------------------------------------------------
 // -------------TESTS FOR WORLD-------------------------------------------------
