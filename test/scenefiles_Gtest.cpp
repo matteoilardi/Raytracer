@@ -13,9 +13,9 @@
 // ---- Helper functions for token assertions ------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-void expect_eq_keyword(const Token &token, KeywordEnum keyword) {
+void expect_eq_keyword(const Token &token, Keyword keyword) {
   EXPECT_EQ(token.type, TokenKind::KEYWORD);
-  EXPECT_EQ(std::get<KeywordEnum>(token.value), keyword);
+  EXPECT_EQ(std::get<Keyword>(token.value), keyword);
 }
 
 void expect_eq_identifier(const Token &token, const std::string &identifier) {
@@ -117,12 +117,12 @@ TEST(InputStreamTest, test_lexer) {
   // Create an InputStream object with the string stream
   InputStream input_file(ss);
 
-  expect_eq_keyword(input_file.read_token(), KeywordEnum::MATERIAL);
+  expect_eq_keyword(input_file.read_token(), Keyword::MATERIAL);
   expect_eq_identifier(input_file.read_token(), "sky_material");
   expect_eq_symbol(input_file.read_token(), '(');
-  expect_eq_keyword(input_file.read_token(), KeywordEnum::DIFFUSE);
+  expect_eq_keyword(input_file.read_token(), Keyword::DIFFUSE);
   expect_eq_symbol(input_file.read_token(), '(');
-  expect_eq_keyword(input_file.read_token(), KeywordEnum::IMAGE);
+  expect_eq_keyword(input_file.read_token(), Keyword::IMAGE);
   expect_eq_symbol(input_file.read_token(), '(');
   expect_eq_string(input_file.read_token(), "my file.pfm");
   expect_eq_symbol(input_file.read_token(), ')');

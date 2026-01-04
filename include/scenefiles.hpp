@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <variant> // type-safe tagged union replacement (used for TokenValue)
@@ -29,18 +30,14 @@
 #include "shapes.hpp"
 
 // ------------------------------------------------------------------------------------------------------------
-// --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
+// -------- DSL CONSTANTS: KEYWORD and SYMBOL definitions ------------------
 // ----------------------------------------------------------------------------------------
 
-const std::string SYMBOLS = "()[]<>,*"; // Declare our symbols
-enum class KeywordEnum;                 // Forward declare our keywords (see section below)
+/// @brief DSL symbol defintion
+inline constexpr std::string_view SYMBOLS{"()[]<>,*"};
 
-//----------------------------------------------------------------------------------------------------
-//------------------- KEYWORDS and related HELPERS -------------------------
-//----------------------------------------------------------------------------------------------------
-
-/// @brief Enum class for the keywords used in the scene files
-enum class KeywordEnum {
+/// @brief DSL keyword definition
+enum class Keyword {
   MATERIAL,
   PLANE,
   SPHERE,
@@ -63,78 +60,55 @@ enum class KeywordEnum {
   POINT_LIGHT
 };
 
-/// @brief String to keyword map
-const std::unordered_map<std::string, KeywordEnum> KEYWORDS = {{"material", KeywordEnum::MATERIAL},
-                                                               {"plane", KeywordEnum::PLANE},
-                                                               {"sphere", KeywordEnum::SPHERE},
-                                                               {"diffuse", KeywordEnum::DIFFUSE},
-                                                               {"specular", KeywordEnum::SPECULAR},
-                                                               {"uniform", KeywordEnum::UNIFORM},
-                                                               {"checkered", KeywordEnum::CHECKERED},
-                                                               {"image", KeywordEnum::IMAGE},
-                                                               {"identity", KeywordEnum::IDENTITY},
-                                                               {"translation", KeywordEnum::TRANSLATION},
-                                                               {"rotation_x", KeywordEnum::ROTATION_X},
-                                                               {"rotation_y", KeywordEnum::ROTATION_Y},
-                                                               {"rotation_z", KeywordEnum::ROTATION_Z},
-                                                               {"scaling", KeywordEnum::SCALING},
-                                                               {"camera", KeywordEnum::CAMERA},
-                                                               {"orthogonal", KeywordEnum::ORTHOGONAL},
-                                                               {"perspective", KeywordEnum::PERSPECTIVE},
-                                                               {"exact_asp_ratio", KeywordEnum::EXACT_ASP_RATIO},
-                                                               {"float", KeywordEnum::FLOAT},
-                                                               {"point_light", KeywordEnum::POINT_LIGHT}};
+inline constexpr size_t KEYWORD_NUMBER = 20;
+
+/// @brief (string, keyword) pairs
+/// @note std::pair is constexpr friendly and allows defining the string array used for reverse lookup at compile time
+/// @note a std::unordered_map is also derived at runtime for fast keyword lookup
+inline constexpr std::pair<std::string_view, Keyword> KEYWORD_PAIRS[] = {{"material", Keyword::MATERIAL},
+                                                                         {"plane", Keyword::PLANE},
+                                                                         {"sphere", Keyword::SPHERE},
+                                                                         {"diffuse", Keyword::DIFFUSE},
+                                                                         {"specular", Keyword::SPECULAR},
+                                                                         {"uniform", Keyword::UNIFORM},
+                                                                         {"checkered", Keyword::CHECKERED},
+                                                                         {"image", Keyword::IMAGE},
+                                                                         {"identity", Keyword::IDENTITY},
+                                                                         {"translation", Keyword::TRANSLATION},
+                                                                         {"rotation_x", Keyword::ROTATION_X},
+                                                                         {"rotation_y", Keyword::ROTATION_Y},
+                                                                         {"rotation_z", Keyword::ROTATION_Z},
+                                                                         {"scaling", Keyword::SCALING},
+                                                                         {"camera", Keyword::CAMERA},
+                                                                         {"orthogonal", Keyword::ORTHOGONAL},
+                                                                         {"perspective", Keyword::PERSPECTIVE},
+                                                                         {"exact_asp_ratio", Keyword::EXACT_ASP_RATIO},
+                                                                         {"float", Keyword::FLOAT},
+                                                                         {"point_light", Keyword::POINT_LIGHT}};
+
+/// @brief Keyword string array for reverse mapping
+inline constexpr std::array<std::string_view, KEYWORD_NUMBER> KEYWORD_STRINGS = [] {
+  std::array<std::string_view, KEYWORD_NUMBER> arr{};
+  for (const auto &[str, kw] : KEYWORD_PAIRS) {
+    arr[static_cast<size_t>(kw)] = str;
+  }
+  return arr;
+}();
 
 /// @brief Convert a keyword enum to its string representation
-std::string to_string(KeywordEnum kw) {
-  switch (kw) {
-  case KeywordEnum::MATERIAL:
-    return "material";
-  case KeywordEnum::PLANE:
-    return "plane";
-  case KeywordEnum::SPHERE:
-    return "sphere";
-  case KeywordEnum::DIFFUSE:
-    return "diffuse";
-  case KeywordEnum::SPECULAR:
-    return "specular";
-  case KeywordEnum::UNIFORM:
-    return "uniform";
-  case KeywordEnum::CHECKERED:
-    return "checkered";
-  case KeywordEnum::IMAGE:
-    return "image";
-  case KeywordEnum::IDENTITY:
-    return "identity";
-  case KeywordEnum::TRANSLATION:
-    return "translation";
-  case KeywordEnum::ROTATION_X:
-    return "rotation_x";
-  case KeywordEnum::ROTATION_Y:
-    return "rotation_y";
-  case KeywordEnum::ROTATION_Z:
-    return "rotation_z";
-  case KeywordEnum::SCALING:
-    return "scaling";
-  case KeywordEnum::CAMERA:
-    return "camera";
-  case KeywordEnum::ORTHOGONAL:
-    return "orthogonal";
-  case KeywordEnum::PERSPECTIVE:
-    return "perspective";
-  case KeywordEnum::EXACT_ASP_RATIO:
-    return "exact_asp_ratio";
-  case KeywordEnum::FLOAT:
-    return "float";
-  case KeywordEnum::POINT_LIGHT:
-    return "point_light";
-  default:
-    throw std::logic_error("Unreachable code: unknown KEYWORD");
+inline constexpr std::string to_string(Keyword k) { return static_cast<std::string>(KEYWORD_STRINGS[static_cast<size_t>(k)]); }
+
+/// @brief String to keyword mapping for fast runtime lookup
+inline std::unordered_map<std::string_view, Keyword> KEYWORD_MAP = [] {
+  std::unordered_map<std::string_view, Keyword> map;
+  for (const auto &[str, kw] : KEYWORD_PAIRS) {
+    map[str] = kw;
   }
-}
+  return map;
+}();
 
 //----------------------------------------------------------------------------------------------------
-//------------------- TOKEN CLASS (using std::variant instead of union) and AUXILIARY SUBCLASSES -------------------------
+//--------------------------------- TOKEN CLASS and AUXILIARY SUBCLASSES -----------------------------
 //----------------------------------------------------------------------------------------------------
 
 //------------SOURCE LOCATION: contains file name, line number and column number of the token----
@@ -169,7 +143,7 @@ enum class TokenKind {
 };
 
 // ------------ TOKEN VALUE: variant for possible token values ---------------
-using TokenValue = std::variant<std::monostate, KeywordEnum, char, std::string, float>;
+using TokenValue = std::variant<std::monostate, Keyword, char, std::string, float>;
 
 //------ TOKEN CLASS: product of `SourceLocation', `TokenKind` and `TokenValue` (tagged union pattern in C++) ------
 class Token {
@@ -191,7 +165,7 @@ public:
   }
 
   /// @brief Assign a keyword token
-  void assign_keyword(KeywordEnum kw) {
+  void assign_keyword(Keyword kw) {
     type = TokenKind::KEYWORD;
     value = kw;
   }
@@ -227,8 +201,8 @@ public:
     case TokenKind::STOP_TOKEN:
       break;
     case TokenKind::KEYWORD:
-      std::cout << ", Value: " << to_string(std::get<KeywordEnum>(value))
-                << " (KeywordEnum: " << static_cast<int>(std::get<KeywordEnum>(value)) << ")";
+      std::cout << ", Value: " << to_string(std::get<Keyword>(value))
+                << " (Keyword: " << static_cast<int>(std::get<Keyword>(value)) << ")";
       break;
     case TokenKind::SYMBOL:
       std::cout << ", Value: " << std::get<char>(value);
@@ -402,7 +376,7 @@ public:
     while (true) {
       char ch = read_char();
 
-      if (ch == '"') { // You got to the ethe nd of string
+      if (ch == '"') { // You got to the end of string
         break;
       }
       if (ch == 0) { // End of file before closing quote
@@ -471,10 +445,10 @@ public:
     }
 
     // Check if it is a keyword
-    auto kw_it = KEYWORDS.find(token_str);
-    if (kw_it != KEYWORDS.end()) { // if it is a keyword, create a token accordingly
+    auto kw_it = KEYWORD_MAP.find(token_str);
+    if (kw_it != KEYWORD_MAP.end()) { // if it is a keyword, create a token accordingly
       Token token(token_location, TokenKind::KEYWORD);
-      token.assign_keyword(kw_it->second); // kw_it->second is the KeywordEnum value
+      token.assign_keyword(kw_it->second); // kw_it->second is the Keyword value
       return token;
     } else { // If it is not a keyword, it must be an identifier
       Token token(token_location, TokenKind::IDENTIFIER);
@@ -511,7 +485,7 @@ public:
     }
 
     // Handle single-character symbols or otherwise start parsing other token types
-    if (SYMBOLS.find(ch) != std::string::npos) {      // std::string::npos means ch was not found in SYMBOLS string
+    if (SYMBOLS.find(ch) != std::string_view::npos) { // std::string::npos means ch was not found in SYMBOLS string
       Token token(token_location, TokenKind::SYMBOL); // Create a symbol token
       token.assign_symbol(ch);
       _skip_whitespaces_and_comments();
@@ -549,7 +523,7 @@ public:
 };
 
 // ------------------------------------------------------------------------------------------------------------
-// ----------------------------------- SCENE DATA STRUCTURE & PARSING METHODS ---------------------------------
+// ----------------------------------- SCENE CLASS & PARSING METHODS ---------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
 class Scene {
@@ -569,7 +543,7 @@ public:
   // -------- parsing helpers: EXPECT_* --------
 
   /// @brief Read a token and check that it matches the symbol expected from our grammar.
-  void expect_symbol(InputStream &input_stream, char symbol) {
+  static void expect_symbol(InputStream &input_stream, char symbol) {
     Token token = input_stream.read_token();
     if (token.type != TokenKind::SYMBOL || std::get<char>(token.value) != symbol) {
       throw GrammarError(token.source_location,
@@ -578,13 +552,14 @@ public:
   }
 
   /// @brief Read a token and check it is one of the keywords your grammar allow in that position. Return the keyword.
-  KeywordEnum expect_keywords(InputStream &input_stream, const std::vector<KeywordEnum> &keywords) {
-    // second argument is a {...} list of keywords from KeywordEnum class
+  [[nodiscard]]
+  static Keyword expect_keywords(InputStream &input_stream, const std::vector<Keyword> &keywords) {
+    // second argument is a {...} list of keywords from Keyword class
     Token token = input_stream.read_token();
     if (token.type != TokenKind::KEYWORD) {
       throw GrammarError(token.source_location, "expected KEYWORD instead of " + token.type_to_string());
     }
-    KeywordEnum kw = std::get<KeywordEnum>(token.value);
+    Keyword kw = std::get<Keyword>(token.value);
     for (const auto &x : keywords) { // check if the keyword is one of the expected ones
       if (kw == x)
         return kw;
@@ -593,6 +568,7 @@ public:
   }
 
   /// @brief Read a token and check that it is either a literal number or a float variable defined in scene
+  [[nodiscard]]
   float expect_number(InputStream &input_stream) {
     Token token = input_stream.read_token();
     if (token.type == TokenKind::LITERAL_NUMBER) {
@@ -610,7 +586,8 @@ public:
   }
 
   /// @brief Read a token and check that it is a literal string
-  std::string expect_string(InputStream &input_stream) {
+  [[nodiscard]]
+  static std::string expect_string(InputStream &input_stream) {
     Token token = input_stream.read_token();
     if (token.type != TokenKind::LITERAL_STRING) {
       throw GrammarError(token.source_location, "expected LITERAL_STRING instead of " + token.type_to_string());
@@ -619,7 +596,8 @@ public:
   }
 
   /// @brief Read a token and check that it is an identifier
-  std::string expect_identifier(InputStream &input_stream) {
+  [[nodiscard]]
+  static std::string expect_identifier(InputStream &input_stream) {
     Token token = input_stream.read_token();
     if (token.type != TokenKind::IDENTIFIER) {
       throw GrammarError(token.source_location, "expected IDENTIFIER instead of " + token.type_to_string());
@@ -658,18 +636,18 @@ public:
     std::shared_ptr<Pigment> result;
 
     // Make sure the pigment name is one of those expected (and currently implemented)
-    KeywordEnum pigment_keyword = expect_keywords(input_file, {KeywordEnum::UNIFORM, KeywordEnum::CHECKERED, KeywordEnum::IMAGE});
+    Keyword pigment_keyword = expect_keywords(input_file, {Keyword::UNIFORM, Keyword::CHECKERED, Keyword::IMAGE});
 
     expect_symbol(input_file, '(');
 
     // Parse the expected structure depending on the type of the pigment
     switch (pigment_keyword) {
-    case KeywordEnum::UNIFORM: {
+    case Keyword::UNIFORM: {
       Color color = parse_color(input_file);
       result = std::make_shared<UniformPigment>(color);
       break;
     }
-    case KeywordEnum::CHECKERED: {
+    case Keyword::CHECKERED: {
       Color color1 = parse_color(input_file);
       expect_symbol(input_file, ',');
       Color color2 = parse_color(input_file);
@@ -678,7 +656,7 @@ public:
       result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
       break;
     }
-    case KeywordEnum::IMAGE: {
+    case Keyword::IMAGE: {
       std::string file_name = expect_string(input_file);
       HdrImage image{file_name};
       result = std::make_shared<ImagePigment>(image);
@@ -696,16 +674,16 @@ public:
   std::shared_ptr<BRDF> parse_brdf(InputStream &input_stream) {
 
     // Make sure the BRDF type is one of those expected (and currently implemented)
-    KeywordEnum brdf_keyword = expect_keywords(input_stream, {KeywordEnum::DIFFUSE, KeywordEnum::SPECULAR});
+    Keyword brdf_keyword = expect_keywords(input_stream, {Keyword::DIFFUSE, Keyword::SPECULAR});
     expect_symbol(input_stream, '(');
     std::shared_ptr<Pigment> pigment = parse_pigment(input_stream);
     expect_symbol(input_stream, ')');
 
     // Depending on the type of BRDF, create the appropriate object
     switch (brdf_keyword) {
-    case KeywordEnum::DIFFUSE:
+    case Keyword::DIFFUSE:
       return std::make_shared<DiffusiveBRDF>(pigment);
-    case KeywordEnum::SPECULAR:
+    case Keyword::SPECULAR:
       return std::make_shared<SpecularBRDF>(pigment);
     default:
       throw std::logic_error("Unreachable code: unknown BRDF type");
@@ -728,38 +706,38 @@ public:
     Transformation result{}; // Initialize with identity
 
     while (true) {
-      KeywordEnum transformation_keyword =
-          expect_keywords(input_stream, {KeywordEnum::IDENTITY, KeywordEnum::TRANSLATION, KeywordEnum::ROTATION_X,
-                                         KeywordEnum::ROTATION_Y, KeywordEnum::ROTATION_Z, KeywordEnum::SCALING});
+      Keyword transformation_keyword =
+          expect_keywords(input_stream, {Keyword::IDENTITY, Keyword::TRANSLATION, Keyword::ROTATION_X, Keyword::ROTATION_Y,
+                                         Keyword::ROTATION_Z, Keyword::SCALING});
       switch (transformation_keyword) {
-      case KeywordEnum::IDENTITY: {
+      case Keyword::IDENTITY: {
         break;
       }
-      case KeywordEnum::TRANSLATION: {
+      case Keyword::TRANSLATION: {
         expect_symbol(input_stream, '(');
         result = result * translation(parse_vector(input_stream));
         expect_symbol(input_stream, ')');
         break;
       }
-      case KeywordEnum::ROTATION_X: {
+      case Keyword::ROTATION_X: {
         expect_symbol(input_stream, '(');
         result = result * rotation_x(degs_to_rads(expect_number(input_stream)));
         expect_symbol(input_stream, ')');
         break;
       }
-      case KeywordEnum::ROTATION_Y: {
+      case Keyword::ROTATION_Y: {
         expect_symbol(input_stream, '(');
         result = result * rotation_y(degs_to_rads(expect_number(input_stream)));
         expect_symbol(input_stream, ')');
         break;
       }
-      case KeywordEnum::ROTATION_Z: {
+      case Keyword::ROTATION_Z: {
         expect_symbol(input_stream, '(');
         result = result * rotation_z(degs_to_rads(expect_number(input_stream)));
         expect_symbol(input_stream, ')');
         break;
       }
-      case KeywordEnum::SCALING: {
+      case Keyword::SCALING: {
         expect_symbol(input_stream, '(');
         Vec scaling_vec = parse_vector(input_stream);
         result = result * scaling({scaling_vec.x, scaling_vec.y, scaling_vec.z});
@@ -825,7 +803,7 @@ public:
     expect_symbol(input_stream, '(');
 
     // Parse Camera type
-    KeywordEnum camera_type = expect_keywords(input_stream, {KeywordEnum::PERSPECTIVE, KeywordEnum::ORTHOGONAL});
+    Keyword camera_type = expect_keywords(input_stream, {Keyword::PERSPECTIVE, Keyword::ORTHOGONAL});
 
     // Parse Transformation
     expect_symbol(input_stream, ',');
@@ -836,26 +814,29 @@ public:
     expect_symbol(input_stream, ',');
     Token asp_ratio_token = input_stream.read_token();
     if (asp_ratio_token.type == TokenKind::KEYWORD) {
-      input_stream.unread_token(asp_ratio_token); // NOTE is it ok to use unread even if strictly speaking it is not necessary?
-      expect_keywords(input_stream, {KeywordEnum::EXACT_ASP_RATIO});
+      if (std::get<Keyword>(asp_ratio_token.value) != Keyword::EXACT_ASP_RATIO) {
+        throw GrammarError(asp_ratio_token.source_location, "unexpected KEYWORD");
+      }
       asp_ratio = std::nullopt;
     } else {
+      // NOTE This is the only case the DSL grammar - other than the production rule for transformation - where
+      // tokens of two different kinds can appear in the same place. This is why it makes sense to use unread_char.
       input_stream.unread_token(asp_ratio_token);
       asp_ratio = std::make_optional<float>(expect_number(input_stream));
     }
 
     // Parse screen-observer distance (only in case of a PerspectiveCamera)
     float distance;
-    if (camera_type == KeywordEnum::PERSPECTIVE) {
+    if (camera_type == Keyword::PERSPECTIVE) {
       expect_symbol(input_stream, ',');
       distance = expect_number(input_stream);
     }
 
     expect_symbol(input_stream, ')');
-    if (camera_type == KeywordEnum::PERSPECTIVE) {
+    if (camera_type == Keyword::PERSPECTIVE) {
       auto cam = std::make_shared<PerspectiveCamera>(distance, asp_ratio, transformation);
       return cam;
-    } else { // Only other case: KeywordEnum::ORTHOGONAL
+    } else { // Only other case: Keyword::ORTHOGONAL
       return std::make_shared<OrthogonalCamera>(asp_ratio, transformation);
     }
   }
@@ -894,10 +875,10 @@ public:
       }
 
       SourceLocation source_location = input_stream.location;
-      KeywordEnum keyword = expect_keywords(input_stream, {KeywordEnum::FLOAT, KeywordEnum::MATERIAL, KeywordEnum::SPHERE,
-                                                           KeywordEnum::PLANE, KeywordEnum::CAMERA, KeywordEnum::POINT_LIGHT});
+      Keyword keyword = expect_keywords(input_stream, {Keyword::FLOAT, Keyword::MATERIAL, Keyword::SPHERE, Keyword::PLANE,
+                                                       Keyword::CAMERA, Keyword::POINT_LIGHT});
       switch (keyword) {
-      case KeywordEnum::FLOAT: {
+      case Keyword::FLOAT: {
         std::string float_name = expect_identifier(input_stream);
 
         // Throw if a variable with the same name has already been defined but is not among the overwritten ones
@@ -915,7 +896,7 @@ public:
         break;
       }
 
-      case KeywordEnum::MATERIAL: {
+      case Keyword::MATERIAL: {
         std::string material_name = expect_identifier(input_stream);
         // Check if a variable with the same name has already been defined, throw exception in case it has
         if (materials.count(material_name)) {
@@ -926,19 +907,19 @@ public:
         break;
       }
 
-      case KeywordEnum::SPHERE: {
+      case Keyword::SPHERE: {
         // Add Sphere to World
         world->add_object(parse_sphere(input_stream));
         break;
       }
 
-      case KeywordEnum::PLANE: {
+      case Keyword::PLANE: {
         // Add Plane to World
         world->add_object(parse_plane(input_stream));
         break;
       }
 
-      case KeywordEnum::CAMERA: {
+      case Keyword::CAMERA: {
         // Throw if a Camera was already defined
         if (camera) {
           throw GrammarError(source_location, "camera already defined");
@@ -948,7 +929,7 @@ public:
         break;
       }
 
-      case KeywordEnum::POINT_LIGHT: {
+      case Keyword::POINT_LIGHT: {
         // Add Point Light to World
         world->add_light_source(parse_point_light(input_stream));
         break;
