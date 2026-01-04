@@ -74,12 +74,12 @@ The output PNG images can be found at `/samples/demo_onoff_tracing.png` and `/sa
 Render a scene described in a custom text-based file format:
 
 ```bash
-./raytracer render -s scene.txt -o output --width 1280 --height 960 --antialiasing 3 --define-float radius=1.5
+./raytracer render scene.txt -o output --width 1280 --height 960 --antialiasing 3 --define-float radius=1.5
 ```
 
 | Option               | Description                                           |
 |----------------------|-------------------------------------------------------|
-| `-s`, `--source`     | Path to the scene description file (required)         |
+| [*first positional argument*]     | Path to the scene description file (required)         |
 | `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)            |
 | `--width`, `--height`| Output resolution (defaults: 1280x960)                |
 | `--antialiasing`     | Samples per pixel edge (default: 3)                   |
@@ -99,7 +99,7 @@ The scene file uses a custom format supporting:
 - Object creation and transformation
 - Variable substitution with command-line overrides (`--define-float`)
 
-See `samples/demo_scene.txt` for usage. A formal EBNF grammar description will be provided soon, along with more examples and use cases.
+See `samples/demo_scene.txt` for usage. See EBNF.md for a formal EBNF grammar description.
 
 ---
 

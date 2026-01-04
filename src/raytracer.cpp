@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
 
   // Input (source) file
   std::string source_file_name;
-  render_subc->add_option("-s, --source", source_file_name, "Specify input (source) file.txt containing the scene to render");
+  render_subc->add_option("source", source_file_name, "Specify input (source) file.txt containing the scene to render")->required();
 
   // Output file
   std::string output_file_name_render;
