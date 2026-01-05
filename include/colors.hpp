@@ -44,39 +44,46 @@ constexpr float DEFAULT_AVG_LUMINOSITY_DARK_MODE =
           // for dark (almost-black) images. THe default value here provided (0.1) is fine as long as the non-dark portions of the
           // image have average luminosity of the same order of magnitude, which is often the case.
 
-/// @brief endianness is order you read floats with (recall 32_bit_float =4
-/// bytes) (left to right or right to left)
+/// @brief Byte endianness (for floats)
 enum class Endianness {
   little_endian, // encoded with +1 or any positive value
   big_endian     // encoded with -1 or any negative value
 };
 
+/// @brief Inspect device endianness
+[[maybe_unused]]
+constexpr Endianness inspect_device_endianness() {
+  static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big,
+                "Mixed endianness is not supported");
+
+  if constexpr (std::endian::native == std::endian::little)
+    return Endianness::little_endian;
+  else
+    return Endianness::big_endian;
+}
+
 /// @brief ad hoc error message/exception to throw when reading pfm files
 class InvalidPfmFileFormat : public std::exception {
-public:
-  // Properties
+private:
   std::string error_message;
 
-  // Constructor (just takes as input the desired error message)
-  InvalidPfmFileFormat(std::string em) : error_message("Invalid PFM file format: " + em) {}
+public:
+  InvalidPfmFileFormat(const std::string &em) : error_message("Invalid PFM file format: " + em) {}
 
-  // Methods
-
-  // override of the what() method from parent class std::exception
   const char *what() const noexcept override {
-    // just a convert string format of C++ into cstring format of C (needed for
-    // compatibility)
+    // Convert to cstring for compatibility
     return error_message.c_str();
   }
 };
 
+/// @brief Check whether two floats are equal within a given tolerance
 bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) { return std::fabs(x - y) < error_tolerance; }
 
 /// @brief normalize a float number (between 0 and 1) using the formula
 /// x/(1+x) (almost x for small x, but saturates to 1 for large x)
 /// @param x
 /// @return
-float _clamp(float x) { return x / (1.f + x); }
+inline constexpr float _clamp(float x) { return x / (1.f + x); }
 
 // ------------------------------------------------------------------------------------------------------------
 // COLOR
@@ -87,63 +94,63 @@ float _clamp(float x) { return x / (1.f + x); }
 class Color {
 public:
   // Properties
-  float r, g, b; // Use 32-bit format to avoid memory waste
+  float r, g, b; // 32-bit for memory efficiency
 
   // Constructors
-  Color() : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
+  constexpr Color() : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
 
-  Color(float red, float green, float blue) // Constructor with externally assigned values
+  constexpr Color(float red, float green, float blue) // Constructor with externally assigned values
       : r(red), g(green), b(blue) {}
 
   // Methods
 
-  /// @brief Check if color is close to another color within some tolerance
+  /// @brief Check if this color is close to another color within a given tolerance
   bool is_close(const Color &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
     return (are_close(r, other.r, error_tolerance) && are_close(g, other.g, error_tolerance) &&
             are_close(b, other.b, error_tolerance));
   }
 
-  /// @brief Check if two colors are close calling is_close on the first one (symmetric syntax)
+  /// @brief Check if two colors are close (symmetric syntax)
   friend bool are_close(const Color &color1, const Color &color2) { return color1.is_close(color2); }
 
   /// @brief Sum of two colors
-  Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
+  constexpr Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
 
   /// @brief Compound addition assigmenent
-  Color &operator+=(const Color &other) {
+  constexpr Color &operator+=(const Color &other) {
     *this = *this + other;
     return *this;
   }
 
   /// @brief Product of two colors
-  Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
+  constexpr Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
 
   /// @brief Compound product assigmenent of two colors
-  Color &operator*=(const Color &other) {
+  constexpr Color &operator*=(const Color &other) {
     *this = *this * other;
     return *this;
   }
 
   /// @brief Product of color and scalar
-  Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
+  constexpr Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
 
   /// @brief Compound product assigmenent of a color and a scalar
-  Color &operator*=(float scalar) {
+  constexpr Color &operator*=(float scalar) {
     *this = *this * scalar;
     return *this;
   }
 
   /// @brief Division of a color by a scalar
-  Color operator/(float scalar) const { return *this * (1.f / scalar); }
+  constexpr Color operator/(float scalar) const { return *this * (1.f / scalar); }
 
   /// @brief Compound division assigment of a color by a scalar
-  Color &operator/=(float scalar) {
+  constexpr Color &operator/=(float scalar) {
     *this = *this / scalar;
     return *this;
   }
 
   /// @brief Friend function to allow multiplying a scalar and a color
-  friend Color operator*(float scalar, const Color &my_color) {
+  constexpr friend Color operator*(float scalar, const Color &my_color) {
     return my_color * scalar; // Reuse the member function
   }
 
@@ -159,36 +166,31 @@ public:
 
   /// @brief luminosity of the color (computed using Shirley & Morley
   /// formula)
-  float luminosity() const {
+  constexpr float luminosity() const {
     return 0.5f * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula (empirically
                                                                // best formula for luminosity)
   }
 
   /// @brief luminosity of the color (computed as arithmetic average of rgb,
   /// instead of Shirley & Morley formula)
-  float luminosity_arithemic_avg() const { return (r + g + b) / 3.f; }
-
-  /// @ brief clamp the color values to the range [0, 1]
-  void clamp() {
-    r = std::clamp(r, 0.f, 1.f);
-    g = std::clamp(g, 0.f, 1.f);
-    b = std::clamp(b, 0.f, 1.f);
-  }
+  constexpr float luminosity_arithemic_avg() const { return (r + g + b) / 3.f; }
 };
 
 // ------------------------------------------------------------------------------------------------------------
 // HDR IMAGE UTILS
 // ------------------------------------------------------------------------------------------------------------
 // The following 5 functions (_write_float, _read_float, _read_line, _parse_img_size, _parse_endianness) are helper functions for
-// the method HdrImage::read_pfm_file()
+// the methods HdrImage::write_pfm and HdrImage::read_pfm_file
 
-/// @brief Takes a float and return its 4 bytes into the stream (NO TEST NEEDED)
+/// @brief Takes a float and return its 4 bytes into the stream
 /// @param stream
 /// @param value
 /// @param endianness
 void _write_float(std::ostream &stream, float value, Endianness endianness) {
   // Convert "value" in a sequence of 32 bits
-  uint32_t double_word{*((uint32_t *)&value)};
+
+  uint32_t double_word = std::bit_cast<uint32_t>(value);
+  // uint32_t double_word{*((uint32_t *)&value)}; // C-style solution, violates C++'s aliasing rules
 
   // Extract the four bytes in "double_word" using bit-level operators
   uint8_t bytes[] = {
@@ -210,10 +212,9 @@ void _write_float(std::ostream &stream, float value, Endianness endianness) {
   }
 }
 
-/// @brief Reads a stream of bytes and convert them to floats (NO TEST NEEDED)
+/// @brief Reads a stream of bytes and convert them to a float
 /// @param stream
 /// @param endianness
-/// @return
 float _read_float(std::istream &stream, Endianness endianness) {
   uint8_t bytes[4];
 
@@ -230,9 +231,9 @@ float _read_float(std::istream &stream, Endianness endianness) {
   }
   uint32_t double_word{(static_cast<uint32_t>(bytes[0]) << 0) | (static_cast<uint32_t>(bytes[1]) << 8) |
                        (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24)};
-  float value{*((float *)&double_word)};
-  // float value = std::bit_cast<float>(double_word); // More modern alternative
 
+  // float value{*((float *)&double_word)}; // C-style solution, violates C++'s aliasing rules
+  float value = std::bit_cast<float>(double_word);
   return value;
 }
 
@@ -251,8 +252,8 @@ std::string _read_line(std::istream &stream) {
   return result;
 }
 
-/// @brief read the image dimensions (columns, rows) from a line of a pfm file
-/// @param line
+/// @brief Parse image dimensions (columns, rows) from the appropriate line of a PFM file header
+/// @param line to parse
 std::pair<int, int> _parse_img_size(const std::string &line) {
   std::istringstream iss(line);
   int width, height;
@@ -276,12 +277,13 @@ std::pair<int, int> _parse_img_size(const std::string &line) {
   return {width, height};
 }
 
-/// @brief read the endianness from a pfm file
+/// @brief Parse endianness from the appropriate line of a PFM file header
 /// @param line
 Endianness _parse_endianness(const std::string &line) {
   std::istringstream iss(line);
   float value = 0.f;
-  if (!(iss >> value)) { // Note: if value is fed e. g. "abc", the conversion fails
+  if (!(iss >> value)) {
+    // Fed value is not a valid float
     throw InvalidPfmFileFormat("Missing endianness specification");
   }
 
@@ -313,7 +315,7 @@ private:
     // usually called «magic bytes»)
     std::string magic = _read_line(stream);
     if (magic != "PF") {
-      throw InvalidPfmFileFormat("invalid magic in PFM file");
+      throw InvalidPfmFileFormat("Invalid magic in PFM file");
     }
 
     // Read the image size line and extract width and height
@@ -375,11 +377,11 @@ public:
 
   /// @brief PFM file --> HDR image
   /// @param inupt stream
-  HdrImage(std::istream &stream) { read_pfm_file(stream); }
+  explicit HdrImage(std::istream &stream) { read_pfm_file(stream); }
 
   /// @brief PFM file --> HDR image
   /// @param inupt file name
-  HdrImage(const std::string &file_name) {
+  explicit HdrImage(const std::string &file_name) {
     std::ifstream stream(file_name, std::ios::binary); // Open the file in binary mode
     if (!stream.is_open()) {
       std::string error_msg = "Failed to open file \"" + file_name + "\"";
@@ -393,9 +395,7 @@ public:
     stream.close();
   }
 
-  // Methods
-  // Some other methods should be private, but following the convention are
-  // declared public with underscore (_) in front.
+  // Methods (those with a leading underscore are intended to be private)
 
   void write_pfm(std::ostream &stream, Endianness endianness = Endianness::little_endian) {
     std::string endianness_str;
@@ -445,7 +445,7 @@ public:
 
   /// @brief Set color at given column and row
   void set_pixel(int32_t col, int32_t row, const Color &c) {
-    int32_t offset = _pixel_offset(col, row); // Assign _pixel_offset to a variable (useful for debugging)
+    int32_t offset = _pixel_offset(col, row);
     pixels[offset] = c;
   }
 
@@ -523,11 +523,11 @@ public:
 //---------- PREDEFINED COLORS ------------------
 //-------------------------------------------------------------------------------------------------------------
 
-Color BLACK(0.0f, 0.0f, 0.0f);
-Color WHITE(1.0f, 1.0f, 1.0f);
-Color RED(1.0f, 0.0f, 0.0f);
-Color GREEN(0.0f, 1.0f, 0.0f);
-Color BLUE(0.0f, 0.0f, 1.0f);
-Color YELLOW(1.0f, 1.0f, 0.0f);
-Color PURPLE(1.0f, 0.0f, 1.0f);
-Color CYAN(0.0f, 1.0f, 1.0f);
+inline constexpr Color BLACK(0.0f, 0.0f, 0.0f);
+inline constexpr Color WHITE(1.0f, 1.0f, 1.0f);
+inline constexpr Color RED(1.0f, 0.0f, 0.0f);
+inline constexpr Color GREEN(0.0f, 1.0f, 0.0f);
+inline constexpr Color BLUE(0.0f, 0.0f, 1.0f);
+inline constexpr Color YELLOW(1.0f, 1.0f, 0.0f);
+inline constexpr Color PURPLE(1.0f, 0.0f, 1.0f);
+inline constexpr Color CYAN(0.0f, 1.0f, 1.0f);
