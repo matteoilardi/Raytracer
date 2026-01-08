@@ -234,16 +234,42 @@ constexpr Vec Point::to_vector() const noexcept { return Vec{x, y, z}; }
 //-------- OPERATIONS with VEC, NORMAL and POINT ----------
 //---------------------------------------------------------------
 
-/// @brief General sum operation `In1 + In2 → Out`
-template <typename In1, typename In2, typename Out> constexpr Out _sum(const In1 &a, const In2 &b) noexcept {
-  return Out{a.x + b.x, a.y + b.y, a.z + b.z};
+// Concepts
+template<typename T>
+concept VecLike = std::same_as<T, Vec>;
+
+template<typename T>
+concept PointLike = std::same_as<T, Point>;
+
+template<typename T>
+concept NormalLike = std::same_as<T, Normal>;
+
+// Legal sum combinations
+template<typename A, typename B>
+concept Sumable = (PointLike<A> && VecLike<B>) || (VecLike<A> && VecLike<B>);
+
+// Low-level addition
+template<typename A, typename B, typename Out>
+constexpr Out _sum(const A& a, const B& b) noexcept {
+    return Out{a.x + b.x, a.y + b.y, a.z + b.z};
 }
 
-/// @brief Sum of two vectors, returning a vector
-constexpr Vec operator+(const Vec &a, const Vec &b) noexcept { return _sum<Vec, Vec, Vec>(a, b); }
+// Sum result type traits
+template<typename A, typename B>
+struct SumResult;
 
-/// @brief Sum of a point and a vector, returning a point
-constexpr Point operator+(const Point &a, const Vec &b) noexcept { return _sum<Point, Vec, Point>(a, b); }
+template<> struct SumResult<Point, Vec> { using type = Point; };
+template<> struct SumResult<Vec, Vec>   { using type = Vec; };
+
+// Public sum operator
+template<typename A, typename B>
+requires Sumable<A,B>
+constexpr auto operator+(const A& a, const B& b) noexcept {
+    using Out = typename SumResult<A,B>::type;
+    return _sum<A,B,Out>(a,b);
+}
+
+// --------
 
 /// @brief General difference operation `In1 - In2 → Out`
 template <typename In1, typename In2, typename Out> constexpr Out _difference(const In1 &a, const In2 &b) noexcept {
