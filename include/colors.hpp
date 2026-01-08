@@ -77,13 +77,13 @@ public:
 };
 
 /// @brief Check whether two floats are equal within a given tolerance
-bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) { return std::fabs(x - y) < error_tolerance; }
+bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) noexcept { return std::fabs(x - y) < error_tolerance; }
 
 /// @brief normalize a float number (between 0 and 1) using the formula
 /// x/(1+x) (almost x for small x, but saturates to 1 for large x)
 /// @param x
 /// @return
-inline constexpr float _clamp(float x) { return x / (1.f + x); }
+inline constexpr float _clamp(float x) noexcept { return x / (1.f + x); }
 
 // ------------------------------------------------------------------------------------------------------------
 // COLOR
@@ -97,60 +97,60 @@ public:
   float r, g, b; // 32-bit for memory efficiency
 
   // Constructors
-  constexpr Color() : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
+  constexpr Color() noexcept : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
 
-  constexpr Color(float red, float green, float blue) // Constructor with externally assigned values
+  constexpr Color(float red, float green, float blue) noexcept // Constructor with externally assigned values
       : r(red), g(green), b(blue) {}
 
   // Methods
 
   /// @brief Check if this color is close to another color within a given tolerance
-  bool is_close(const Color &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+  bool is_close(const Color &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return (are_close(r, other.r, error_tolerance) && are_close(g, other.g, error_tolerance) &&
             are_close(b, other.b, error_tolerance));
   }
 
   /// @brief Check if two colors are close (symmetric syntax)
-  friend bool are_close(const Color &color1, const Color &color2) { return color1.is_close(color2); }
+  friend bool are_close(const Color &color1, const Color &color2) noexcept { return color1.is_close(color2); }
 
   /// @brief Sum of two colors
-  constexpr Color operator+(const Color &other) const { return Color(r + other.r, g + other.g, b + other.b); }
+  constexpr Color operator+(const Color &other) const noexcept { return Color(r + other.r, g + other.g, b + other.b); }
 
   /// @brief Compound addition assigmenent
-  constexpr Color &operator+=(const Color &other) {
+  constexpr Color &operator+=(const Color &other) noexcept {
     *this = *this + other;
     return *this;
   }
 
   /// @brief Product of two colors
-  constexpr Color operator*(const Color &other) const { return Color(r * other.r, g * other.g, b * other.b); }
+  constexpr Color operator*(const Color &other) const noexcept { return Color(r * other.r, g * other.g, b * other.b); }
 
   /// @brief Compound product assigmenent of two colors
-  constexpr Color &operator*=(const Color &other) {
+  constexpr Color &operator*=(const Color &other) noexcept {
     *this = *this * other;
     return *this;
   }
 
   /// @brief Product of color and scalar
-  constexpr Color operator*(float scalar) const { return Color(r * scalar, g * scalar, b * scalar); }
+  constexpr Color operator*(float scalar) const noexcept { return Color(r * scalar, g * scalar, b * scalar); }
 
   /// @brief Compound product assigmenent of a color and a scalar
-  constexpr Color &operator*=(float scalar) {
+  constexpr Color &operator*=(float scalar) noexcept {
     *this = *this * scalar;
     return *this;
   }
 
   /// @brief Division of a color by a scalar
-  constexpr Color operator/(float scalar) const { return *this * (1.f / scalar); }
+  constexpr Color operator/(float scalar) const noexcept { return *this * (1.f / scalar); }
 
   /// @brief Compound division assigment of a color by a scalar
-  constexpr Color &operator/=(float scalar) {
+  constexpr Color &operator/=(float scalar) noexcept {
     *this = *this / scalar;
     return *this;
   }
 
   /// @brief Friend function to allow multiplying a scalar and a color
-  constexpr friend Color operator*(float scalar, const Color &my_color) {
+  constexpr friend Color operator*(float scalar, const Color &my_color) noexcept {
     return my_color * scalar; // Reuse the member function
   }
 
@@ -166,14 +166,14 @@ public:
 
   /// @brief luminosity of the color (computed using Shirley & Morley
   /// formula)
-  constexpr float luminosity() const {
+  constexpr float luminosity() const noexcept {
     return 0.5f * (std::min({r, g, b}) + std::max({r, g, b})); // Shirley & Morley's formula (empirically
                                                                // best formula for luminosity)
   }
 
   /// @brief luminosity of the color (computed as arithmetic average of rgb,
   /// instead of Shirley & Morley formula)
-  constexpr float luminosity_arithemic_avg() const { return (r + g + b) / 3.f; }
+  constexpr float luminosity_arithemic_avg() const noexcept { return (r + g + b) / 3.f; }
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -452,7 +452,7 @@ public:
   /// @brief Compute the average luminosity of the image
   /// @param delta (default value to prevent taking log(0))
   /// @return return the average luminosity of the image as float
-  float average_luminosity(float delta = DEFAULT_DELTA_LOG) const {
+  float average_luminosity(float delta = DEFAULT_DELTA_LOG) const noexcept {
     float cumsum = 0.f;
     for (auto pixel : pixels) {
       cumsum += std::log10(delta + pixel.luminosity());
@@ -464,7 +464,7 @@ public:
   /// @brief Normalize image applying the same factor to all pixel rgb values
   /// @param alpha factor
   /// @param optional value to replace average pixel luminosity (useful in case of dark images)
-  void normalize_image(float alpha, std::optional<float> avg_luminosity = std::nullopt) {
+  void normalize_image(float alpha, std::optional<float> avg_luminosity = std::nullopt) noexcept {
     float avg_lum = avg_luminosity.value_or(average_luminosity());
 
     for (auto &pixel : pixels) {
@@ -475,7 +475,7 @@ public:
   }
 
   /// @brief Clamp the image rgb values between 0 and 1
-  void clamp_image() {
+  void clamp_image() noexcept {
     for (auto &pixel : pixels) {
       pixel.r = _clamp(pixel.r);
       pixel.g = _clamp(pixel.g);
