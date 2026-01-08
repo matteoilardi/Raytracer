@@ -77,8 +77,8 @@ TEST(SphereTest, test_normals) {
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
 
   ASSERT_TRUE(hit1);
-  Normal computed_normal = (hit1->normal).normalize();
-  Normal expected_normal = (Normal(1.f, 4.f, 0.f)).normalize();
+  Normal computed_normal = (hit1->normal).normalized();
+  Normal expected_normal = (Normal(1.f, 4.f, 0.f)).normalized();
   EXPECT_TRUE(computed_normal.is_close(expected_normal));
 }
 

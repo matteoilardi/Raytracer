@@ -195,7 +195,7 @@ public:
   Ray scatter_ray(std::shared_ptr<PCG> pcg, const Vec &incoming_dir, const Point &intersection_point, Normal normal,
                   int depth) const override {
     normal =
-        normal.normalize(); // Note that scatter_ray() are the only functions in the code that require a normalized normal (except
+        normal.normalized(); // Note that scatter_ray() are the only functions in the code that require a normalized normal (except
                             // for SpecularBRDF::eval(), which is never used), so it makes sens to enforce normalization here.
     ONB onb{normal.to_vector()};
     auto [theta, phi] = pcg->random_phong(1); // Uniform BRDF makes the integrand of the rendering equation proportional to
@@ -228,9 +228,9 @@ public:
 
   /// @brief Evaluate the BRDF at the given point
   Color eval(const Normal &normal, const Vec &in_dir, const Vec &out_dir, const Vec2d &uv) const override {
-    Normal n = normal.normalize();
-    Vec in = in_dir.normalize();
-    Vec out = out_dir.normalize();
+    Normal n = normal.normalized();
+    Vec in = in_dir.normalized();
+    Vec out = out_dir.normalized();
 
     float theta_in = std::acos(n * -in);  // incidence angle
     float theta_out = std::acos(n * out); // reflection angle
@@ -249,10 +249,9 @@ public:
                   int depth) const override {
     Vec in =
         incoming_dir
-            .normalize(); // Note that scatter_ray() are the only functions in the code that require a normalized normal (except
+            .normalized(); // Note that scatter_ray() are the only functions in the code that require a normalized normal (except
                           // for SpecularBRDF::eval(), which is never used), so it makes sens to enforce normalization here.
-    Vec n = (normal.to_vector()).normalize();
-    // n.normalize();
+    Vec n = normal.to_vector().normalized();
 
     Vec reflected = in - n * 2.f * (n * in);
 
