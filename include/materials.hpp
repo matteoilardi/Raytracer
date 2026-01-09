@@ -203,7 +203,7 @@ public:
     Vec outgoing_dir{onb.e1 * std::sin(theta) * std::cos(phi) + onb.e2 * std::sin(theta) * std::sin(phi) +
                      onb.e3 * std::cos(theta)}; // Get outgoing direction from the local ONB basis
 
-    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinite, depth);
+    return Ray(intersection_point, outgoing_dir, 1.e-3f, infinity, depth);
   };
 };
 
@@ -255,7 +255,7 @@ public:
 
     Vec reflected = in - n * 2.f * (n * in);
 
-    return Ray(intersection_point, reflected, 1.e-5f, infinite, depth);
+    return Ray(intersection_point, reflected, 1.e-5f, infinity, depth);
   }
 };
 

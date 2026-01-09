@@ -303,7 +303,7 @@ public:
 
       // If there's a valid hit and it's closer than any previous hit, update closest_hit
       // (note there's no need to check hit->t > 0 since we already do it inside ray_intersection method of Shapes)
-      if (hit.has_value() && hit->t < (closest_hit.has_value() ? closest_hit->t : infinite)) {
+      if (hit.has_value() && hit->t < (closest_hit.has_value() ? closest_hit->t : infinity)) {
         closest_hit = hit;
       }
     }

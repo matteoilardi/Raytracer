@@ -13,8 +13,8 @@
 #include "geometry.hpp"
 #include "random.hpp" // random numbers for antialiasing
 #include <cassert>
-#include <functional> // library for std::function
-#include <limits>     // library to have infinity as a float
+#include <functional> // for std::function
+#include <limits>     // for std::numeric_limits (infinity as float)
 #include <memory>
 
 // ------------------------------------------------------------------------------------------------------------
@@ -25,8 +25,7 @@ class Ray;
 class Camera;
 class ImageTracer;
 
-/// @brief define infinity as a float
-const float infinite = std::numeric_limits<float>::infinity();
+inline constexpr auto infinity = std::numeric_limits<float>::infinity();
 
 // ------------------------------------------------------------------------------------------------------------
 // -----------RAY CLASS------------------
@@ -38,32 +37,33 @@ public:
   Point origin;          // Origin of the ray
   Vec direction;         // Direction of the ray
   float tmin = 1e-5f;    // Minimum distance run along the ray
-  float tmax = infinite; // Maximum distance run along the ray
+  float tmax = infinity; // Maximum distance run along the ray
   int depth = 0;         // Number of reflections before is considered exhausted
 
   //-----------Constructors-----------
 
   /// Default constructor
-  Ray() : origin(Point()), direction(Vec()) {};
+  constexpr Ray() noexcept : origin{}, direction{} {};
 
   /// Constructor with parameters
-  Ray(Point origin, Vec direction) : origin(origin), direction(direction) {};
-  Ray(Point origin, Vec direction, float tmin, float tmax, int depth)
+  constexpr Ray(Point origin, Vec direction) noexcept : origin(origin), direction(direction) {};
+
+  constexpr Ray(Point origin, Vec direction, float tmin, float tmax, int depth) noexcept
       : origin(origin), direction(direction), tmin(tmin), tmax(tmax), depth(depth) {};
 
   //--------------------Methods----------------------
   ///@brief check if origin and direction are close to the other ray's
-  bool is_close(Ray other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+  constexpr bool is_close(const Ray &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return origin.is_close(other.origin, error_tolerance) && direction.is_close(other.direction, error_tolerance);
   }
 
   /// @brief returns Point at the given distance from the screen
   /// @param t distance from the screen
-  Point at(float t) const { return origin + Vec(t * direction); }
+  constexpr Point at(float t) const noexcept { return origin + Vec(t * direction); }
 
   /// @brief apply a transformation to the ray (origin transformed like a point, direction transformed like a vector)
   /// @param transformation to be applied
-  Ray transform(Transformation T) { return Ray(T * origin, T * direction, tmin, tmax, depth); };
+  constexpr Ray transform(const Transformation &T) noexcept { return Ray(T * origin, T * direction, tmin, tmax, depth); };
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -90,26 +90,49 @@ public:
   virtual ~Camera() {}
 
   //--------------------Methods----------------------
-  /// @brief virtual method that fires a ray through a point of the screen
-  /// @param screen coordinate u
-  /// @param screen coordinate v
+  /// @brief Fires a ray through the point of the screen of coordinates (u, v)
+  /// @param Screen coordinate u
+  /// @param Screen coordinate v
+  /// @details This method is supposed to be called after asp_ratio is given a float value,
+  /// which usually happens when the instance of Camera starts seeing an HdrImage object,
+  /// inside Imagetracer. This is because the default aspect ratio is inferred from the size
+  /// of the image.
   virtual Ray fire_ray(float u, float v) const = 0;
+
+protected:
+  /// @brief Maximum z coordinate of the screen; maximum y coordinate is scaled by aspect ratio
+  static constexpr float SCREEN_MAX = 1.f;
+
+  /// @brief Minimum z coordinate of the screen; minimum y coordinate is scaled by aspect ratio
+  static constexpr float SCREEN_MIN = -1.f;
+
+  static constexpr float SCREEN_RANGE = SCREEN_MAX - SCREEN_MIN;
+
+  /// @brief Maps screen coordinate u to y coordinate of the general reference frame
+  float u_to_y(float u) const {
+    // Compare Lab 6, slide 15 ad slide 20-21
+    return (SCREEN_MAX - u * SCREEN_RANGE) * asp_ratio.value();
+  }
+
+  /// @brief Maps screen coordinate v to z coordinate of the general reference frame
+  static float v_to_z(float v) {
+    // Compare Lab 6, slide 15 ad slide 20-21
+    return SCREEN_MIN + v * SCREEN_RANGE;
+  }
 };
 
 class OrthogonalCamera : public Camera {
 public:
   //-----------Constructors-----------
-  /// Default constructor
-
+  //
   /// Constructor with parameters
-  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, Transformation transformation = Transformation())
+  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, const Transformation &transformation = Transformation())
       : Camera(asp_ratio, transformation) {}
   //--------------------Methods----------------------
 
-  ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
-    Point origin = Point(-1.f, (1.f - 2.f * u) * asp_ratio.value(), -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
-    Vec direction = VEC_X;
+    Point origin = Point(-1.f, u_to_y(u), v_to_z(v));
+    constexpr Vec direction = VEC_X;
     return Ray(origin, direction).transform(transformation);
   };
 };
@@ -120,7 +143,6 @@ public:
   float distance;
 
   //-----------Constructors-----------
-  /// Default constructor
 
   /// Constructor with parameters
   PerspectiveCamera(float distance = 1.f, std::optional<float> asp_ratio = std::nullopt,
@@ -132,7 +154,7 @@ public:
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
     Point origin = Point(-distance, 0.f, 0.f);
-    Vec direction = Vec(distance, (1.f - 2.f * u) * asp_ratio.value(), -1.f + 2.f * v); // compare Lab 6, slide 15 ad slide 20-21
+    Vec direction = Vec(distance, u_to_y(u), v_to_z(v));
     return Ray(origin, direction).transform(transformation);
   };
 };
@@ -162,9 +184,6 @@ public:
     if (!camera->asp_ratio.has_value()) {
       camera->asp_ratio.emplace(static_cast<float>(this->image->width) / static_cast<float>(this->image->height));
     }
-
-    // Ensure image and camera are not dangling or null
-    assert(this->image && this->camera);
   }
   // Note that it is ok for image and camera to stay in the heap, since they will be created once and after that access to
   // heap memory is as fast as access to stack
@@ -179,8 +198,8 @@ public:
   /// @param v_pixel (optional) y-coordinate of the pixel (default value is 0.5, meaning the ray hits y-center of the
   /// pixel)
   Ray fire_ray(int col, int row, float u_pixel = 0.5f, float v_pixel = 0.5f) {
-    // convert pixel indices into a position on the screen
-    // default values of u_pixel and v_pixel make the ray hit the center of the pixel
+    // Convert pixel indices into a position on the screen
+    // Default values of u_pixel and v_pixel make the ray hit the center of the pixel
 
     float u = (col + u_pixel) / (image->width);
     float v = 1.f - ((row + v_pixel) / (image->height));
@@ -197,12 +216,13 @@ public:
   // The method perfomrming the task should accept a function of type ProgressCallback as an argument
   using ProgressCallback = std::function<void(float)>;
 
-  /// @brief Calls fire_ray on every pixel of the image (multiple times if antialiasing is set on) and reports progress to the main
-  void fire_all_rays(RaySolver func, ProgressCallback report_progress = [](float progress)->void{}) {
+  /// @brief Calls fire_ray on every pixel of the image (multiple times if antialiasing is set on) and reports progress to the
+  /// main
+  void fire_all_rays(RaySolver func, ProgressCallback report_progress = [](float progress) -> void {}) {
     for (int col = 0; col < image->width; ++col) {
       for (int row = 0; row < image->height; ++row) {
 
-        Color cum_color = Color();
+        Color cum_color{};
         Ray ray;
         const int spp = samples_per_pixel_edge; // Just for code readability
 
