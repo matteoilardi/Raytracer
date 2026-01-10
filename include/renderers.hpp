@@ -150,7 +150,7 @@ public:
     Color cum_radiance = ambient_color + (*(hit_material->emitted_radiance))(hit->surface_point);
 
     // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
-    for (auto source : world->light_sources) {
+    for (const auto &source : world->light_sources) {
       std::optional<Vec> in_dir = world->offset_if_visible(source->point, hit->world_point, hit->normal);
       // In offset_if_visible(..) the `viewer' is the light source and in_dir is the direction from it to the hit point
 

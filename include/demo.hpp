@@ -4,7 +4,6 @@
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-
 // ------------------------------------------------------------------------------------------------------------
 // INCLUDED LIBRARIES
 // ------------------------------------------------------------------------------------------------------------
@@ -50,8 +49,8 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
                                        {0.0f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}};
 
   for (const Vec &pos : sphere_positions) {
-    auto sphere = std::make_shared<Sphere>(translation(pos) * sc);
-    world->add_object(sphere);
+    auto sphere = std::make_unique<Sphere>(translation(pos) * sc);
+    world->add_object(std::move(sphere));
   }
 
   // Perform on/off tracing
@@ -88,10 +87,10 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
 
   // 3. Add objects
   Transformation sky_transform = scaling({50.f, 50.f, 50.f});
-  world->add_object(std::make_shared<Sphere>(sky_transform, sky_material));
-  world->add_object(std::make_shared<Plane>(translation(Vec(0.f, 0.f, -2.f)), ground_material));
-  world->add_object(std::make_shared<Sphere>(scaling({0.4f, 0.4f, 0.4f}), sphere_material));
-  world->add_object(std::make_shared<Sphere>(translation(Vec(0.f, -1.5f, -2.f)), sphere2_material));
+  world->add_object(std::make_unique<Sphere>(sky_transform, sky_material));
+  world->add_object(std::make_unique<Plane>(translation(Vec(0.f, 0.f, -2.f)), ground_material));
+  world->add_object(std::make_unique<Sphere>(scaling({0.4f, 0.4f, 0.4f}), sphere_material));
+  world->add_object(std::make_unique<Sphere>(translation(Vec(0.f, -1.5f, -2.f)), sphere2_material));
 
   // 4. Setup camera
   std::unique_ptr<Camera> camera;

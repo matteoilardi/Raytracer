@@ -290,12 +290,12 @@ TEST(SceneTest, test_parse_scene) {
 
   // Check defined Shapes
   EXPECT_EQ(scene.world->objects.size(), 3);
-  EXPECT_TRUE(dynamic_pointer_cast<Plane>(scene.world->objects[0]));
+  EXPECT_NE(dynamic_cast<Plane *>(scene.world->objects[0].get()), nullptr);
   EXPECT_TRUE(
       scene.world->objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(degs_to_rads(150.f))));
-  EXPECT_TRUE(dynamic_pointer_cast<Plane>(scene.world->objects[1]));
+  EXPECT_NE(dynamic_cast<Plane *>(scene.world->objects[1].get()), nullptr);
   EXPECT_TRUE(scene.world->objects[1]->transformation.is_close(Transformation()));
-  EXPECT_TRUE(dynamic_pointer_cast<Sphere>(scene.world->objects[2]));
+  EXPECT_NE(dynamic_cast<Sphere *>(scene.world->objects[2].get()), nullptr);
   EXPECT_TRUE(scene.world->objects[2]->transformation.is_close(translation(Vec(0.f, 0.f, 1.f))));
 
   // Check defined Camera

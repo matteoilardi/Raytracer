@@ -39,20 +39,19 @@ class HitRecord {
 public:
   //-------Properties--------
 
-  std::shared_ptr<const Shape> shape; // shape that was hit (required in order to trace back to the material that was hit)
-  Point world_point;                  // 3D coordinates of the intersection point in real world
-  Normal normal;                      // normal to the surface at the intersection point
-  Vec2d surface_point;                // 2D coordinates on the surface
-  Ray ray;                            // the ray that actually hit the shape
-  float t;                            // distance from the origin of the ray to the intersection point
+  const Shape *shape;  // shape that was hit (required in order to trace back to the material that was hit)
+  Point world_point;   // 3D coordinates of the intersection point in real world
+  Normal normal;       // normal to the surface at the intersection point
+  Vec2d surface_point; // 2D coordinates on the surface
+  Ray ray;             // the ray that actually hit the shape
+  float t;             // distance from the origin of the ray to the intersection point
 
   //-----------Constructors-----------
   /// Default constructor
   HitRecord() : world_point{}, normal{}, surface_point{}, ray{}, t{0.f} {};
 
   /// Constructor with parameters
-  HitRecord(std::shared_ptr<const Shape> shape, Point world_point, Normal normal, Vec2d surface_point, const Ray &ray,
-            float t) noexcept
+  HitRecord(const Shape *shape, Point world_point, Normal normal, Vec2d surface_point, const Ray &ray, float t) noexcept
       : shape{shape}, world_point{world_point}, normal{normal}, surface_point{surface_point}, ray{ray}, t{t} {}
 
   //------------Methods-----------
@@ -68,10 +67,7 @@ public:
 // ------------------------------------------------------------------------------------------------------------
 
 /// @brief Shape class is the base class for all shapes in the scene
-class Shape : public std::enable_shared_from_this<Shape> {
-  // Shape must inherit from this template class in order for its methods to return a shared_ptr to itself
-  // via the shared_from_this() method built into the std::enable_shared_from_this<Shape> class
-  // this is needed in the ray_intersection method to return a shared_ptr to the shape that was hit
+class Shape {
 public:
   //-------Properties--------
   ///@brief transformation describing the actual position of the shape in the world reference frame
@@ -179,8 +175,7 @@ public:
 
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
-    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
-                t_first_hit);
+    hit.emplace(this, transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_first_hit);
     return hit;
 
     // PERF: declaring `hit` at the start of the function and returning it instead of std::nullopt appears to reduce performance
@@ -234,8 +229,7 @@ public:
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
-    hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
-                t_hit);
+    hit.emplace(this, transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_hit);
     return hit;
   }
 };
@@ -272,9 +266,9 @@ public:
   // ------- Properties --------
 
   /// @brief vector containing the shapes in the scene (stored as shared_ptr for polymorphism and memory safety)
-  std::vector<std::shared_ptr<Shape>> objects;
+  std::vector<std::unique_ptr<Shape>> objects;
   /// @brief vector containing the light sources in the scene (use for illumination in point-light tracing)
-  std::vector<std::shared_ptr<PointLightSource>> light_sources;
+  std::vector<std::unique_ptr<PointLightSource>> light_sources;
 
   // ----------- Constructors -----------
 
@@ -285,11 +279,11 @@ public:
 
   /// @brief Add a shape to the scene
   /// @param object shape to add
-  void add_object(std::shared_ptr<Shape> object) { objects.push_back(object); }
+  void add_object(std::unique_ptr<Shape> &&object) { objects.push_back(std::move(object)); }
 
   /// @brief Add a point light source to the scene
   /// @param point light source to add
-  void add_light_source(std::shared_ptr<PointLightSource> light_source) { light_sources.push_back(light_source); }
+  void add_light_source(std::unique_ptr<PointLightSource> &&light_source) { light_sources.push_back(std::move(light_source)); }
 
   /// @brief Finds the closest intersection of a ray with the objects in the scene
   /// @param ray to be traced through the world

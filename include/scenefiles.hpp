@@ -759,7 +759,7 @@ public:
   }
 
   /// @brief Parse the description of a Sphere from the input stream
-  std::shared_ptr<Sphere> parse_sphere(InputStream &input_stream) {
+  std::unique_ptr<Sphere> parse_sphere(InputStream &input_stream) {
     // Parse transformation
     expect_symbol(input_stream, '(');
     Transformation sphere_transformation = parse_transformation(input_stream);
@@ -775,11 +775,11 @@ public:
     }
 
     expect_symbol(input_stream, ')');
-    return std::make_shared<Sphere>(sphere_transformation, materials_it->second);
+    return std::make_unique<Sphere>(sphere_transformation, materials_it->second);
   }
 
   /// @brief Parse the description of a Plane from the input stream
-  std::shared_ptr<Plane> parse_plane(InputStream &input_stream) {
+  std::unique_ptr<Plane> parse_plane(InputStream &input_stream) {
     // Parse transformation
     expect_symbol(input_stream, '(');
     Transformation plane_transformation = parse_transformation(input_stream);
@@ -795,7 +795,7 @@ public:
     }
 
     expect_symbol(input_stream, ')');
-    return std::make_shared<Plane>(plane_transformation, materials_it->second);
+    return std::make_unique<Plane>(plane_transformation, materials_it->second);
   }
 
   /// @brief Parse the description of a Camera from the input stream
@@ -842,7 +842,7 @@ public:
   }
 
   /// @brief Parse the description of a PointLightSource from the input stream
-  std::shared_ptr<PointLightSource> parse_point_light(InputStream &input_stream) {
+  std::unique_ptr<PointLightSource> parse_point_light(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
 
     // Parse position
@@ -857,7 +857,7 @@ public:
     float emission_radius = expect_number(input_stream);
 
     expect_symbol(input_stream, ')');
-    return std::make_shared<PointLightSource>(position.to_point(), emitted_radiance, emission_radius);
+    return std::make_unique<PointLightSource>(position.to_point(), emitted_radiance, emission_radius);
   }
 
   /// @brief Parse a scene from a stream
