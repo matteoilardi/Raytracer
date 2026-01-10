@@ -182,6 +182,9 @@ public:
     hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
                 t_first_hit);
     return hit;
+
+    // PERF: declaring `hit` at the start of the function and returning it instead of std::nullopt appears to reduce performance
+    // significantly.
   }
 };
 
