@@ -15,9 +15,9 @@
 #include "materials.hpp"
 
 #include <cmath>
-#include <memory> // library for smart pointers
+#include <memory>
 #include <numbers>
-#include <optional> // library for nullable types in C++
+#include <optional>
 
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
@@ -48,14 +48,15 @@ public:
 
   //-----------Constructors-----------
   /// Default constructor
-  HitRecord() : world_point(Point()), normal(Normal()), surface_point(Vec2d()), ray(Ray()), t(0.) {};
+  HitRecord() : world_point{}, normal{}, surface_point{}, ray{}, t{0.f} {};
 
   /// Constructor with parameters
-  HitRecord(std::shared_ptr<const Shape> shape, Point world_point, Normal normal, Vec2d surface_point, Ray ray, float t)
-      : shape(shape), world_point(world_point), normal(normal), surface_point(surface_point), ray(ray), t(t) {};
+  HitRecord(std::shared_ptr<const Shape> shape, Point world_point, Normal normal, Vec2d surface_point, const Ray &ray,
+            float t) noexcept
+      : shape{shape}, world_point{world_point}, normal{normal}, surface_point{surface_point}, ray{ray}, t{t} {}
 
   //------------Methods-----------
-  bool is_close(const HitRecord &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const {
+  bool is_close(const HitRecord &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return (this->shape == other.shape) && world_point.is_close(other.world_point, error_tolerance) &&
            normal.is_close(other.normal, error_tolerance) && surface_point.is_close(other.surface_point, error_tolerance) &&
            ray.is_close(other.ray, error_tolerance) && are_close(t, other.t, error_tolerance);
@@ -80,37 +81,34 @@ public:
 
   //-----------Constructors-----------
   /// Default constructor
-  Shape() : transformation(Transformation()) { material = std::make_shared<Material>(); };
+  Shape() : transformation{} { material = std::make_shared<Material>(); };
 
   /// @brief Constructor with parameters
   /// @param tranformation taking you to the shape reference frame
   /// @param material properties of the shape (pigment and brdf) as a function of (u, v)
-  Shape(Transformation transformation, std::shared_ptr<Material> material = nullptr)
-      : transformation(transformation), material(material) {
+  Shape(const Transformation &transformation, std::shared_ptr<Material> material = nullptr)
+      : transformation{transformation}, material{material} {
     if (!this->material) {
       material = std::make_shared<Material>(); // If no material is provided, set default material with both diffusive BRDF black
                                                // and uniform pigment black
     }
   };
 
-  /// @brief Virtual destructor to ensure proper cleanup of derived classes
   virtual ~Shape() {}
 
   //--------------------Methods----------------------
 
   /// @brief Virtual method that finds the closest intersection of a given ray with the shape
   /// @param ray incoming ray hitting the shape
-  virtual std::optional<HitRecord> ray_intersection(Ray ray) const = 0;
+  virtual std::optional<HitRecord> ray_intersection(const Ray &ray) const noexcept = 0;
 
   /// @brief Flip the normal to the surface so that it has negative scalar product with the hitting ray
   /// @param normal to the surface
   /// @param incoming ray hitting the shape
-  Normal enforce_correct_normal_orientation(Normal normal, Ray ray) const {
-    if (normal * ray.direction > 0) {
-      return -normal; // The normal and the ray must have opposite directions, if this is false (dot product>0), flip the normal
-    } else {
-      return normal;
-    }
+  static Normal enforce_correct_normal_orientation(Normal normal, const Ray &ray) noexcept {
+    // The normal and the ray must have opposite directions, if this is false (dot product>0), flip the normal
+    float sign = std::copysignf(1.0f, -(normal * ray.direction));
+    return normal * sign;
   }
 };
 
@@ -126,14 +124,14 @@ public:
 
   //-----------Constructors-----------
   /// Default constructor
-  Sphere() : Shape() {};
+  Sphere() = default;
 
   /// Constructor with parameters
-  Sphere(Transformation transformation, std::shared_ptr<Material> material = nullptr) : Shape(transformation, material) {};
+  Sphere(const Transformation &transformation, std::shared_ptr<Material> material = nullptr) : Shape{transformation, material} {};
 
   //--------------------Methods----------------------
 
-  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+  virtual std::optional<HitRecord> ray_intersection(const Ray &ray_world_frame) const noexcept override {
     //  Important note: unless otherwise specified, every geometrical object in the body of this method is in the
     //  reference frame of the *standard* sphere
 
@@ -167,8 +165,8 @@ public:
     Point hit_point = ray.at(t_first_hit);
 
     // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
-    Normal normal = Normal(hit_point.x, hit_point.y, hit_point.z); // The normal to the sphere is just the vector from the origin
-    normal = enforce_correct_normal_orientation(normal, ray);      // Enforce normal and hitting ray have opposite directions
+    Normal normal{hit_point.x, hit_point.y, hit_point.z};     // The normal to the sphere is just the vector from the origin
+    normal = enforce_correct_normal_orientation(normal, ray); // Enforce normal and hitting ray have opposite directions
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
     // reference frame by our convention)
@@ -180,12 +178,11 @@ public:
     Vec2d surface_coordinates = Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
 
     // 7. Transform the intersection point parameters back to the world's reference frame
-    std::optional<HitRecord> hit{};
-    // Optional type cannot be built by calling the construcor directly, need to use emplace or similar syntax instead
+    std::optional<HitRecord> hit;
     hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
                 t_first_hit);
     return hit;
-  };
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -199,14 +196,14 @@ public:
 
   //-----------Constructors-----------
   /// @brief Default constructor
-  Plane() : Shape() {};
+  Plane() = default;
 
   /// @brief Constructor with parameters
-  Plane(Transformation transformation, std::shared_ptr<Material> material = nullptr) : Shape(transformation, material) {};
+  Plane(const Transformation &transformation, std::shared_ptr<Material> material = nullptr) : Shape{transformation, material} {}
 
   //--------------------Methods----------------------
 
-  virtual std::optional<HitRecord> ray_intersection(Ray ray_world_frame) const override {
+  virtual std::optional<HitRecord> ray_intersection(const Ray &ray_world_frame) const noexcept override {
     // Important note: unless otherwise specified, every geometrical object in the body of this method is in the
     // reference frame of the *standard* plane
 
@@ -218,7 +215,7 @@ public:
       return std::nullopt;
     }
 
-    // 3. Compute the t at the intersection point and return null if t < 0, compute the intersection point
+    // 3. Compute t at the intersection point and return null if t < 0, compute the intersection point
     float t_hit = -ray.origin.to_vector().z / ray.direction.z;
     if (t_hit < ray.tmin || t_hit > ray.tmax) {
       return std::nullopt;
@@ -237,7 +234,7 @@ public:
     hit.emplace(shared_from_this(), transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame,
                 t_hit);
     return hit;
-  };
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -258,8 +255,8 @@ public:
   /// @param position of the light source
   /// @param color of the light
   /// @param fictitious radius, used to compute solid angle rescaling with distance
-  PointLightSource(Point point = Point(), Color color = Color(1.f, 1.f, 1.f), float emission_radius = 0.f)
-      : point(point), color(color), emission_radius(emission_radius) {};
+  PointLightSource(Point point = Point(), Color color = WHITE, float emission_radius = 0.f)
+      : point{point}, color{color}, emission_radius{emission_radius} {}
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -279,7 +276,7 @@ public:
   // ----------- Constructors -----------
 
   /// @brief Default constructor
-  World() : objects(), light_sources() {};
+  World() = default;
 
   // -------------------- Methods ----------------------
 
@@ -294,7 +291,7 @@ public:
   /// @brief Finds the closest intersection of a ray with the objects in the scene
   /// @param ray to be traced through the world
   /// @return closest intersection info (or std::nullopt if no hit)
-  std::optional<HitRecord> ray_intersection(const Ray &ray) const {
+  std::optional<HitRecord> ray_intersection(const Ray &ray) const noexcept {
     std::optional<HitRecord> closest_hit; // closest hit found (if any)
 
     // Loop through all objects in World
@@ -307,14 +304,14 @@ public:
         closest_hit = hit;
       }
     }
-    return closest_hit; // Return the closest hit (or nullopt if none found)
+    return closest_hit; // Return the closest hit (or std::nullopt if none found)
   }
 
   /// @brief Finds the first intersection of a ray with objects in the world list (in iteration order, not necessarily the
   /// closest) used to speed up on_off rendering of images
   /// @param ray to be traced through the world
   /// @return first intersection info (or std::nullopt if no hit is found)
-  std::optional<HitRecord> on_off_ray_intersection(const Ray &ray) const {
+  std::optional<HitRecord> on_off_ray_intersection(const Ray &ray) const noexcept {
     std::optional<HitRecord> first_hit; // First hit found in the list (if any)
 
     // Loop through all objects in World
@@ -324,7 +321,7 @@ public:
         return first_hit; // Return the first hit found
       }
     }
-    return first_hit; // Return the first hit (or nullopt if none found)
+    return first_hit; // Return the first hit (nullopt if none is found)
   }
 
   /// @brief Compute ray connecting a viewer's point to a point on the surface of an object if the latter is visible
@@ -332,6 +329,7 @@ public:
   /// @param surface point
   /// @param normal at the surface
   std::optional<Vec> offset_if_visible(Point viewer_point, Point surface_point, Normal normal_at_surface) {
+    // TODO reconsider this method
     Vec in_dir = surface_point - viewer_point;
     Ray in_ray{viewer_point, in_dir};
 
@@ -340,8 +338,8 @@ public:
       return std::nullopt;
     }
 
-    // Note that the algorithm doesn't consider the case where the point light source is visible via a speculaar reflection
-    // Loop over the objects in the World and return null if one of them sits before surface_point
+    // Note that the algorithm doesn't consider the case where the point light source is visible via a specular reflection
+    // Loop over the objects in the World and return nullopt if one of them sits before surface_point
     for (const auto &object : objects) {
       std::optional<HitRecord> hit = object->ray_intersection(in_ray);
       if (hit.has_value() && hit->t < 1.f && !hit->world_point.is_close(surface_point)) {

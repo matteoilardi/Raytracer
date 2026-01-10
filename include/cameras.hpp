@@ -63,7 +63,7 @@ public:
 
   /// @brief apply a transformation to the ray (origin transformed like a point, direction transformed like a vector)
   /// @param transformation to be applied
-  constexpr Ray transform(const Transformation &T) noexcept { return Ray(T * origin, T * direction, tmin, tmax, depth); };
+  constexpr Ray transform(const Transformation &T) const noexcept { return Ray(T * origin, T * direction, tmin, tmax, depth); };
 };
 
 // ------------------------------------------------------------------------------------------------------------
