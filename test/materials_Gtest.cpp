@@ -85,8 +85,8 @@ TEST(BRDFTest, test_specular_brdf_reflection) {
   expected_out = expected_out.normalized();
 
   // Build the BRDF
-  auto pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
-  SpecularBRDF brdf(pigment);
+  auto pigment = std::make_unique<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
+  SpecularBRDF brdf(std::move(pigment));
   auto pcg = std::make_shared<PCG>();
 
   // Call scatter_ray

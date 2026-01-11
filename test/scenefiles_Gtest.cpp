@@ -250,42 +250,40 @@ TEST(SceneTest, test_parse_scene) {
   EXPECT_EQ(scene.materials.count("ground_material"), 1);
 
   // Retrieve the pointers to the materials and the BRDFs
-  auto sphere_material = scene.materials["sphere_material"];
-  auto sky_material = scene.materials["sky_material"];
-  auto ground_material = scene.materials["ground_material"];
+  const Material &sphere_material = scene.materials["sphere_material"];
+  const Material &sky_material = scene.materials["sky_material"];
+  const Material &ground_material = scene.materials["ground_material"];
 
-  auto sky_brdf = dynamic_pointer_cast<DiffusiveBRDF>(sky_material->brdf);
-  auto sky_brdf_pigment = dynamic_pointer_cast<UniformPigment>(sky_material->brdf->pigment);
-  // dynamic_pointer_cast converts a smart pointer to the base class into a smart pointer to a specific derived class
-  // it fails (returns nullptr) if the object pointed at is NOT an instance of the derived class
+  auto sky_brdf = dynamic_cast<DiffusiveBRDF *>(sky_material.brdf.get());
+  auto sky_brdf_pigment = dynamic_cast<UniformPigment *>(sky_material.brdf->pigment.get());
 
-  EXPECT_TRUE(sky_brdf);
-  EXPECT_TRUE(sky_brdf_pigment);
+  EXPECT_NE(sky_brdf, nullptr);
+  EXPECT_NE(sky_brdf_pigment, nullptr);
   EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // Color is a member of UniformPigment only, not of the base class so
                                                           // dynamic_pointer_cast is required for this line to compile
 
-  auto ground_brdf = dynamic_pointer_cast<DiffusiveBRDF>(ground_material->brdf);
-  auto ground_brdf_pigment = dynamic_pointer_cast<CheckeredPigment>(ground_material->brdf->pigment);
-  EXPECT_TRUE(ground_brdf);
-  EXPECT_TRUE(ground_brdf_pigment);
+  auto ground_brdf = dynamic_cast<DiffusiveBRDF *>(ground_material.brdf.get());
+  auto ground_brdf_pigment = dynamic_cast<CheckeredPigment *>(ground_material.brdf->pigment.get());
+  EXPECT_NE(ground_brdf, nullptr);
+  EXPECT_NE(ground_brdf_pigment, nullptr);
   EXPECT_TRUE(ground_brdf_pigment->color1.is_close(Color(0.3f, 0.5f, 0.1f)));
   EXPECT_TRUE(ground_brdf_pigment->color2.is_close(Color(0.1f, 0.2f, 0.5f)));
   EXPECT_EQ(ground_brdf_pigment->n_intervals, 4);
 
-  auto sphere_brdf = dynamic_pointer_cast<SpecularBRDF>(sphere_material->brdf);
-  auto sphere_brdf_pigment = dynamic_pointer_cast<UniformPigment>(sphere_material->brdf->pigment);
-  EXPECT_TRUE(sphere_brdf);
-  EXPECT_TRUE(sphere_brdf_pigment);
+  auto sphere_brdf = dynamic_cast<SpecularBRDF *>(sphere_material.brdf.get());
+  auto sphere_brdf_pigment = dynamic_cast<UniformPigment *>(sphere_material.brdf->pigment.get());
+  EXPECT_NE(sphere_brdf, nullptr);
+  EXPECT_NE(sphere_brdf_pigment, nullptr);
   EXPECT_TRUE(sphere_brdf_pigment->color.is_close(Color(0.5f, 0.5f, 0.5f)));
 
-  auto sky_emitted_radiance = dynamic_pointer_cast<UniformPigment>(sky_material->emitted_radiance);
-  auto ground_emitted_radiance = dynamic_pointer_cast<UniformPigment>(ground_material->emitted_radiance);
-  auto sphere_emitted_radiance = dynamic_pointer_cast<UniformPigment>(sphere_material->emitted_radiance);
-  EXPECT_TRUE(sky_emitted_radiance);
+  auto sky_emitted_radiance = dynamic_cast<UniformPigment *>(sky_material.emitted_radiance.get());
+  auto ground_emitted_radiance = dynamic_cast<UniformPigment *>(ground_material.emitted_radiance.get());
+  auto sphere_emitted_radiance = dynamic_cast<UniformPigment *>(sphere_material.emitted_radiance.get());
+  EXPECT_NE(sky_emitted_radiance, nullptr);
   EXPECT_TRUE(sky_emitted_radiance->color.is_close(Color(0.7f, 0.5f, 1.f)));
-  EXPECT_TRUE(ground_emitted_radiance);
+  EXPECT_NE(ground_emitted_radiance, nullptr);
   EXPECT_TRUE(ground_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
-  EXPECT_TRUE(sphere_emitted_radiance);
+  EXPECT_NE(sphere_emitted_radiance, nullptr);
   EXPECT_TRUE(sphere_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
 
   // Check defined Shapes

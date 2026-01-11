@@ -48,8 +48,10 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
                                        {-0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, -0.5f}, {-0.5f, -0.5f, 0.5f}, {-0.5f, -0.5f, -0.5f},
                                        {0.0f, 0.0f, -0.5f}, {0.0f, 0.5f, 0.0f}};
 
+  const Material material{};
+
   for (const Vec &pos : sphere_positions) {
-    auto sphere = std::make_unique<Sphere>(translation(pos) * sc);
+    auto sphere = std::make_unique<Sphere>(translation(pos) * sc, material);
     world->add_object(std::move(sphere));
   }
 
@@ -71,26 +73,27 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   std::shared_ptr<World> world = std::make_shared<World>();
 
   // 2. Define Pigments and Materials
-  auto sky_emission = std::make_shared<UniformPigment>(Color(0.2f, 0.3f, 1.f));
-  auto black_pigment = std::make_shared<UniformPigment>(BLACK);
-  auto sky_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(black_pigment), sky_emission);
+  auto sky_emission = std::make_unique<UniformPigment>(Color{0.2f, 0.3f, 1.f});
+  auto sky_material = Material{std::make_unique<DiffusiveBRDF>(std::make_unique<UniformPigment>(BLACK)), std::move(sky_emission)};
 
-  auto ground_pattern = std::make_shared<CheckeredPigment>(Color(0.3f, 0.5f, 0.1f), Color(0.1f, 0.2f, 0.5f), 4);
-  auto ground_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(ground_pattern),
-                                                    std::make_shared<UniformPigment>(Color(0.f, 0.f, 0.f)));
+  auto ground_pattern = std::make_unique<CheckeredPigment>(Color{0.3f, 0.5f, 0.1f}, Color{0.1f, 0.2f, 0.5f}, 4);
+  auto ground_material =
+      Material{std::make_unique<DiffusiveBRDF>(std::move(ground_pattern)), std::make_unique<UniformPigment>(BLACK)};
 
-  auto grey_pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
-  auto sphere_material = std::make_shared<Material>(std::make_shared<SpecularBRDF>(grey_pigment), black_pigment);
+  auto grey_pigment = std::make_unique<UniformPigment>(Color{0.5f, 0.5f, 0.5f});
+  auto sphere_material =
+      Material{std::make_unique<SpecularBRDF>(std::move(grey_pigment)), std::make_unique<UniformPigment>(BLACK)};
 
-  auto red_pigment = std::make_shared<UniformPigment>(Color(0.8f, 0.1f, 0.f));
-  auto sphere2_material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(red_pigment), black_pigment);
+  auto red_pigment = std::make_unique<UniformPigment>(Color{0.8f, 0.1f, 0.f});
+  auto sphere2_material =
+      Material{std::make_unique<DiffusiveBRDF>(std::move(red_pigment)), std::make_unique<UniformPigment>(BLACK)};
 
   // 3. Add objects
   Transformation sky_transform = scaling({50.f, 50.f, 50.f});
   world->add_object(std::make_unique<Sphere>(sky_transform, sky_material));
-  world->add_object(std::make_unique<Plane>(translation(Vec(0.f, 0.f, -2.f)), ground_material));
-  world->add_object(std::make_unique<Sphere>(scaling({0.4f, 0.4f, 0.4f}), sphere_material));
-  world->add_object(std::make_unique<Sphere>(translation(Vec(0.f, -1.5f, -2.f)), sphere2_material));
+  world->add_object(std::make_unique<Plane>(translation{Vec{0.f, 0.f, -2.f}}, ground_material));
+  world->add_object(std::make_unique<Sphere>(scaling{{0.4f, 0.4f, 0.4f}}, sphere_material));
+  world->add_object(std::make_unique<Sphere>(translation{Vec{0.f, -1.5f, -2.f}}, sphere2_material));
 
   // 4. Setup camera
   std::unique_ptr<Camera> camera;

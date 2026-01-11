@@ -37,6 +37,7 @@ class Material;
 
 /// @brief Abstract functor that associates a Color to a Vec2d
 struct Pigment {
+  virtual ~Pigment() {}
 
   //------------Methods-----------
   virtual Color operator()(Vec2d uv) const = 0;
@@ -143,11 +144,13 @@ public:
 class BRDF {
 public:
   //-------Properties--------
-  std::shared_ptr<Pigment> pigment;
+  std::unique_ptr<Pigment> pigment;
 
   //-----------Constructors-----------
 
-  BRDF(std::shared_ptr<Pigment> pigment) : pigment{pigment} {}
+  BRDF(std::unique_ptr<Pigment> pigment) : pigment{std::move(pigment)} {}
+
+  virtual ~BRDF() {}
 
   //------------Methods-----------
 
@@ -179,9 +182,9 @@ public:
 
   //-----------Constructor-----------
   /// @param pigment of the object
-  DiffusiveBRDF(std::shared_ptr<Pigment> pigment = nullptr) : BRDF{pigment} {
+  DiffusiveBRDF(std::unique_ptr<Pigment> pigment = nullptr) : BRDF{std::move(pigment)} {
     if (!this->pigment) {
-      this->pigment = std::make_shared<UniformPigment>(); // if no pigment is provided, set uniform pigment (black)
+      this->pigment = std::make_unique<UniformPigment>(); // if no pigment is provided, set uniform pigment (black)
     }
   };
 
@@ -218,10 +221,10 @@ public:
   //-------Properties--------
 
   //-----------Constructor-----------
-  SpecularBRDF(std::shared_ptr<Pigment> pigment = nullptr) : BRDF{pigment} {
+  SpecularBRDF(std::unique_ptr<Pigment> pigment = nullptr) : BRDF{std::move(pigment)} {
     if (!this->pigment) {
       this->pigment =
-          std::make_shared<UniformPigment>(WHITE); // if no pigment is provided, set uniform pigment WHITE for perfect mirror
+          std::make_unique<UniformPigment>(WHITE); // if no pigment is provided, set uniform pigment WHITE for perfect mirror
     }
   }
 
@@ -267,18 +270,25 @@ public:
 class Material {
 public:
   //-------Properties--------
-  std::shared_ptr<BRDF> brdf;
-  std::shared_ptr<Pigment> emitted_radiance; // Pigment that describes the emitted radiance of the material, if any
+  std::unique_ptr<BRDF> brdf;
+  std::unique_ptr<Pigment> emitted_radiance; // Pigment that describes the emitted radiance of the material, if any
 
   //-----------Constructors-----------
-  Material(std::shared_ptr<BRDF> brdf = nullptr, std::shared_ptr<Pigment> emitted_radiance = nullptr)
-      : brdf{brdf}, emitted_radiance{emitted_radiance} {
+  Material(std::unique_ptr<BRDF> brdf = nullptr, std::unique_ptr<Pigment> emitted_radiance = nullptr)
+      : brdf{std::move(brdf)}, emitted_radiance{std::move(emitted_radiance)} {
     if (!this->brdf) {
-      this->brdf = std::make_shared<DiffusiveBRDF>(); // If no BRDF is provided, set diffusive BRDF with uniform pigment black
+      this->brdf = std::make_unique<DiffusiveBRDF>(); // If no BRDF is provided, set diffusive BRDF with uniform pigment black
     }
     if (!this->emitted_radiance) {
       this->emitted_radiance =
-          std::make_shared<UniformPigment>(); // If no emitted radiance is provided, set uniform pigment black
+          std::make_unique<UniformPigment>(); // If no emitted radiance is provided, set uniform pigment black
     }
   }
 };
+
+/// @brief Build default material
+/// @details Use where a shape's material doesn't matter, e. g. in tests (a material is always required)
+inline Material make_neutral_material() {
+  return Material{std::make_unique<DiffusiveBRDF>(std::make_unique<UniformPigment>(WHITE)),
+                  std::make_unique<UniformPigment>(BLACK)};
+}

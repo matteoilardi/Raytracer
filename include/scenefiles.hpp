@@ -529,11 +529,11 @@ public:
 class Scene {
 public:
   // ---- properties ----
-  std::unordered_map<std::string, std::shared_ptr<Material>> materials; // map of material names to Material objects
-  std::shared_ptr<World> world;                                         // world object top render
-  std::shared_ptr<Camera> camera = nullptr;                             // camera used for firing rays
-  std::unordered_map<std::string, float> float_variables;               // float identifiers table
-  std::unordered_set<std::string> overwritten_variables; // set of float identifiers that can be overwritten from command line
+  std::unordered_map<std::string, Material> materials;    // map of material names to Material objects
+  std::shared_ptr<World> world;                           // world object top render
+  std::shared_ptr<Camera> camera = nullptr;               // camera used for firing rays
+  std::unordered_map<std::string, float> float_variables; // float identifiers table
+  std::unordered_set<std::string> overwritten_variables;  // set of float identifiers that can be overwritten from command line
 
   // -------- constructors --------
   Scene() : world(std::make_shared<World>()) {}
@@ -632,8 +632,8 @@ public:
   }
 
   ///@brief Parse a pigment from the input stream according to the expected format
-  std::shared_ptr<Pigment> parse_pigment(InputStream &input_file) {
-    std::shared_ptr<Pigment> result;
+  std::unique_ptr<Pigment> parse_pigment(InputStream &input_file) {
+    std::unique_ptr<Pigment> result;
 
     // Make sure the pigment name is one of those expected (and currently implemented)
     Keyword pigment_keyword = expect_keywords(input_file, {Keyword::UNIFORM, Keyword::CHECKERED, Keyword::IMAGE});
@@ -644,7 +644,7 @@ public:
     switch (pigment_keyword) {
     case Keyword::UNIFORM: {
       Color color = parse_color(input_file);
-      result = std::make_shared<UniformPigment>(color);
+      result = std::make_unique<UniformPigment>(color);
       break;
     }
     case Keyword::CHECKERED: {
@@ -653,13 +653,13 @@ public:
       Color color2 = parse_color(input_file);
       expect_symbol(input_file, ',');
       int n_intervals = static_cast<int>(expect_number(input_file));
-      result = std::make_shared<CheckeredPigment>(color1, color2, n_intervals);
+      result = std::make_unique<CheckeredPigment>(color1, color2, n_intervals);
       break;
     }
     case Keyword::IMAGE: {
       std::string file_name = expect_string(input_file);
       HdrImage image{file_name};
-      result = std::make_shared<ImagePigment>(image);
+      result = std::make_unique<ImagePigment>(image);
       break;
     }
     default:
@@ -671,34 +671,34 @@ public:
   }
 
   /// @brief Parse a BRDF from the input stream according to the expected format
-  std::shared_ptr<BRDF> parse_brdf(InputStream &input_stream) {
+  std::unique_ptr<BRDF> parse_brdf(InputStream &input_stream) {
 
     // Make sure the BRDF type is one of those expected (and currently implemented)
     Keyword brdf_keyword = expect_keywords(input_stream, {Keyword::DIFFUSE, Keyword::SPECULAR});
     expect_symbol(input_stream, '(');
-    std::shared_ptr<Pigment> pigment = parse_pigment(input_stream);
+    std::unique_ptr<Pigment> pigment = parse_pigment(input_stream);
     expect_symbol(input_stream, ')');
 
     // Depending on the type of BRDF, create the appropriate object
     switch (brdf_keyword) {
     case Keyword::DIFFUSE:
-      return std::make_shared<DiffusiveBRDF>(pigment);
+      return std::make_unique<DiffusiveBRDF>(std::move(pigment));
     case Keyword::SPECULAR:
-      return std::make_shared<SpecularBRDF>(pigment);
+      return std::make_unique<SpecularBRDF>(std::move(pigment));
     default:
       throw std::logic_error("Unreachable code: unknown BRDF type");
     }
   }
 
   /// @brief Parse a Material from the input stream according to the expected format
-  std::shared_ptr<Material> parse_material(InputStream &input_stream) {
+  Material parse_material(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
     auto brdf = parse_brdf(input_stream);
     expect_symbol(input_stream, ',');
     auto emitted_radiance = parse_pigment(input_stream);
     expect_symbol(input_stream, ')');
 
-    return std::make_shared<Material>(brdf, emitted_radiance);
+    return Material{std::move(brdf), std::move(emitted_radiance)};
   }
 
   /// @brief Parse a Transformation from the input stream: lookahead of one token required

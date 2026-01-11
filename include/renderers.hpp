@@ -89,8 +89,8 @@ public:
       return background_color;
     }
     // Return the color of the closest object hit (if any), both the brdf pigment and the emitted radiance
-    return (*(hit->shape->material->brdf->pigment))(hit->surface_point) +
-           (*(hit->shape->material->emitted_radiance))(hit->surface_point);
+    return (*(hit->shape->material.brdf->pigment))(hit->surface_point) +
+           (*(hit->shape->material.emitted_radiance))(hit->surface_point);
   };
 };
 
@@ -117,8 +117,9 @@ public:
   virtual Color operator()(Ray ray) const {
     // Forward declarations
     std::optional<HitRecord> hit;
-    std::shared_ptr<Material> hit_material;
-    std::shared_ptr<BRDF> brdf;
+    const Material *hit_material;
+    BRDF *brdf;
+
     Color reflection_attenuation =
         Color(1.f, 1.f, 1.f); // Attenuation factor due to Specular BRDFs that reflect the incoming ray (if any)
 
@@ -130,10 +131,10 @@ public:
       }
 
       // 2. Unpack hit
-      hit_material = hit->shape->material;
-      brdf = hit_material->brdf;
+      hit_material = &hit->shape->material;
+      brdf = hit_material->brdf.get();
 
-      auto specular = std::dynamic_pointer_cast<SpecularBRDF>(
+      SpecularBRDF *specular = dynamic_cast<SpecularBRDF *>(
           brdf); // Returns nullptr if brdf is not a pointer to an object of the derived class SpecularBRDF
       // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by the
       // reflection law; otherwise go ahead with color evaluation
@@ -212,10 +213,10 @@ public:
     }
 
     // 3. Unpack hit
-    std::shared_ptr<Material> hit_material = hit->shape->material;
-    Color reflected_color = (*(hit_material->brdf->pigment))(hit->surface_point); // both pigment and emitted_radiance are
-                                                                                  // pointers
-    Color emitted_radiance = (*(hit_material->emitted_radiance))(hit->surface_point);
+    const Material &hit_material = hit->shape->material;
+    Color reflected_color = (*(hit_material.brdf->pigment))(hit->surface_point); // both pigment and emitted_radiance are
+                                                                                 // pointers
+    Color emitted_radiance = (*(hit_material.emitted_radiance))(hit->surface_point);
 
     // 4. Apply russian roulette: decide whether to scatter new rays and rescale the BRDF to compesate for possible
     // truncations and get unbiased expected value
@@ -241,7 +242,7 @@ public:
     Color cum_radiance = Color();
     if (hit_lum > 0.f) { // Proceed with recursion only if hit object is not perfectly absorbing (i.e. hit_lum==0)
       for (int i_ray = 0; i_ray < n_rays; i_ray++) {
-        Ray new_ray = hit_material->brdf->scatter_ray(
+        Ray new_ray = hit_material.brdf->scatter_ray(
             pcg, ray.direction, hit->world_point, hit->normal,
             ray.depth + 1); // Scatter a new ray by sampling the solid angle distribution proportional to the BRDF
         cum_radiance = cum_radiance + (*this)(new_ray); // Call this recursively

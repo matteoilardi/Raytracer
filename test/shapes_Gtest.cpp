@@ -18,9 +18,16 @@
 // -------------TESTS FOR SPHERE-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+class SphereTest : public ::testing::Test {
+protected:
+  void SetUp() override { default_material = make_neutral_material(); }
+
+  Material default_material;
+};
+
 // Test two hits from outside the sphere
-TEST(SphereTest, test_outer_hit) {
-  auto unit_sphere = std::make_unique<Sphere>();
+TEST_F(SphereTest, test_outer_hit) {
+  auto unit_sphere = std::make_unique<Sphere>(Transformation{}, default_material);
 
   Ray ray1 = Ray(Point(0.f, 0.f, 2.f), -VEC_Z);
   std::optional<HitRecord> hit1 = unit_sphere->ray_intersection(ray1);
@@ -36,8 +43,8 @@ TEST(SphereTest, test_outer_hit) {
 }
 
 // Test hit from the inside
-TEST(SphereTest, test_inner_hit) {
-  auto unit_sphere = std::make_unique<Sphere>();
+TEST_F(SphereTest, test_inner_hit) {
+  auto unit_sphere = std::make_unique<Sphere>(Transformation{}, default_material);
 
   Ray ray1 = Ray(Point(0.f, 0.f, 0.f), VEC_X);
   std::optional<HitRecord> hit1 = unit_sphere->ray_intersection(ray1);
@@ -47,8 +54,8 @@ TEST(SphereTest, test_inner_hit) {
 }
 
 // Test hits on a translated sphere, ensuring that there are no intersections with the untranslated sphere
-TEST(SphereTest, test_translation) {
-  auto translated_sphere = std::make_unique<Sphere>(translation(Vec(10.f, 0.f, 0.f)));
+TEST_F(SphereTest, test_translation) {
+  auto translated_sphere = std::make_unique<Sphere>(translation(Vec(10.f, 0.f, 0.f)), default_material);
 
   Ray ray1 = Ray(Point(10.f, 0.f, 2.f), -VEC_Z);
   std::optional<HitRecord> hit1 = translated_sphere->ray_intersection(ray1);
@@ -70,8 +77,8 @@ TEST(SphereTest, test_translation) {
 }
 
 // Test normals, which are non-trivial when a scaling is performed on the sphere
-TEST(SphereTest, test_normals) {
-  auto sphere1 = std::make_unique<Sphere>(scaling({2.f, 1.f, 1.f}));
+TEST_F(SphereTest, test_normals) {
+  auto sphere1 = std::make_unique<Sphere>(scaling({2.f, 1.f, 1.f}), default_material);
 
   Ray ray1 = Ray(Point(1.f, 1.f, 0.f), Vec(-1.f, -1.f, 0.f));
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
@@ -83,10 +90,10 @@ TEST(SphereTest, test_normals) {
 }
 
 // Test normal flipping
-TEST(SphereTest, test_normal_flipping) {
+TEST_F(SphereTest, test_normal_flipping) {
   // This scaling flips the sphere about the z-x plane, so that in the standard sphere's reference frame the ray is
   // incoming from the left
-  auto sphere1 = std::make_unique<Sphere>(scaling({1.f, -1.f, 1.f}));
+  auto sphere1 = std::make_unique<Sphere>(scaling({1.f, -1.f, 1.f}), default_material);
 
   Ray ray1 = Ray(Point(0.f, 2.f, 0.f), -VEC_Y);
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
@@ -96,8 +103,8 @@ TEST(SphereTest, test_normal_flipping) {
 }
 
 // Test surface coordinates for non-trivial rays
-TEST(SphereTest, test_surface_coordinates) {
-  auto unit_sphere = std::make_unique<Sphere>();
+TEST_F(SphereTest, test_surface_coordinates) {
+  auto unit_sphere = std::make_unique<Sphere>(Transformation{}, default_material);
 
   // The first four rays hit the unit sphere at the points P1, P2, P3, and P4.
   //
@@ -154,9 +161,16 @@ TEST(SphereTest, test_surface_coordinates) {
 // -------------TESTS FOR PLANE-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+class PlaneTest : public ::testing::Test {
+protected:
+  void SetUp() override { default_material = make_neutral_material(); }
+
+  Material default_material;
+};
+
 // Test intersections between default plane and orthogonal and parallel rays
-TEST(PlaneTest, test_hit) {
-  auto default_plane = std::make_unique<Plane>();
+TEST_F(PlaneTest, test_hit) {
+  auto default_plane = std::make_unique<Plane>(Transformation{}, default_material);
 
   Ray ray1 = Ray(Point(0.f, 0.f, 1.f), -VEC_Z);
   std::optional<HitRecord> hit1 = default_plane->ray_intersection(ray1);
@@ -179,8 +193,8 @@ TEST(PlaneTest, test_hit) {
 }
 
 // Test intersections with rotated plane
-TEST(PlaneTest, test_rotation) {
-  auto rotated_plane = std::make_unique<Plane>(rotation_y(std::numbers::pi_v<float> / 2.f));
+TEST_F(PlaneTest, test_rotation) {
+  auto rotated_plane = std::make_unique<Plane>(rotation_y(std::numbers::pi_v<float> / 2.f), default_material);
 
   Ray ray1 = Ray(Point(1.f, 0.f, 0.f), -VEC_X);
   std::optional<HitRecord> hit1 = rotated_plane->ray_intersection(ray1);
@@ -203,8 +217,8 @@ TEST(PlaneTest, test_rotation) {
 }
 
 // Test periodic surface coordinates parametrization
-TEST(PlaneTest, test_surface_coordinates) {
-  auto default_plane = std::make_unique<Plane>();
+TEST_F(PlaneTest, test_surface_coordinates) {
+  auto default_plane = std::make_unique<Plane>(Transformation{}, default_material);
 
   Ray ray1 = Ray(Point(0.25f, 0.75f, 1.f), -VEC_Z);
   Ray ray2 = Ray(Point(4.25f, 7.75f, 1.f), -VEC_Z);
@@ -222,12 +236,19 @@ TEST(PlaneTest, test_surface_coordinates) {
 // -------------TESTS FOR WORLD-------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+class WorldTest : public ::testing::Test {
+protected:
+  void SetUp() override { default_material = make_neutral_material(); }
+
+  Material default_material;
+};
+
 // Test ray_intersection method
-TEST(WorldTest, test_ray_intersection) {
+TEST_F(WorldTest, test_ray_intersection) {
   World world = World();
 
-  auto sphere1 = std::make_unique<Sphere>(translation(Vec(2.f, 0.f, 0.f)));
-  auto sphere2 = std::make_unique<Sphere>(translation(Vec(10.f, 0.f, 0.f)));
+  auto sphere1 = std::make_unique<Sphere>(translation(Vec(2.f, 0.f, 0.f)), default_material);
+  auto sphere2 = std::make_unique<Sphere>(translation(Vec(10.f, 0.f, 0.f)), default_material);
 
   world.add_object(std::move(sphere1));
   world.add_object(std::move(sphere2));
@@ -243,11 +264,11 @@ TEST(WorldTest, test_ray_intersection) {
   EXPECT_TRUE(hit2->world_point.is_close(Point(9.f, 0.f, 0.f)));
 }
 
-TEST(WorldTest, test_offset_if_visible) {
+TEST_F(WorldTest, test_offset_if_visible) {
   World world = World();
 
-  auto sphere1 = std::make_unique<Sphere>(translation(2.f * VEC_X));
-  auto sphere2 = std::make_unique<Sphere>(translation(8.f * VEC_X));
+  auto sphere1 = std::make_unique<Sphere>(translation(2.f * VEC_X), default_material);
+  auto sphere2 = std::make_unique<Sphere>(translation(8.f * VEC_X), default_material);
   world.add_object(std::move(sphere1));
   world.add_object(std::move(sphere2));
 

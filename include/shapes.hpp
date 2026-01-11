@@ -73,22 +73,14 @@ public:
   ///@brief transformation describing the actual position of the shape in the world reference frame
   Transformation transformation;
   ///@brief properties (pigment and brdf) of the shape as a function of (u, v)
-  std::shared_ptr<Material> material;
+  const Material &material;
 
   //-----------Constructors-----------
-  /// Default constructor
-  Shape() : transformation{} { material = std::make_shared<Material>(); };
 
   /// @brief Constructor with parameters
   /// @param tranformation taking you to the shape reference frame
   /// @param material properties of the shape (pigment and brdf) as a function of (u, v)
-  Shape(const Transformation &transformation, std::shared_ptr<Material> material = nullptr)
-      : transformation{transformation}, material{material} {
-    if (!this->material) {
-      material = std::make_shared<Material>(); // If no material is provided, set default material with both diffusive BRDF black
-                                               // and uniform pigment black
-    }
-  };
+  Shape(const Transformation &transformation, const Material &material) : transformation{transformation}, material{material} {}
 
   virtual ~Shape() {}
 
@@ -121,11 +113,9 @@ public:
   // specified in the transformation (that can take to an ellipsoid centered anywhere)
 
   //-----------Constructors-----------
-  /// Default constructor
-  Sphere() = default;
 
   /// Constructor with parameters
-  Sphere(const Transformation &transformation, std::shared_ptr<Material> material = nullptr) : Shape{transformation, material} {};
+  Sphere(const Transformation &transformation, const Material &material) : Shape{transformation, material} {};
 
   //--------------------Methods----------------------
 
@@ -206,11 +196,9 @@ public:
   // transformation
 
   //-----------Constructors-----------
-  /// @brief Default constructor
-  Plane() = default;
 
   /// @brief Constructor with parameters
-  Plane(const Transformation &transformation, std::shared_ptr<Material> material = nullptr) : Shape{transformation, material} {}
+  Plane(const Transformation &transformation, const Material &material) : Shape{transformation, material} {}
 
   //--------------------Methods----------------------
 

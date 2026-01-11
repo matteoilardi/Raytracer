@@ -21,8 +21,9 @@ TEST(OnOffTracerTest, test_example) {
   ImageTracer tracer(std::move(img), cam);
 
   auto world = std::make_shared<World>();
-  auto pigment = std::make_shared<UniformPigment>(Color(1.f, 1.f, 1.f));
-  auto material = std::make_shared<Material>(std::make_shared<DiffusiveBRDF>(pigment));
+  auto pigment = std::make_unique<UniformPigment>(Color(1.f, 1.f, 1.f));
+  Material material{std::make_unique<DiffusiveBRDF>(std::move(pigment))};
+
   auto sphere = std::make_unique<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
   world->add_object(std::move(sphere));
 
@@ -44,9 +45,9 @@ TEST(OnOffTracerTest, test_example) {
 // Test flat renderer
 TEST(FlatTracerTest, test_example) {
   Color sphere_color{1.f, 2.f, 3.f};
-  auto pigment = std::make_shared<UniformPigment>(sphere_color);
-  auto brdf = std::make_shared<DiffusiveBRDF>(pigment);
-  auto material = std::make_shared<Material>(brdf);
+  auto pigment = std::make_unique<UniformPigment>(sphere_color);
+  auto brdf = std::make_unique<DiffusiveBRDF>(std::move(pigment));
+  Material material{std::move(brdf)};
 
   // Move the sphere to the center of the screen and make it small enough to cover only the central pixel
   auto sphere = std::make_unique<Sphere>(translation(Vec(2.f, 0.f, 0.f)) * scaling({0.2f, 0.2f, 0.2f}), material);
@@ -81,17 +82,18 @@ TEST(PointLightTracer, test_example) {
   auto cam = std::make_shared<OrthogonalCamera>();
   ImageTracer tracer{std::move(img), cam, 1};
 
-  auto plane_pigment = std::make_shared<UniformPigment>(Color(0.2f, 0.f, 0.f));
-  auto plane_brdf = std::make_shared<DiffusiveBRDF>(plane_pigment);
-  auto plane_emitted_radiance = std::make_shared<UniformPigment>(Color(0.f, 0.3f, 0.f));
-  auto plane_material = std::make_shared<Material>(plane_brdf, plane_emitted_radiance);
-
   // The ray intersects the plane 1 at (1, 0, 0)
+  auto plane_pigment = std::make_unique<UniformPigment>(Color(0.2f, 0.f, 0.f));
+  auto plane_brdf = std::make_unique<DiffusiveBRDF>(std::move(plane_pigment));
+  auto plane_emitted_radiance = std::make_unique<UniformPigment>(Color(0.f, 0.3f, 0.f));
+  Material plane_material{std::move(plane_brdf), std::move(plane_emitted_radiance)};
+
   auto world = std::make_shared<World>();
   auto plane1 = std::make_unique<Plane>(translation(VEC_X) * rotation_y(-std::numbers::pi_v<float> / 2.f), plane_material);
   auto plane2 = std::make_unique<Plane>(translation(VEC_Y) * rotation_x(std::numbers::pi_v<float> / 2.f), plane_material);
   world->add_object(std::move(plane1));
   world->add_object(std::move(plane2));
+
   // The first light source is behind plane 2, the other two are visible from point (1, 0, 0)
   world->add_light_source(std::make_unique<PointLightSource>(Point(0.f, 2.f, 0.f))); // default Color(1.f, 1.f, 1.f)
   world->add_light_source(std::make_unique<PointLightSource>(Point(0.f, -2.f, 0.f)));
@@ -108,20 +110,20 @@ TEST(PointLightTracer, test_example) {
 
 // Test reflective BRDFs are handled corrctly in point light tracing
 TEST(PointLightTracer, test_reflections) {
-  auto black_pigment = std::make_shared<UniformPigment>(BLACK);
-  auto grey_pigment = std::make_shared<UniformPigment>(Color(0.5f, 0.5f, 0.5f));
+  auto make_black_pigment = []() { return std::make_unique<UniformPigment>(BLACK); };
+  auto make_grey_pigment = []() { return std::make_unique<UniformPigment>(Color(0.5f, 0.5f, 0.5f)); };
 
-  // Material mirror
-  auto mirror_brdf = std::make_shared<SpecularBRDF>(grey_pigment);
-  auto mirror_material = std::make_shared<Material>(mirror_brdf, black_pigment);
+  // Mirror material
+  auto mirror_brdf = std::make_unique<SpecularBRDF>(make_grey_pigment());
+  Material mirror_material{std::move(mirror_brdf), make_black_pigment()};
 
   // Material for grey surface
-  auto grey_brdf = std::make_shared<DiffusiveBRDF>(grey_pigment);
-  auto grey_material = std::make_shared<Material>(grey_brdf, black_pigment);
+  auto grey_brdf = std::make_unique<DiffusiveBRDF>(make_grey_pigment());
+  Material grey_material{std::move(grey_brdf), make_black_pigment()};
 
   // Material for the non-reflective and non-emitting sphere
-  auto sphere_brdf = std::make_shared<DiffusiveBRDF>(black_pigment);
-  auto sphere_material = std::make_shared<Material>(sphere_brdf, black_pigment);
+  auto sphere_brdf = std::make_unique<DiffusiveBRDF>(make_black_pigment());
+  Material sphere_material{std::move(sphere_brdf), make_black_pigment()};
 
   Ray ray{Point(), VEC_X};
   auto light_source = std::make_unique<PointLightSource>(Point(-1.f, 0.f, 0.f));
@@ -165,13 +167,19 @@ TEST(PointLightTracer, test_reflections) {
 TEST(PathTracerTest, test_furnace) {
 
   // 1. Build material
-  auto pigment = std::make_shared<UniformPigment>();
-  auto brdf = std::make_shared<DiffusiveBRDF>(pigment);
-  auto emitted_radiance = std::make_shared<UniformPigment>();
-  auto material = std::make_shared<Material>(brdf, emitted_radiance);
+  // Save raw pointer handles before moving the unique_ptrs so that pigment parameters can be mutated inside
+  // the test loop. This is an intentional test-only hack: materials are conceptually immutable, but here we
+  // want to sweep reflectance and emitted radiance without rebuilding the whole scene each iteration.
+  auto pigment = std::make_unique<UniformPigment>();
+  UniformPigment *pigment_raw = pigment.get();
+  auto brdf = std::make_unique<DiffusiveBRDF>(std::move(pigment));
+  auto emitted_radiance = std::make_unique<UniformPigment>();
+  UniformPigment *emitted_radiance_raw = emitted_radiance.get();
+
+  Material material{std::move(brdf), std::move(emitted_radiance)};
 
   // 2. Build enclosing sphere and world
-  auto enclosure = std::make_unique<Sphere>(Transformation(), material); // unit sphere at the origin with material above
+  auto enclosure = std::make_unique<Sphere>(Transformation{}, material);
   auto world = std::make_shared<World>();
   world->add_object(std::move(enclosure));
 
@@ -185,8 +193,8 @@ TEST(PathTracerTest, test_furnace) {
   for (int i = 0; i < 100; i++) {
     float reflectance = pcg->random_float() * 0.9f; // avoid rho_d = 1 for numerical stability
     float luminosity = pcg->random_float();
-    pigment->color = Color(reflectance, 0.f, 0.f);
-    emitted_radiance->color = Color(luminosity, 0.f, 0.f);
+    pigment_raw->color = Color(reflectance, 0.f, 0.f);
+    emitted_radiance_raw->color = Color(luminosity, 0.f, 0.f);
 
     Color total_radiance = renderer(ray);
     Color expected{luminosity / (1.f - reflectance), 0.f, 0.f};
