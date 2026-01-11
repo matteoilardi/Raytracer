@@ -101,6 +101,8 @@ public:
   /// @brief Flip the normal to the surface so that it has negative scalar product with the hitting ray
   /// @param normal to the surface
   /// @param incoming ray hitting the shape
+
+protected:
   static Normal enforce_correct_normal_orientation(Normal normal, const Ray &ray) noexcept {
     // The normal and the ray must have opposite directions, if this is false (dot product>0), flip the normal
     float sign = std::copysignf(1.0f, -(normal * ray.direction));
@@ -134,11 +136,11 @@ public:
     // 1. Transform the ray to the *standard* sphere's reference frame
     Ray ray = ray_world_frame.transform(transformation.inverse());
 
-    // 2. Compute the discriminant of the 2nd degree equation in slides 8b 29-31, return null if the ray is tangent (as
-    // if there were no intersections)
+    // 2. Compute the discriminant of the 2nd degree equation in t for ray-sphere intersection (cfr. slides 8b 29-31), return null
+    // if the ray is tangent (as if there were no intersections)
     Vec O = ray.origin.to_vector();
     float reduced_discriminant = std::powf(O * ray.direction, 2) - ray.direction.squared_norm() * (O.squared_norm() - 1.f);
-    if (reduced_discriminant == 0.f) {
+    if (reduced_discriminant <= 0.f) {
       return std::nullopt;
     }
 
@@ -161,17 +163,12 @@ public:
     Point hit_point = ray.at(t_first_hit);
 
     // 5. Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
-    Normal normal{hit_point.x, hit_point.y, hit_point.z};     // The normal to the sphere is just the vector from the origin
+    Normal normal = calculate_normal(hit_point);
     normal = enforce_correct_normal_orientation(normal, ray); // Enforce normal and hitting ray have opposite directions
 
     // 6. Compute the 2D coordinates on the surface (u,v) of the intersection point (they are the same in the world's
     // reference frame by our convention)
-    float u = atan2f(hit_point.y, hit_point.x) / (2.f * std::numbers::pi_v<float>); // atan2 is the arctangent
-    if (u < 0.f) {
-      u = u + 1.f;
-    } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
-    float v = std::acos(hit_point.z) / std::numbers::pi_v<float>;
-    Vec2d surface_coordinates = Vec2d(u, v); // We follow the convention (u, v) = (phi, theta)
+    Vec2d surface_coordinates = calculate_uv(hit_point);
 
     // 7. Transform the intersection point parameters back to the world's reference frame
     std::optional<HitRecord> hit;
@@ -180,6 +177,22 @@ public:
 
     // PERF: declaring `hit` at the start of the function and returning it instead of std::nullopt appears to reduce performance
     // significantly.
+  }
+
+private:
+  /// @brief Calculate normal at given hit point
+  static constexpr Normal calculate_normal(Point hit_point) noexcept {
+    return Normal{hit_point.x, hit_point.y, hit_point.z}; // The normal to the sphere is just the vector from the origin
+  }
+
+  /// @brief Calculate (u, v) coordinates of given point (i. e. spherical coordinates)
+  static constexpr Vec2d calculate_uv(Point point) noexcept {
+    float u = atan2f(point.y, point.x) / (2.f * std::numbers::pi_v<float>); // atan2 is the arctangent
+    if (u < 0.f) {
+      u = u + 1.f;
+    } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]
+    float v = std::acos(point.z) / std::numbers::pi_v<float>;
+    return Vec2d{u, v}; // We follow the convention (u, v) = (phi, theta)
   }
 };
 
@@ -214,23 +227,32 @@ public:
     }
 
     // 3. Compute t at the intersection point and return null if t < 0, compute the intersection point
-    float t_hit = -ray.origin.to_vector().z / ray.direction.z;
+    float t_hit = -ray.origin.z / ray.direction.z;
     if (t_hit < ray.tmin || t_hit > ray.tmax) {
       return std::nullopt;
     }
     Point hit_point = ray.at(t_hit);
 
     // 4. Compute the normal to the plane at the intersection point (i. e. choose the sign of the normal)
-    Normal normal = enforce_correct_normal_orientation(VEC_Z.to_normal(), ray);
+    Normal normal = calculate_normal();
+    normal = enforce_correct_normal_orientation(normal, ray);
 
-    // 5. Compute surface 2D coordinates (u,v) of the intersection point (periodic parametrization Tomasi Lesson 8a
-    // slides 37-38)
-    Vec2d surface_coordinates = Vec2d(hit_point.x - std::floor(hit_point.x), hit_point.y - std::floor(hit_point.y));
+    // 5. Compute surface 2D coordinates (u,v) of the intersection point
+    Vec2d surface_coordinates = calculate_uv(hit_point);
 
     // 6. Transform the intersection point parameters (HitRecord) back to the world reference frame
     std::optional<HitRecord> hit;
     hit.emplace(this, transformation * hit_point, transformation * normal, surface_coordinates, ray_world_frame, t_hit);
     return hit;
+  }
+
+private:
+  /// @brief Calculate normal at given hit point
+  static constexpr Normal calculate_normal() noexcept { return VEC_Z.to_normal(); }
+
+  /// @brief Calculate (u, v) coordinates of given point (periodic parametrization)
+  static constexpr Vec2d calculate_uv(Point point) noexcept {
+    return Vec2d{point.x - std::floor(point.x), point.y - std::floor(point.y)};
   }
 };
 
@@ -265,7 +287,7 @@ class World {
 public:
   // ------- Properties --------
 
-  /// @brief vector containing the shapes in the scene (stored as shared_ptr for polymorphism and memory safety)
+  /// @brief vector containing the shapes in the scene
   std::vector<std::unique_ptr<Shape>> objects;
   /// @brief vector containing the light sources in the scene (use for illumination in point-light tracing)
   std::vector<std::unique_ptr<PointLightSource>> light_sources;
