@@ -185,14 +185,16 @@ TEST(PathTracerTest, test_furnace) {
 
   // 3. Cast ray and compute total radiance
   Ray ray{Point(), VEC_X};
-  auto pcg = std::make_shared<PCG>();
+  auto pcg = std::make_unique<PCG>();
+  auto pcg_test = std::make_unique<PCG>();
 
-  PathTracer renderer{world, pcg, 1, 200, 200}; // Russian roulette is not invoked up to depth=200, which is the max depth
+  PathTracer renderer{world, std::move(pcg), 1, 200,
+                      200}; // Russian roulette is not invoked up to depth=200, which is the max depth
 
   // 4. Compute total radiance and compare with expected result
   for (int i = 0; i < 100; i++) {
-    float reflectance = pcg->random_float() * 0.9f; // avoid rho_d = 1 for numerical stability
-    float luminosity = pcg->random_float();
+    float reflectance = pcg_test->random_float() * 0.9f; // avoid rho_d = 1 for numerical stability
+    float luminosity = pcg_test->random_float();
     pigment_raw->color = Color(reflectance, 0.f, 0.f);
     emitted_radiance_raw->color = Color(luminosity, 0.f, 0.f);
 

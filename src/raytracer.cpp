@@ -10,7 +10,6 @@
 #include <fstream>
 #include <iostream>
 
-
 int main(int argc, char **argv) {
   CLI::App app{"Raytracer"};    // Define the main CLI11 App
   argv = app.ensure_utf8(argv); // Ensure utf8 standard
@@ -71,9 +70,7 @@ int main(int argc, char **argv) {
   // Default value is "demo"
   std::string output_file_name_demo;
   demo_subc->add_option("-o,--output-file", output_file_name_demo, "Insert name of the output PNG file")->default_val("demo");
-  demo_subc->callback([&]() {
-    output_file_name = output_file_name_demo;
-  });
+  demo_subc->callback([&]() { output_file_name = output_file_name_demo; });
 
   // Add option for observer transformation: rotation around the scene and camera-screen distance (only for perspective camera).
   // Angles phi and theta: longitude and colatitude (theta=0 -> north pole). Default position along the negative x direction:
@@ -85,15 +82,13 @@ int main(int argc, char **argv) {
   demo_subc->add_option("-d,--distance", distance, "Specify observer's distance from screen (default is 1)")
       ->excludes(orthogonal_flag);
 
-  demo_subc
-      ->add_option_function<float>(
-          "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi_v<float>; },
-          "Specify observer's colatitude angle theta (0 degree is north pole, default is 90)");
+  demo_subc->add_option_function<float>(
+      "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi_v<float>; },
+      "Specify observer's colatitude angle theta (0 degree is north pole, default is 90)");
 
-  demo_subc
-      ->add_option_function<float>(
-          "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi_v<float>; },
-          "Specify observer's longitude angle phi (default is 180 degrees, observer along negative direction of x-axis)");
+  demo_subc->add_option_function<float>(
+      "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi_v<float>; },
+      "Specify observer's longitude angle phi (default is 180 degrees, observer along negative direction of x-axis)");
 
   demo_subc
       ->add_option<int>("--antialiasing", samples_per_pixel_edge,
@@ -101,9 +96,11 @@ int main(int argc, char **argv) {
       ->default_val("1");
 
   demo_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber)->default_val("2.2"); // Reject negative values
+      ->check(CLI::PositiveNumber)
+      ->default_val("2.2"); // Reject negative values
   demo_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber)->default_val("0.18"); // Reject negative values
+      ->check(CLI::PositiveNumber)
+      ->default_val("0.18"); // Reject negative values
 
   // -----------------------------------------------------------
   // Command line parsing for "render" mode
@@ -126,11 +123,13 @@ int main(int argc, char **argv) {
 
   // Input (source) file
   std::string source_file_name;
-  render_subc->add_option("source", source_file_name, "Specify input (source) file.txt containing the scene to render")->required();
+  render_subc->add_option("source", source_file_name, "Specify input (source) file.txt containing the scene to render")
+      ->required();
 
   // Output file
   std::string output_file_name_render;
-  render_subc->add_option("-o,--output-file", output_file_name_render, "Insert name of the output file name stem (default: <source>_<mode>)");
+  render_subc->add_option("-o,--output-file", output_file_name_render,
+                          "Insert name of the output file name stem (default: <source>_<mode>)");
   render_subc->callback([&]() {
     if (output_file_name_render.empty()) { // Extract and assign source file name stem and render mode
       std::filesystem::path source_path(source_file_name);
@@ -188,9 +187,11 @@ int main(int argc, char **argv) {
       ->default_val("false");
 
   render_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber)->default_val("2.2"); // Reject negative values
+      ->check(CLI::PositiveNumber)
+      ->default_val("2.2"); // Reject negative values
   render_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber)->default_val("0.18"); // Reject negative values
+      ->check(CLI::PositiveNumber)
+      ->default_val("0.18"); // Reject negative values
 
   // -----------------------------------------------------------
   // Command line parsing for pfm2png converter mode
@@ -203,9 +204,11 @@ int main(int argc, char **argv) {
   pfm2png_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->required();
 
   pfm2png_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber)->default_val("2.2"); // Reject negative values
+      ->check(CLI::PositiveNumber)
+      ->default_val("2.2"); // Reject negative values
   pfm2png_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber)->default_val("0.18"); // Reject negative values
+      ->check(CLI::PositiveNumber)
+      ->default_val("0.18"); // Reject negative values
 
   // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
   // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
@@ -283,14 +286,12 @@ int main(int argc, char **argv) {
     } else if (render_mode_str == "point_light") {
       renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
     } else if (render_mode_str == "path") {
-      auto pcg = std::make_shared<PCG>();
-      renderer = make_shared<PathTracer>(scene.world, pcg, n_rays, russian_roulette_lim, max_depth, BLACK);
+      auto pcg = std::make_unique<PCG>();
+      renderer = make_shared<PathTracer>(scene.world, std::move(pcg), n_rays, russian_roulette_lim, max_depth, BLACK);
     }
 
     std::cout << "Rendering image in " << source_file_name << "... " << std::endl << std::flush;
-    run_with_timer([&]() {
-      tracer.fire_all_rays([&](const Ray &ray) { return (*renderer)(ray); }, show_progress);
-    });
+    run_with_timer([&]() { tracer.fire_all_rays([&](const Ray &ray) { return (*renderer)(ray); }, show_progress); });
 
     // Save PFM image
     tracer.image->write_pfm(output_file_name + ".pfm");

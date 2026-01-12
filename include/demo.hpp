@@ -105,14 +105,19 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   }
 
   // 5. Render image with path tracing
-  auto pcg = std::make_shared<PCG>();
-  PathTracer tracer(world, pcg, 10, 2, 6); // n_rays, roulette limit, max_depth
+  auto pcg = std::make_unique<PCG>();
+  PathTracer tracer(world, std::move(pcg), 10, 2, 6); // n_rays, roulette limit, max_depth
   // FlatTracer tracer(world);
 
   // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);
   ImageTracer image_tracer(std::move(image), std::move(camera));
-  image_tracer.fire_all_rays(tracer, show_progress);
+
+  image_tracer.fire_all_rays([&tracer](Ray ray) { return tracer(ray); }, show_progress);
+  // Note that you cannot pass tracer directly: since the argument of ImageTracer::fire_all_rays is wrapped by
+  // std::function, which is copyable, it should be copyable as well. But PathTracer is not copyable, because it
+  // stores a unique_ptr. The lambda here acts like a copyable "proxy" that borrows 'tracer' for the duration of
+  // the call. Instead of resorting to the lamba, one might also use std::move_only_function (C++23) and move tracer.
 
   return std::move(image_tracer.image);
 }

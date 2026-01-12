@@ -168,8 +168,7 @@ public:
   /// @param point world point where the incoming ray hits the surface
   /// @param normal to the surface at that point
   /// @param depth value for the newly scattered ray, counting how many times it has been reflected
-  virtual Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec in_dir, Point intersection_point, Normal normal,
-                          int depth) const noexcept = 0;
+  virtual Ray scatter_ray(PCG *pcg, Vec in_dir, Point intersection_point, Normal normal, int depth) const noexcept = 0;
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -195,8 +194,7 @@ public:
     return (*pigment)(uv) * (1.f / std::numbers::pi_v<float>);
   }
 
-  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec in_dir, Point intersection_point, Normal normal,
-                  int depth) const noexcept override {
+  Ray scatter_ray(PCG *pcg, Vec in_dir, Point intersection_point, Normal normal, int depth) const noexcept override {
     normal = normal.normalized();
     // Note that BRDF::scatter_ray methods are the only places in the code that require a normalized normal (except for
     // SpecularBRDF::eval, which is never used), so it makes sense to enforce normalization here.
@@ -249,8 +247,7 @@ public:
   }
 
   /// @brief Deterministic perfect mirror reflection
-  Ray scatter_ray(std::shared_ptr<PCG> pcg, Vec in_dir, Point intersection_point, Normal normal,
-                  int depth) const noexcept override {
+  Ray scatter_ray(PCG *pcg, Vec in_dir, Point intersection_point, Normal normal, int depth) const noexcept override {
     in_dir = in_dir.normalized();
     Vec n = normal.normalized().to_vector();
     // Note that BRDF::scatter_ray methods are the only places in the code that require a normalized normal (except for

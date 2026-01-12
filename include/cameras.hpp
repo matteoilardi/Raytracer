@@ -170,16 +170,16 @@ public:
   std::unique_ptr<HdrImage> image;
   std::shared_ptr<Camera> camera; // use shared_ptr for camera to allow sharing with Scene::camera
   int samples_per_pixel_edge;     // total samples per pixel = samples_per_pixel_side^2
-  std::shared_ptr<PCG> pcg;       // random number generator, for antialiasing (stratified sampling)
+  std::unique_ptr<PCG> pcg;       // random number generator, for antialiasing (stratified sampling)
 
   //-----------Constructors-----------
 
   /// @brief Constructor with parameters
   ImageTracer(std::unique_ptr<HdrImage> image, std::shared_ptr<Camera> camera, int samples_per_pixel_edge = 1,
-              std::shared_ptr<PCG> pcg = nullptr)
-      : image(std::move(image)), camera(camera), samples_per_pixel_edge(samples_per_pixel_edge), pcg(pcg) {
+              std::unique_ptr<PCG> pcg = nullptr)
+      : image(std::move(image)), camera(camera), samples_per_pixel_edge(samples_per_pixel_edge), pcg(std::move(pcg)) {
     if (!pcg) {
-      this->pcg = std::make_shared<PCG>();
+      this->pcg = std::make_unique<PCG>();
     }
     if (!camera->asp_ratio.has_value()) {
       camera->asp_ratio.emplace(static_cast<float>(this->image->width) / static_cast<float>(this->image->height));
