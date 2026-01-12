@@ -9,10 +9,10 @@
 // ------------------------------------------------------------------------------------------------------------
 #pragma once
 
-#include <cmath>   // library for math functions
-#include <cstdint> // library for fixed size integer types
+#include <cmath>
+#include <cstdint> // fixed size integer types
 #include <iostream>
-#include <numbers> // library for pi
+#include <numbers>
 #include <utility>
 
 // ------------------------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ public:
     uint32_t xorshifted = static_cast<uint32_t>(((old_state >> 18ull) ^ old_state) >> 27ull); // scramble the bits
     uint32_t rot = static_cast<uint32_t>(old_state >> 59ull); // pick the 5 most significant bits (64-59=5)
 
-    return (xorshifted >> rot) | (xorshifted << ((32 - rot) % 32)); // (32 - rot) % 32 = (-rot) & 31u, but avoids applying a minus
+    return (xorshifted >> rot) | (xorshifted << ((32 - rot) & 31)); // (32 - rot) & 31 = (-rot) & 31, but avoids applying a minus
                                                                     // to an unsigned type, which may trigger a compiler warning
   };
 
