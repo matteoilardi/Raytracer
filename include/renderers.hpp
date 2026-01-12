@@ -38,6 +38,8 @@ public:
   //-----------Constructors-----------
   Renderer(std::shared_ptr<World> world, Color background_color = Color()) : world(world), background_color(background_color) {};
 
+  virtual ~Renderer() = default;
+
   //------------Methods-----------
   virtual Color operator()(Ray ray) const = 0;
 };

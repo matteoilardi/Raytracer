@@ -278,20 +278,22 @@ int main(int argc, char **argv) {
 
     ImageTracer tracer = ImageTracer(std::make_unique<HdrImage>(width, height), scene.camera, samples_per_pixel_edge);
 
-    std::shared_ptr<Renderer> renderer;
+    std::unique_ptr<Renderer> renderer;
     if (render_mode_str == "onoff") {
-      renderer = make_shared<OnOffTracer>(scene.world);
+      renderer = make_unique<OnOffTracer>(scene.world);
     } else if (render_mode_str == "flat") {
-      renderer = make_shared<FlatTracer>(scene.world, BLACK);
+      renderer = make_unique<FlatTracer>(scene.world, BLACK);
     } else if (render_mode_str == "point_light") {
-      renderer = make_shared<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
+      renderer = make_unique<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
     } else if (render_mode_str == "path") {
       auto pcg = std::make_unique<PCG>();
-      renderer = make_shared<PathTracer>(scene.world, std::move(pcg), n_rays, russian_roulette_lim, max_depth, BLACK);
+      renderer = make_unique<PathTracer>(scene.world, std::move(pcg), n_rays, russian_roulette_lim, max_depth, BLACK);
     }
 
     std::cout << "Rendering image in " << source_file_name << "... " << std::endl << std::flush;
-    run_with_timer([&]() { tracer.fire_all_rays([&](const Ray &ray) { return (*renderer)(ray); }, show_progress); });
+    run_with_timer([&renderer, &tracer]() {
+      tracer.fire_all_rays([&renderer](const Ray &ray) { return (*renderer)(ray); }, show_progress);
+    });
 
     // Save PFM image
     tracer.image->write_pfm(output_file_name + ".pfm");
