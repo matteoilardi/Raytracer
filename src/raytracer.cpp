@@ -280,11 +280,11 @@ int main(int argc, char **argv) {
 
     std::unique_ptr<Renderer> renderer;
     if (render_mode_str == "onoff") {
-      renderer = make_unique<OnOffTracer>(scene.world);
+      renderer = std::make_unique<OnOffTracer>(scene.world);
     } else if (render_mode_str == "flat") {
-      renderer = make_unique<FlatTracer>(scene.world, BLACK);
+      renderer = std::make_unique<FlatTracer>(scene.world, BLACK);
     } else if (render_mode_str == "point_light") {
-      renderer = make_unique<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
+      renderer = std::make_unique<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
     } else if (render_mode_str == "path") {
       auto pcg = std::make_unique<PCG>();
       renderer = make_unique<PathTracer>(scene.world, std::move(pcg), n_rays, russian_roulette_lim, max_depth, BLACK);

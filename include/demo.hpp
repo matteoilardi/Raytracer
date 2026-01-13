@@ -40,7 +40,7 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
   ImageTracer tracer(std::move(img), cam, samples_per_pixel_edge);
 
   // Initialize demo World
-  auto world = std::make_shared<World>();
+  World world{};
 
   scaling sc({0.1f, 0.1f, 0.1f}); // common scaling for all spheres
 
@@ -52,7 +52,7 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
 
   for (const Vec &pos : sphere_positions) {
     auto sphere = std::make_unique<Sphere>(translation(pos) * sc, material);
-    world->add_object(std::move(sphere));
+    world.add_object(std::move(sphere));
   }
 
   // Perform on/off tracing
@@ -70,7 +70,7 @@ std::unique_ptr<HdrImage> make_demo_image_onoff(bool orthogonal, int width, int 
 std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int height, float distance,
                                                const Transformation &screen_transformation, int samples_per_pixel_edge) {
   // 1. Create World
-  std::shared_ptr<World> world = std::make_shared<World>();
+  World world{};
 
   // 2. Define Pigments and Materials
   auto sky_emission = std::make_unique<UniformPigment>(Color{0.2f, 0.3f, 1.f});
@@ -90,10 +90,10 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
 
   // 3. Add objects
   Transformation sky_transform = scaling({50.f, 50.f, 50.f});
-  world->add_object(std::make_unique<Sphere>(sky_transform, sky_material));
-  world->add_object(std::make_unique<Plane>(translation{Vec{0.f, 0.f, -2.f}}, ground_material));
-  world->add_object(std::make_unique<Sphere>(scaling{{0.4f, 0.4f, 0.4f}}, sphere_material));
-  world->add_object(std::make_unique<Sphere>(translation{Vec{0.f, -1.5f, -2.f}}, sphere2_material));
+  world.add_object(std::make_unique<Sphere>(sky_transform, sky_material));
+  world.add_object(std::make_unique<Plane>(translation{Vec{0.f, 0.f, -2.f}}, ground_material));
+  world.add_object(std::make_unique<Sphere>(scaling{{0.4f, 0.4f, 0.4f}}, sphere_material));
+  world.add_object(std::make_unique<Sphere>(translation{Vec{0.f, -1.5f, -2.f}}, sphere2_material));
 
   // 4. Setup camera
   std::unique_ptr<Camera> camera;
@@ -107,7 +107,6 @@ std::unique_ptr<HdrImage> make_demo_image_path(bool orthogonal, int width, int h
   // 5. Render image with path tracing
   auto pcg = std::make_unique<PCG>();
   PathTracer tracer(world, std::move(pcg), 10, 2, 6); // n_rays, roulette limit, max_depth
-  // FlatTracer tracer(world);
 
   // 6. Trace the image
   auto image = std::make_unique<HdrImage>(width, height);

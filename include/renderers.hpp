@@ -32,11 +32,11 @@ class PathTracer;
 class Renderer {
 public:
   //------------Properties-----------
-  std::shared_ptr<World> world; // world to render
-  Color background_color;       // background color
+  const World& world;     // world to render
+  Color background_color;  // background color
 
   //-----------Constructors-----------
-  Renderer(std::shared_ptr<World> world, Color background_color = Color()) : world(world), background_color(background_color) {};
+  Renderer(const World& world, Color background_color = Color()) : world(world), background_color(background_color) {};
 
   virtual ~Renderer() = default;
 
@@ -56,11 +56,11 @@ public:
   //-----------Constructors-----------
   /// Constructor with parameters
   /// @param world to render
-  OnOffTracer(std::shared_ptr<World> world) : Renderer(world) {};
+  OnOffTracer(const World& world) : Renderer(world) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
-    if (world->on_off_ray_intersection(
+    if (world.on_off_ray_intersection(
             ray)) { // use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
       return WHITE; // return white if any object is hit
     } else {
@@ -82,11 +82,11 @@ public:
   /// Constructor with parameters
   /// @param world to render
   /// @param background color
-  FlatTracer(std::shared_ptr<World> world, Color background_color = Color()) : Renderer(world, background_color) {};
+  FlatTracer(const World& world, Color background_color = Color()) : Renderer(world, background_color) {};
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
-    std::optional<HitRecord> hit = world->ray_intersection(ray); // save the closest hit (if any)
+    std::optional<HitRecord> hit = world.ray_intersection(ray); // save the closest hit (if any)
     if (!hit) {
       return background_color;
     }
@@ -112,7 +112,7 @@ public:
   /// @param world to render
   /// @param ambient color
   /// @param background color
-  PointLightTracer(std::shared_ptr<World> world, Color ambient_color = Color(), Color background_color = Color())
+  PointLightTracer(const World& world, Color ambient_color = Color(), Color background_color = Color())
       : Renderer(world, background_color), ambient_color(ambient_color) {};
 
   //------------Methods-----------
@@ -127,7 +127,7 @@ public:
 
     while (true) {
       // 1. Save the closest hit or return background Color if no object gets hit
-      hit = world->ray_intersection(ray);
+      hit = world.ray_intersection(ray);
       if (!hit.has_value()) {
         return background_color;
       }
@@ -153,8 +153,8 @@ public:
     Color cum_radiance = ambient_color + (*(hit_material->emitted_radiance))(hit->surface_point);
 
     // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
-    for (const auto &source : world->light_sources) {
-      std::optional<Vec> in_dir = world->offset_if_visible(source->point, hit->world_point, hit->normal);
+    for (const auto &source : world.light_sources) {
+      std::optional<Vec> in_dir = world.offset_if_visible(source->point, hit->world_point, hit->normal);
       // In offset_if_visible(..) the `viewer' is the light source and in_dir is the direction from it to the hit point
 
       if (in_dir.has_value()) {
@@ -193,7 +193,7 @@ public:
   /// @param ray depth reached before russian roulette starts applying
   /// @param maximum ray depth
   /// @param background color
-  PathTracer(std::shared_ptr<World> world, std::unique_ptr<PCG> pcg = nullptr, int n_rays = 10, int russian_roulette_lim = 3,
+  PathTracer(const World& world, std::unique_ptr<PCG> pcg = nullptr, int n_rays = 10, int russian_roulette_lim = 3,
              int max_depth = 5, Color background = Color())
       : Renderer(world, background), pcg(std::move(pcg)), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim),
         max_depth(max_depth) {
@@ -210,7 +210,7 @@ public:
     }
 
     // 2. Get closest intersection of ray with world objects or return background Color if no object is hit
-    std::optional<HitRecord> hit = world->ray_intersection(ray);
+    std::optional<HitRecord> hit = world.ray_intersection(ray);
     if (!hit) {
       return background_color;
     }

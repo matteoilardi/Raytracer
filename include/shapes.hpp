@@ -335,7 +335,7 @@ public:
   /// @param viewer point
   /// @param surface point
   /// @param normal at the surface
-  std::optional<Vec> offset_if_visible(Point viewer_point, Point surface_point, Normal normal_at_surface) {
+  std::optional<Vec> offset_if_visible(Point viewer_point, Point surface_point, Normal normal_at_surface) const {
     // TODO reconsider this method
     Vec in_dir = surface_point - viewer_point;
     Ray in_ray{viewer_point, in_dir};

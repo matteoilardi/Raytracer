@@ -287,14 +287,14 @@ TEST(SceneTest, test_parse_scene) {
   EXPECT_TRUE(sphere_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
 
   // Check defined Shapes
-  EXPECT_EQ(scene.world->objects.size(), 3);
-  EXPECT_NE(dynamic_cast<Plane *>(scene.world->objects[0].get()), nullptr);
+  EXPECT_EQ(scene.world.objects.size(), 3);
+  EXPECT_NE(dynamic_cast<Plane *>(scene.world.objects[0].get()), nullptr);
   EXPECT_TRUE(
-      scene.world->objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(degs_to_rads(150.f))));
-  EXPECT_NE(dynamic_cast<Plane *>(scene.world->objects[1].get()), nullptr);
-  EXPECT_TRUE(scene.world->objects[1]->transformation.is_close(Transformation()));
-  EXPECT_NE(dynamic_cast<Sphere *>(scene.world->objects[2].get()), nullptr);
-  EXPECT_TRUE(scene.world->objects[2]->transformation.is_close(translation(Vec(0.f, 0.f, 1.f))));
+      scene.world.objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(degs_to_rads(150.f))));
+  EXPECT_NE(dynamic_cast<Plane *>(scene.world.objects[1].get()), nullptr);
+  EXPECT_TRUE(scene.world.objects[1]->transformation.is_close(Transformation()));
+  EXPECT_NE(dynamic_cast<Sphere *>(scene.world.objects[2].get()), nullptr);
+  EXPECT_TRUE(scene.world.objects[2]->transformation.is_close(translation(Vec(0.f, 0.f, 1.f))));
 
   // Check defined Camera
   auto cam = dynamic_pointer_cast<PerspectiveCamera>(scene.camera);

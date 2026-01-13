@@ -530,13 +530,13 @@ class Scene {
 public:
   // ---- properties ----
   std::unordered_map<std::string, Material> materials;    // map of material names to Material objects
-  std::shared_ptr<World> world;                           // world object top render
+  World world;                                            // world object top render
   std::shared_ptr<Camera> camera = nullptr;               // camera used for firing rays
   std::unordered_map<std::string, float> float_variables; // float identifiers table
   std::unordered_set<std::string> overwritten_variables;  // set of float identifiers that can be overwritten from command line
 
   // -------- constructors --------
-  Scene() : world(std::make_shared<World>()) {}
+  Scene() = default;
 
   // -------- methods --------
 
@@ -909,13 +909,13 @@ public:
 
       case Keyword::SPHERE: {
         // Add Sphere to World
-        world->add_object(parse_sphere(input_stream));
+        world.add_object(parse_sphere(input_stream));
         break;
       }
 
       case Keyword::PLANE: {
         // Add Plane to World
-        world->add_object(parse_plane(input_stream));
+        world.add_object(parse_plane(input_stream));
         break;
       }
 
@@ -931,7 +931,7 @@ public:
 
       case Keyword::POINT_LIGHT: {
         // Add Point Light to World
-        world->add_light_source(parse_point_light(input_stream));
+        world.add_light_source(parse_point_light(input_stream));
         break;
       }
 
