@@ -68,14 +68,14 @@ endfunction()
 # Register test files
 # -------------------------------
 
-add_gtest(colorTest test/colors_Gtest.cpp)
-add_gtest(geometryTest test/geometry_Gtest.cpp)
-add_gtest(camerasTest test/cameras_Gtest.cpp)
-add_gtest(shapesTest test/shapes_Gtest.cpp)
-add_gtest(randomTest test/random_Gtest.cpp)
-add_gtest(materialsTest test/materials_Gtest.cpp)
-add_gtest(renderersTest test/renderers_Gtest.cpp)
-add_gtest(scenefilesTest test/scenefiles_Gtest.cpp)
+add_gtest(colorTest test/colors_test.cpp)
+add_gtest(geometryTest test/geometry_test.cpp)
+add_gtest(camerasTest test/cameras_test.cpp)
+add_gtest(shapesTest test/shapes_test.cpp)
+add_gtest(randomTest test/random_test.cpp)
+add_gtest(materialsTest test/materials_test.cpp)
+add_gtest(renderersTest test/renderers_test.cpp)
+add_gtest(scenefilesTest test/scenefiles_test.cpp)
 
 # -------------------------------
 # Disable warnings due to deprecated functions in library include/stb_image_write.h

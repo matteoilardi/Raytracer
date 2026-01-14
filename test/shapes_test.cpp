@@ -29,15 +29,15 @@ protected:
 TEST_F(SphereTest, test_outer_hit) {
   auto unit_sphere = std::make_unique<Sphere>(Transformation{}, default_material);
 
-  Ray ray1 = Ray(Point(0.f, 0.f, 2.f), -VEC_Z);
+  Ray ray1{Point{0.f, 0.f, 2.f}, -VEC_Z};
   std::optional<HitRecord> hit1 = unit_sphere->ray_intersection(ray1);
-  HitRecord expected1 = HitRecord(unit_sphere.get(), Point(0.f, 0.f, 1.f), VEC_Z.to_normal(), Vec2d(0.f, 0.f), ray1, 1.f);
+  HitRecord expected1 = HitRecord(unit_sphere.get(), Point{0.f, 0.f, 1.f}, VEC_Z.to_normal(), Vec2d{}, ray1, 1.f);
   ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1.value().is_close(expected1));
 
-  Ray ray2 = Ray(Point(3.f, 0.f, 0.f), -VEC_X);
+  Ray ray2{Point{3.f, 0.f, 0.f}, -VEC_X};
   std::optional<HitRecord> hit2 = unit_sphere->ray_intersection(ray2);
-  HitRecord expected2 = HitRecord(unit_sphere.get(), Point(1.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
+  HitRecord expected2 = HitRecord(unit_sphere.get(), Point{1.f, 0.f, 0.f}, VEC_X.to_normal(), Vec2d{0.f, 0.5f}, ray2, 2.f);
   ASSERT_TRUE(hit2);
   EXPECT_TRUE(hit2.value().is_close(expected2));
 }
@@ -46,46 +46,46 @@ TEST_F(SphereTest, test_outer_hit) {
 TEST_F(SphereTest, test_inner_hit) {
   auto unit_sphere = std::make_unique<Sphere>(Transformation{}, default_material);
 
-  Ray ray1 = Ray(Point(0.f, 0.f, 0.f), VEC_X);
+  Ray ray1(Point{}, VEC_X);
   std::optional<HitRecord> hit1 = unit_sphere->ray_intersection(ray1);
-  HitRecord expected1 = HitRecord(unit_sphere.get(), Point(1.f, 0.f, 0.f), -VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray1, 1.f);
+  HitRecord expected1 = HitRecord(unit_sphere.get(), Point{1.f, 0.f, 0.f}, -VEC_X.to_normal(), Vec2d{0.f, 0.5f}, ray1, 1.f);
   ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1.value().is_close(expected1));
 }
 
 // Test hits on a translated sphere, ensuring that there are no intersections with the untranslated sphere
 TEST_F(SphereTest, test_translation) {
-  auto translated_sphere = std::make_unique<Sphere>(translation(Vec(10.f, 0.f, 0.f)), default_material);
+  auto translated_sphere = std::make_unique<Sphere>(translation{Vec{10.f, 0.f, 0.f}}, default_material);
 
-  Ray ray1 = Ray(Point(10.f, 0.f, 2.f), -VEC_Z);
+  Ray ray1{Point{10.f, 0.f, 2.f}, -VEC_Z};
   std::optional<HitRecord> hit1 = translated_sphere->ray_intersection(ray1);
-  HitRecord expected1 = HitRecord(translated_sphere.get(), Point(10.f, 0.f, 1.f), VEC_Z.to_normal(), Vec2d(), ray1, 1.f);
+  HitRecord expected1 = HitRecord(translated_sphere.get(), Point{10.f, 0.f, 1.f}, VEC_Z.to_normal(), Vec2d{}, ray1, 1.f);
   ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1.value().is_close(expected1));
 
-  Ray ray2 = Ray(Point(13.f, 0.f, 0.f), -VEC_X);
+  Ray ray2(Point{13.f, 0.f, 0.f}, -VEC_X);
   std::optional<HitRecord> hit2 = translated_sphere->ray_intersection(ray2);
-  HitRecord expected2 = HitRecord(translated_sphere.get(), Point(11.f, 0.f, 0.f), VEC_X.to_normal(), Vec2d(0.f, 0.5f), ray2, 2.f);
+  HitRecord expected2 = HitRecord(translated_sphere.get(), Point{11.f, 0.f, 0.f}, VEC_X.to_normal(), Vec2d{0.f, 0.5f}, ray2, 2.f);
   ASSERT_TRUE(hit2);
   EXPECT_TRUE(hit2.value().is_close(expected2));
 
-  std::optional<HitRecord> hit3 = translated_sphere->ray_intersection(Ray(Point(0.f, 0.f, 2.f), -VEC_Z));
+  std::optional<HitRecord> hit3 = translated_sphere->ray_intersection(Ray{Point{0.f, 0.f, 2.f}, -VEC_Z});
   EXPECT_FALSE(hit3);
 
-  std::optional<HitRecord> hit4 = translated_sphere->ray_intersection(Ray(Point(-10.f, 0.f, 2.f), -VEC_Z));
+  std::optional<HitRecord> hit4 = translated_sphere->ray_intersection(Ray{Point{-10.f, 0.f, 2.f}, -VEC_Z});
   EXPECT_FALSE(hit4);
 }
 
 // Test normals, which are non-trivial when a scaling is performed on the sphere
 TEST_F(SphereTest, test_normals) {
-  auto sphere1 = std::make_unique<Sphere>(scaling({2.f, 1.f, 1.f}), default_material);
+  auto sphere1 = std::make_unique<Sphere>(scaling{{2.f, 1.f, 1.f}}, default_material);
 
-  Ray ray1 = Ray(Point(1.f, 1.f, 0.f), Vec(-1.f, -1.f, 0.f));
+  Ray ray1{Point{1.f, 1.f, 0.f}, Vec{-1.f, -1.f, 0.f}};
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
 
   ASSERT_TRUE(hit1);
-  Normal computed_normal = (hit1->normal).normalized();
-  Normal expected_normal = (Normal(1.f, 4.f, 0.f)).normalized();
+  Normal computed_normal = hit1->normal.normalized();
+  Normal expected_normal = Normal{1.f, 4.f, 0.f}.normalized();
   EXPECT_TRUE(computed_normal.is_close(expected_normal));
 }
 
@@ -93,9 +93,9 @@ TEST_F(SphereTest, test_normals) {
 TEST_F(SphereTest, test_normal_flipping) {
   // This scaling flips the sphere about the z-x plane, so that in the standard sphere's reference frame the ray is
   // incoming from the left
-  auto sphere1 = std::make_unique<Sphere>(scaling({1.f, -1.f, 1.f}), default_material);
+  auto sphere1 = std::make_unique<Sphere>(scaling{{1.f, -1.f, 1.f}}, default_material);
 
-  Ray ray1 = Ray(Point(0.f, 2.f, 0.f), -VEC_Y);
+  Ray ray1{Point{0.f, 2.f, 0.f}, -VEC_Y};
   std::optional<HitRecord> hit1 = sphere1->ray_intersection(ray1);
 
   ASSERT_TRUE(hit1);
@@ -126,35 +126,35 @@ TEST_F(SphereTest, test_surface_coordinates) {
   //  P5 and P6 have same x and y coordinates as P1, but are displaced along z (ray5 in the positive direction, ray6 in
   //  the negative direction) so that the center of the sphere sees both of them at an angle pi/3 with respect to P1.
 
-  Ray ray1 = Ray(Point(2.f, 0.f, 0.f), -VEC_X);
+  Ray ray1{Point{2.f, 0.f, 0.f}, -VEC_X};
   std::optional<HitRecord> hit1 = unit_sphere->ray_intersection(ray1);
   ASSERT_TRUE(hit1);
-  EXPECT_TRUE(hit1->surface_point.is_close(Vec2d(0.f, 0.5f)));
+  EXPECT_TRUE(hit1->surface_point.is_close(Vec2d{0.f, 0.5f}));
 
-  Ray ray2 = Ray(Point(0.f, 2.f, 0.f), -VEC_Y);
+  Ray ray2{Point{0.f, 2.f, 0.f}, -VEC_Y};
   std::optional<HitRecord> hit2 = unit_sphere->ray_intersection(ray2);
   ASSERT_TRUE(hit2);
-  EXPECT_TRUE(hit2->surface_point.is_close(Vec2d(0.25f, 0.5f)));
+  EXPECT_TRUE(hit2->surface_point.is_close(Vec2d{0.25f, 0.5f}));
 
-  Ray ray3 = Ray(Point(-2.f, 0.f, 0.f), VEC_X);
+  Ray ray3{Point{-2.f, 0.f, 0.f}, VEC_X};
   std::optional<HitRecord> hit3 = unit_sphere->ray_intersection(ray3);
   ASSERT_TRUE(hit3);
-  EXPECT_TRUE(hit3->surface_point.is_close(Vec2d(0.5f, 0.5f)));
+  EXPECT_TRUE(hit3->surface_point.is_close(Vec2d{0.5f, 0.5f}));
 
-  Ray ray4 = Ray(Point(0.f, -2.f, 0.f), VEC_Y);
+  Ray ray4{Point{0.f, -2.f, 0.f}, VEC_Y};
   std::optional<HitRecord> hit4 = unit_sphere->ray_intersection(ray4);
   ASSERT_TRUE(hit4);
-  EXPECT_TRUE(hit4->surface_point.is_close(Vec2d(0.75f, 0.5f)));
+  EXPECT_TRUE(hit4->surface_point.is_close(Vec2d{0.75f, 0.5f}));
 
-  Ray ray5 = Ray(Point(2.f, 0.f, 0.5f), -VEC_X);
+  Ray ray5{Point{2.f, 0.f, 0.5f}, -VEC_X};
   std::optional<HitRecord> hit5 = unit_sphere->ray_intersection(ray5);
   ASSERT_TRUE(hit5);
-  EXPECT_TRUE(hit5->surface_point.is_close(Vec2d(0.f, 1.f / 3.f)));
+  EXPECT_TRUE(hit5->surface_point.is_close(Vec2d{0.f, 1.f / 3.f}));
 
-  Ray ray6 = Ray(Point(2.f, 0.f, -0.5f), -VEC_X);
+  Ray ray6{Point{2.f, 0.f, -0.5f}, -VEC_X};
   std::optional<HitRecord> hit6 = unit_sphere->ray_intersection(ray6);
   ASSERT_TRUE(hit6);
-  EXPECT_TRUE(hit6->surface_point.is_close(Vec2d(0.f, 2.f / 3.f)));
+  EXPECT_TRUE(hit6->surface_point.is_close(Vec2d{0.f, 2.f / 3.f}));
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -172,19 +172,19 @@ protected:
 TEST_F(PlaneTest, test_hit) {
   auto default_plane = std::make_unique<Plane>(Transformation{}, default_material);
 
-  Ray ray1 = Ray(Point(0.f, 0.f, 1.f), -VEC_Z);
+  Ray ray1{Point{0.f, 0.f, 1.f}, -VEC_Z};
   std::optional<HitRecord> hit1 = default_plane->ray_intersection(ray1);
-  HitRecord expected1 = HitRecord(default_plane.get(), Point(), VEC_Z.to_normal(), Vec2d(), ray1, 1.f);
+  HitRecord expected1 = HitRecord(default_plane.get(), Point{}, VEC_Z.to_normal(), Vec2d{}, ray1, 1.f);
   ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1.value().is_close(expected1));
 
-  Ray ray2 = Ray(Point(0.f, 0.f, 1.f), VEC_Z);
+  Ray ray2{Point{0.f, 0.f, 1.f}, VEC_Z};
   std::optional<HitRecord> hit2 = default_plane->ray_intersection(ray2);
 
-  Ray ray3 = Ray(Point(0.f, 0.f, 1.f), VEC_X);
+  Ray ray3{Point{0.f, 0.f, 1.f}, VEC_X};
   std::optional<HitRecord> hit3 = default_plane->ray_intersection(ray3);
 
-  Ray ray4 = Ray(Point(0.f, 0.f, 1.f), VEC_Y);
+  Ray ray4{Point{0.f, 0.f, 1.f}, VEC_Y};
   std::optional<HitRecord> hit4 = default_plane->ray_intersection(ray4);
 
   EXPECT_FALSE(hit2);
@@ -194,21 +194,21 @@ TEST_F(PlaneTest, test_hit) {
 
 // Test intersections with rotated plane
 TEST_F(PlaneTest, test_rotation) {
-  auto rotated_plane = std::make_unique<Plane>(rotation_y(std::numbers::pi_v<float> / 2.f), default_material);
+  auto rotated_plane = std::make_unique<Plane>(rotation_y{std::numbers::pi_v<float> / 2.f}, default_material);
 
-  Ray ray1 = Ray(Point(1.f, 0.f, 0.f), -VEC_X);
+  Ray ray1{Point{1.f, 0.f, 0.f}, -VEC_X};
   std::optional<HitRecord> hit1 = rotated_plane->ray_intersection(ray1);
-  HitRecord expected1 = HitRecord(rotated_plane.get(), Point(), VEC_X.to_normal(), Vec2d(), ray1, 1.f);
+  HitRecord expected1 = HitRecord(rotated_plane.get(), Point{}, VEC_X.to_normal(), Vec2d{}, ray1, 1.f);
   ASSERT_TRUE(hit1);
   EXPECT_TRUE(hit1.value().is_close(expected1));
 
-  Ray ray2 = Ray(Point(1.f, 0.f, 0.f), VEC_X);
+  Ray ray2{Point{1.f, 0.f, 0.f}, VEC_X};
   std::optional<HitRecord> hit2 = rotated_plane->ray_intersection(ray2);
 
-  Ray ray3 = Ray(Point(1.f, 0.f, 0.f), VEC_Y);
+  Ray ray3{Point{1.f, 0.f, 0.f}, VEC_Y};
   std::optional<HitRecord> hit3 = rotated_plane->ray_intersection(ray3);
 
-  Ray ray4 = Ray(Point(1.f, 0.f, 0.f), VEC_Z);
+  Ray ray4{Point{1.f, 0.f, 0.f}, VEC_Z};
   std::optional<HitRecord> hit4 = rotated_plane->ray_intersection(ray4);
 
   EXPECT_FALSE(hit2);
@@ -220,16 +220,16 @@ TEST_F(PlaneTest, test_rotation) {
 TEST_F(PlaneTest, test_surface_coordinates) {
   auto default_plane = std::make_unique<Plane>(Transformation{}, default_material);
 
-  Ray ray1 = Ray(Point(0.25f, 0.75f, 1.f), -VEC_Z);
-  Ray ray2 = Ray(Point(4.25f, 7.75f, 1.f), -VEC_Z);
+  Ray ray1{Point{0.25f, 0.75f, 1.f}, -VEC_Z};
+  Ray ray2{Point{4.25f, 7.75f, 1.f}, -VEC_Z};
 
   std::optional<HitRecord> hit1 = default_plane->ray_intersection(ray1);
   std::optional<HitRecord> hit2 = default_plane->ray_intersection(ray2);
 
   ASSERT_TRUE(hit1);
   ASSERT_TRUE(hit2);
-  EXPECT_TRUE(hit1.value().surface_point.is_close(Vec2d(0.25f, 0.75f)));
-  EXPECT_TRUE(hit2.value().surface_point.is_close(Vec2d(0.25f, 0.75f)));
+  EXPECT_TRUE(hit1.value().surface_point.is_close(Vec2d{0.25f, 0.75f}));
+  EXPECT_TRUE(hit2.value().surface_point.is_close(Vec2d{0.25f, 0.75f}));
 }
 
 // ------------------------------------------------------------------------------------------------------------
@@ -245,49 +245,49 @@ protected:
 
 // Test ray_intersection method
 TEST_F(WorldTest, test_ray_intersection) {
-  World world = World();
+  World world{};
 
-  auto sphere1 = std::make_unique<Sphere>(translation(Vec(2.f, 0.f, 0.f)), default_material);
-  auto sphere2 = std::make_unique<Sphere>(translation(Vec(10.f, 0.f, 0.f)), default_material);
+  auto sphere1 = std::make_unique<Sphere>(translation{Vec{2.f, 0.f, 0.f}}, default_material);
+  auto sphere2 = std::make_unique<Sphere>(translation{Vec{10.f, 0.f, 0.f}}, default_material);
 
   world.add_object(std::move(sphere1));
   world.add_object(std::move(sphere2));
 
-  Ray ray1 = Ray(Point(0.f, 0.f, 0.f), VEC_X);
+  Ray ray1{Point{}, VEC_X};
   std::optional<HitRecord> hit1 = world.ray_intersection(ray1);
   ASSERT_TRUE(hit1);
-  EXPECT_TRUE(hit1->world_point.is_close(Point(1.f, 0.f, 0.f)));
+  EXPECT_TRUE(hit1->world_point.is_close(Point{1.f, 0.f, 0.f}));
 
-  Ray ray2 = Ray(Point(10.f, 0.f, 0.f), -VEC_X);
+  Ray ray2{Point{10.f, 0.f, 0.f}, -VEC_X};
   std::optional<HitRecord> hit2 = world.ray_intersection(ray2);
   ASSERT_TRUE(hit2);
-  EXPECT_TRUE(hit2->world_point.is_close(Point(9.f, 0.f, 0.f)));
+  EXPECT_TRUE(hit2->world_point.is_close(Point{9.f, 0.f, 0.f}));
 }
 
 TEST_F(WorldTest, test_offset_if_visible) {
-  World world = World();
+  World world{};
 
-  auto sphere1 = std::make_unique<Sphere>(translation(2.f * VEC_X), default_material);
-  auto sphere2 = std::make_unique<Sphere>(translation(8.f * VEC_X), default_material);
+  auto sphere1 = std::make_unique<Sphere>(translation{2.f * VEC_X}, default_material);
+  auto sphere2 = std::make_unique<Sphere>(translation{8.f * VEC_X}, default_material);
   world.add_object(std::move(sphere1));
   world.add_object(std::move(sphere2));
 
-  EXPECT_FALSE(world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(10.f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f)));
-  EXPECT_FALSE(world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(5.f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f)));
+  EXPECT_FALSE(world.offset_if_visible(Point{}, Point{10.f, 0.f, 0.f}, Normal{-1.f, 0.f, 0.f}));
+  EXPECT_FALSE(world.offset_if_visible(Point{}, Point{5.f, 0.f, 0.f}, Normal{-1.f, 0.f, 0.f}));
 
-  std::optional<Vec> v1 = world.offset_if_visible(Point(4.f, 0.f, 0.f), Point(5.f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f));
+  std::optional<Vec> v1 = world.offset_if_visible(Point{4.f, 0.f, 0.f}, Point{5.f, 0.f, 0.f}, Normal{-1.f, 0.f, 0.f});
   EXPECT_TRUE(v1.has_value());
   EXPECT_TRUE(v1.value().is_close(VEC_X));
 
-  std::optional<Vec> v2 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.5f, 0.f, 0.f), Normal(-1.f, 0.f, 0.f));
+  std::optional<Vec> v2 = world.offset_if_visible(Point{}, Point{0.5f, 0.f, 0.f}, Normal{-1.f, 0.f, 0.f});
   EXPECT_TRUE(v2.has_value());
   EXPECT_TRUE(v2.value().is_close(0.5f * VEC_X));
 
-  std::optional<Vec> v3 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.f, 10.f, 0.f), Normal(0.f, -1.f, 0.f));
+  std::optional<Vec> v3 = world.offset_if_visible(Point{}, Point{0.f, 10.f, 0.f}, Normal{0.f, -1.f, 0.f});
   EXPECT_TRUE(v3.has_value());
   EXPECT_TRUE(v3.value().is_close(10.f * VEC_Y));
 
-  std::optional<Vec> v4 = world.offset_if_visible(Point(0.f, 0.f, 0.f), Point(0.f, 0.f, 10.f), Normal(0.f, 0.f, -1.f));
+  std::optional<Vec> v4 = world.offset_if_visible(Point{0.f, 0.f, 0.f}, Point{0.f, 0.f, 10.f}, Normal{0.f, 0.f, -1.f});
   EXPECT_TRUE(v4.has_value());
   EXPECT_TRUE(v4.value().is_close(10.f * VEC_Z));
 }

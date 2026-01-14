@@ -45,8 +45,8 @@ void expect_eq_string(const Token &token, const std::string &s) {
 //---------------- Test character reading functionalities (read and unread char, update location) in InputStream ----------------
 
 TEST(InputStreamTest, test_input_file) {
-  std::istringstream ss("abc   \nd\nef"); // Create a string stream to simulate an input file
-  InputStream stream(ss);                 // Create an InputStream object with the string stream
+  std::istringstream ss{"abc   \nd\nef"}; // Create a string stream to simulate an input file
+  InputStream stream{ss};                 // Create an InputStream object with the string stream
 
   // Initial position (we start at line 1, column 1)
   EXPECT_EQ(stream.location.line, 1);
@@ -106,16 +106,16 @@ TEST(InputStreamTest, test_input_file) {
 
 TEST(InputStreamTest, test_lexer) {
   // Create a string stream to simulate an input file (R "..." syntax is to allow breaking line in the string)
-  std::istringstream ss(R"(
+  std::istringstream ss{R"(
         # This is a comment
         # This is another comment
         material sky_material(
             diffuse(image("my file.pfm")),
             <1.0, .33, 0.7>
         ) # Comment at the end of the line
-    )");
+    )"};
   // Create an InputStream object with the string stream
-  InputStream input_file(ss);
+  InputStream input_file{ss};
 
   expect_eq_keyword(input_file.read_token(), Keyword::MATERIAL);
   expect_eq_identifier(input_file.read_token(), "sky_material");
@@ -150,8 +150,8 @@ TEST(InputStreamTest, test_GrammarError) {
   // 1. Test invalid float number
   {
     // Set up a stream with an invalid float: "12.3.4" is not a valid float (two dots not allowed)
-    std::istringstream ss("12.3.4");
-    InputStream input_file(ss);
+    std::istringstream ss{"12.3.4"};
+    InputStream input_file{ss};
 
     try {
       input_file.read_token(); // This should try to parse and throw GrammarError
@@ -177,8 +177,8 @@ TEST(InputStreamTest, test_GrammarError) {
   // 2. Test invalid character (e.g. @)
   {
     // Set up a stream with an invalid character: "@" is not valid in your syntax
-    std::istringstream ss("@");
-    InputStream input_file(ss);
+    std::istringstream ss{"@"};
+    InputStream input_file{ss};
 
     try {
       input_file.read_token(); // Should throw GrammarError for invalid character
@@ -205,7 +205,7 @@ TEST(InputStreamTest, test_GrammarError) {
 
 // Create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
 TEST(SceneTest, test_parse_scene) {
-  std::istringstream ss(R"(
+  std::istringstream ss{R"(
 		float clock(150)
 
         material sky_material(
@@ -232,9 +232,9 @@ TEST(SceneTest, test_parse_scene) {
         sphere(translation([0, 0, 1]), sphere_material)
 
         camera(perspective, rotation_z(30) * translation([-4, 0, 1]), 1.0, 2.0)
-        )");
+        )"};
 
-  InputStream input_stream(ss);
+  InputStream input_stream{ss};
   Scene scene;
   scene.parse_scene(input_stream);
 
@@ -249,7 +249,7 @@ TEST(SceneTest, test_parse_scene) {
   EXPECT_EQ(scene.materials.count("sky_material"), 1);
   EXPECT_EQ(scene.materials.count("ground_material"), 1);
 
-  // Retrieve the pointers to the materials and the BRDFs
+  // Retrieve the references to the materials and the BRDFs
   const Material &sphere_material = scene.materials["sphere_material"];
   const Material &sky_material = scene.materials["sky_material"];
   const Material &ground_material = scene.materials["ground_material"];
@@ -259,54 +259,54 @@ TEST(SceneTest, test_parse_scene) {
 
   EXPECT_NE(sky_brdf, nullptr);
   EXPECT_NE(sky_brdf_pigment, nullptr);
-  EXPECT_TRUE(sky_brdf_pigment->color.is_close(Color())); // Color is a member of UniformPigment only, not of the base class so
-                                                          // dynamic_pointer_cast is required for this line to compile
+  EXPECT_TRUE(sky_brdf_pigment->color.is_close(BLACK)); // Color is a member of UniformPigment only, not of the base class so
+                                                        // dynamic_pointer_cast is required for this line to compile
 
   auto ground_brdf = dynamic_cast<DiffusiveBRDF *>(ground_material.brdf.get());
   auto ground_brdf_pigment = dynamic_cast<CheckeredPigment *>(ground_material.brdf->pigment.get());
   EXPECT_NE(ground_brdf, nullptr);
   EXPECT_NE(ground_brdf_pigment, nullptr);
-  EXPECT_TRUE(ground_brdf_pigment->color1.is_close(Color(0.3f, 0.5f, 0.1f)));
-  EXPECT_TRUE(ground_brdf_pigment->color2.is_close(Color(0.1f, 0.2f, 0.5f)));
+  EXPECT_TRUE(ground_brdf_pigment->color1.is_close(Color{0.3f, 0.5f, 0.1f}));
+  EXPECT_TRUE(ground_brdf_pigment->color2.is_close(Color{0.1f, 0.2f, 0.5f}));
   EXPECT_EQ(ground_brdf_pigment->n_intervals, 4);
 
   auto sphere_brdf = dynamic_cast<SpecularBRDF *>(sphere_material.brdf.get());
   auto sphere_brdf_pigment = dynamic_cast<UniformPigment *>(sphere_material.brdf->pigment.get());
   EXPECT_NE(sphere_brdf, nullptr);
   EXPECT_NE(sphere_brdf_pigment, nullptr);
-  EXPECT_TRUE(sphere_brdf_pigment->color.is_close(Color(0.5f, 0.5f, 0.5f)));
+  EXPECT_TRUE(sphere_brdf_pigment->color.is_close(Color{0.5f, 0.5f, 0.5f}));
 
   auto sky_emitted_radiance = dynamic_cast<UniformPigment *>(sky_material.emitted_radiance.get());
   auto ground_emitted_radiance = dynamic_cast<UniformPigment *>(ground_material.emitted_radiance.get());
   auto sphere_emitted_radiance = dynamic_cast<UniformPigment *>(sphere_material.emitted_radiance.get());
   EXPECT_NE(sky_emitted_radiance, nullptr);
-  EXPECT_TRUE(sky_emitted_radiance->color.is_close(Color(0.7f, 0.5f, 1.f)));
+  EXPECT_TRUE(sky_emitted_radiance->color.is_close(Color{0.7f, 0.5f, 1.f}));
   EXPECT_NE(ground_emitted_radiance, nullptr);
-  EXPECT_TRUE(ground_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
+  EXPECT_TRUE(ground_emitted_radiance->color.is_close(BLACK));
   EXPECT_NE(sphere_emitted_radiance, nullptr);
-  EXPECT_TRUE(sphere_emitted_radiance->color.is_close(Color(0.f, 0.f, 0.f)));
+  EXPECT_TRUE(sphere_emitted_radiance->color.is_close(BLACK));
 
   // Check defined Shapes
   EXPECT_EQ(scene.world.objects.size(), 3);
   EXPECT_NE(dynamic_cast<Plane *>(scene.world.objects[0].get()), nullptr);
   EXPECT_TRUE(
-      scene.world.objects[0]->transformation.is_close(translation(Vec(0.f, 0.f, 100.f)) * rotation_y(degs_to_rads(150.f))));
+      scene.world.objects[0]->transformation.is_close(translation{Vec{0.f, 0.f, 100.f}} * rotation_y{degs_to_rads(150.f)}));
   EXPECT_NE(dynamic_cast<Plane *>(scene.world.objects[1].get()), nullptr);
-  EXPECT_TRUE(scene.world.objects[1]->transformation.is_close(Transformation()));
+  EXPECT_TRUE(scene.world.objects[1]->transformation.is_close(Transformation{}));
   EXPECT_NE(dynamic_cast<Sphere *>(scene.world.objects[2].get()), nullptr);
-  EXPECT_TRUE(scene.world.objects[2]->transformation.is_close(translation(Vec(0.f, 0.f, 1.f))));
+  EXPECT_TRUE(scene.world.objects[2]->transformation.is_close(translation{Vec{0.f, 0.f, 1.f}}));
 
   // Check defined Camera
   auto cam = dynamic_pointer_cast<PerspectiveCamera>(scene.camera);
   EXPECT_TRUE(cam);
-  EXPECT_TRUE(cam->transformation.is_close(rotation_z(degs_to_rads(30.f)) * translation(Vec(-4.f, 0.f, 1.f))));
+  EXPECT_TRUE(cam->transformation.is_close(rotation_z{degs_to_rads(30.f)} * translation{Vec{-4.f, 0.f, 1.f}}));
   EXPECT_TRUE(are_close(*cam->asp_ratio, 1.f));
   EXPECT_TRUE(are_close(cam->distance, 2.f));
 }
 
 TEST(SceneTest, test_parse_scene_undefined_material) {
-  std::istringstream ss("plane(identity, this_material_does_not_exist)");
-  InputStream input_stream(ss);
+  std::istringstream ss{"plane(identity, this_material_does_not_exist)"};
+  InputStream input_stream{ss};
   Scene scene;
 
   try {
@@ -327,10 +327,10 @@ TEST(SceneTest, test_parse_scene_undefined_material) {
 }
 
 TEST(SceneTest, test_parse_scene_double_camera) {
-  std::istringstream ss(
-      "camera(perspective, rotation_z(30) * translation([-4, 0, 1]), 1.0, 1.0)\ncamera(orthogonal, identity, 1.0, 1.0)");
+  std::istringstream ss{
+      "camera(perspective, rotation_z(30) * translation([-4, 0, 1]), 1.0, 1.0)\ncamera(orthogonal, identity, 1.0, 1.0)"};
 
-  InputStream input_stream(ss);
+  InputStream input_stream{ss};
   Scene scene;
 
   try {
