@@ -87,14 +87,14 @@ public:
   //--------------------Methods----------------------
 
   /// @brief Virtual method that finds the closest intersection of a given ray with the shape
-  /// @param ray incoming ray hitting the shape
+  /// @param incoming ray hitting the shape
+  /// @details This method is required to calculate and return (inside HitRecord) a normalized normal
   virtual std::optional<HitRecord> ray_intersection(const Ray &ray) const noexcept = 0;
 
+protected:
   /// @brief Flip the normal to the surface so that it has negative scalar product with the hitting ray
   /// @param normal to the surface
   /// @param incoming ray hitting the shape
-
-protected:
   static Normal enforce_correct_normal_orientation(Normal normal, const Ray &ray) noexcept {
     // The normal and the ray must have opposite directions, if this is false (dot product>0), flip the normal
     float sign = std::copysignf(1.0f, -(normal * ray.direction));

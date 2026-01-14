@@ -159,7 +159,9 @@ public:
   /// @param incident direction
   /// @param outgoing direction
   /// @param uv coordinates of the point on the surface
-  /// @details Actually this method is not used be called in path tracing: we use the BRDF to perform importance sampling instead
+  /// @details Actually this method is not used be called in path tracing: we use the BRDF to perform
+  /// importance sampling instead. This method shouldn't assume the first three arguments to be
+  /// normalized: see PointLightTracer::operator().
   virtual Color eval(Normal normal, Vec in_dir, Vec out_dir, Vec2d uv) const = 0;
 
   /// @brief Scatters ray in random direction using BRDF-based importance sampling

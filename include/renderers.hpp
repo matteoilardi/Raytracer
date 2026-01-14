@@ -32,11 +32,11 @@ class PathTracer;
 class Renderer {
 public:
   //------------Properties-----------
-  const World& world;     // world to render
-  Color background_color;  // background color
+  const World &world;     // world to render
+  Color background_color; // background color
 
   //-----------Constructors-----------
-  Renderer(const World& world, Color background_color = Color()) : world(world), background_color(background_color) {};
+  Renderer(const World &world, Color background_color = BLACK) : world(world), background_color(background_color) {}
 
   virtual ~Renderer() = default;
 
@@ -56,15 +56,15 @@ public:
   //-----------Constructors-----------
   /// Constructor with parameters
   /// @param world to render
-  OnOffTracer(const World& world) : Renderer(world) {};
+  OnOffTracer(const World &world) : Renderer{world} {}
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
     if (world.on_off_ray_intersection(
-            ray)) { // use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
-      return WHITE; // return white if any object is hit
+            ray)) { // Use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
+      return WHITE; // Return white if any object is hit
     } else {
-      return Color(); // return black if no object is hit
+      return BLACK;
     }
   }
 };
@@ -82,7 +82,7 @@ public:
   /// Constructor with parameters
   /// @param world to render
   /// @param background color
-  FlatTracer(const World& world, Color background_color = Color()) : Renderer(world, background_color) {};
+  FlatTracer(const World &world, Color background_color = BLACK) : Renderer(world, background_color) {}
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
@@ -112,8 +112,8 @@ public:
   /// @param world to render
   /// @param ambient color
   /// @param background color
-  PointLightTracer(const World& world, Color ambient_color = Color(), Color background_color = Color())
-      : Renderer(world, background_color), ambient_color(ambient_color) {};
+  PointLightTracer(const World &world, Color ambient_color = BLACK, Color background_color = BLACK)
+      : Renderer{world, background_color}, ambient_color{ambient_color} {}
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
@@ -122,8 +122,7 @@ public:
     const Material *hit_material;
     BRDF *brdf;
 
-    Color reflection_attenuation =
-        Color(1.f, 1.f, 1.f); // Attenuation factor due to Specular BRDFs that reflect the incoming ray (if any)
+    Color reflection_attenuation = WHITE; // Attenuation factor due to encountered Specular BRDFs (if any)
 
     while (true) {
       // 1. Save the closest hit or return background Color if no object gets hit
@@ -139,13 +138,14 @@ public:
       SpecularBRDF *specular = dynamic_cast<SpecularBRDF *>(
           brdf); // Returns nullptr if brdf is not a pointer to an object of the derived class SpecularBRDF
       // 3. In case you hit an object with SpecularBRDF, scatter a new Ray from the hit point in the direction given by the
-      // reflection law; otherwise go ahead with color evaluation
+      // reflection law; otherwise go ahead.
       if (!specular) {
         break;
       }
 
       reflection_attenuation *= (*brdf->pigment)(hit->surface_point);
-      Vec new_dir = ray.direction - 2 * hit->normal.to_vector() * (hit->normal.to_vector() * ray.direction);
+      Vec new_dir = ray.direction - 2 * hit->normal.to_vector() * (hit->normal * ray.direction);
+      // Note that hit shapes always return normalized normals (Shape::ray_intersection)
       ray = Ray(hit->world_point, new_dir);
     }
 
@@ -155,13 +155,13 @@ public:
     // 5. Loop over point light sources and add a contribution to radiance if the light source is visible
     for (const auto &source : world.light_sources) {
       std::optional<Vec> in_dir = world.offset_if_visible(source->point, hit->world_point, hit->normal);
-      // In offset_if_visible(..) the `viewer' is the light source and in_dir is the direction from it to the hit point
+      // In World::offset_if_visible the 'viewer' is the light source and in_dir is the direction from it to the hit point
 
       if (in_dir.has_value()) {
         float distance = in_dir->norm();
         float distance_factor = (source->emission_radius > 0.f) ? std::powf((source->emission_radius / distance), 2) : 1.f;
         // angle between normal at hitting point and incoming direction (from light source)
-        float cos_theta = (-1.f / distance) * (*in_dir) * (1.f / hit->normal.norm()) * (hit->normal);
+        float cos_theta = (-1.f / distance) * (*in_dir) * hit->normal.normalized();
         cum_radiance += source->color * distance_factor * cos_theta *
                         brdf->eval(hit->normal, *in_dir, -hit->ray.direction, hit->surface_point);
       }
@@ -193,20 +193,20 @@ public:
   /// @param ray depth reached before russian roulette starts applying
   /// @param maximum ray depth
   /// @param background color
-  PathTracer(const World& world, std::unique_ptr<PCG> pcg = nullptr, int n_rays = 10, int russian_roulette_lim = 3,
-             int max_depth = 5, Color background = Color())
-      : Renderer(world, background), pcg(std::move(pcg)), n_rays(n_rays), russian_roulette_lim(russian_roulette_lim),
-        max_depth(max_depth) {
+  PathTracer(const World &world, std::unique_ptr<PCG> pcg = nullptr, int n_rays = 10, int russian_roulette_lim = 3,
+             int max_depth = 5, Color background = BLACK)
+      : Renderer{world, background}, pcg{std::move(pcg)}, n_rays{n_rays}, russian_roulette_lim{russian_roulette_lim},
+        max_depth{max_depth} {
     if (!this->pcg) {
       pcg = std::make_unique<PCG>();
     }
-  };
+  }
 
   //------------Methods-----------
   virtual Color operator()(Ray ray) const {
     // 1. Stop recursion if maximum depth is reached
     if (ray.depth > max_depth) {
-      return Color();
+      return BLACK;
     }
 
     // 2. Get closest intersection of ray with world objects or return background Color if no object is hit
@@ -217,19 +217,19 @@ public:
 
     // 3. Unpack hit
     const Material &hit_material = hit->shape->material;
-    Color reflected_color = (*(hit_material.brdf->pigment))(hit->surface_point); // both pigment and emitted_radiance are
-                                                                                 // pointers
+    Color reflected_color = (*(hit_material.brdf->pigment))(hit->surface_point);
     Color emitted_radiance = (*(hit_material.emitted_radiance))(hit->surface_point);
 
     // 4. Apply russian roulette: decide whether to scatter new rays and rescale the BRDF to compesate for possible
-    // truncations and get unbiased expected value
+    // truncations and get an unbiased result
     float hit_lum = std::max({reflected_color.r, reflected_color.g, reflected_color.b});
     if (ray.depth > russian_roulette_lim) {
       float q = std::max(1.f - hit_lum, 0.05f);
       // Following Shirley & Morley, use max reflectance of hit color as Russian roulette probability
       if (pcg->random_float() > q) {
-        // Stop with higher probability if the hit point has low reflactance: this improves efficiency without increasing variance
-        // too much Keep a finite stopping probability 0.05 even if hit_lum is close to 1
+        // Stop with higher probability if the hit point has low reflactance, to reduce cost while not
+        // incurring in variance penalty. This follows the same principle as imortance sampling.
+        // Keep a finite stopping probability 0.05 even if hit_lum is close to 1.
         reflected_color = reflected_color * (1.f / (1.f - q));
       } else {
         return emitted_radiance;
@@ -241,8 +241,8 @@ public:
     // Note that the algorithm is correct for a diffusiveBRDF provided reflected_color is rho_d for the three bands. This is
     // beacuse the normalization of the diffusiveBRDF exactly cancels out the normalization of the n=1 Phong
     // distribution. A further multiplicative factor should probably be supplied for other BRDFs: remember to do the
-    // maths ad check.
-    Color cum_radiance = Color();
+    // maths and check.
+    Color cum_radiance = BLACK;
     if (hit_lum > 0.f) { // Proceed with recursion only if hit object is not perfectly absorbing (i.e. hit_lum==0)
       for (int i_ray = 0; i_ray < n_rays; i_ray++) {
         Ray new_ray = hit_material.brdf->scatter_ray(
