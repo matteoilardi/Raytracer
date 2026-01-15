@@ -53,7 +53,7 @@ public:
 
   //--------------------Methods----------------------
   ///@brief check if origin and direction are close to the other ray's
-  constexpr bool is_close(const Ray &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+  bool is_close(const Ray &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return origin.is_close(other.origin, error_tolerance) && direction.is_close(other.direction, error_tolerance);
   }
 

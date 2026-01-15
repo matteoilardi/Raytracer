@@ -53,7 +53,7 @@ public:
   void print() const { std::cout << to_string() << std::endl; }
 
   /// @brief Check if two 2D vectors are close
-  constexpr bool is_close(const Vec2d &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+bool is_close(const Vec2d &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return are_close(u, other.u, error_tolerance) && are_close(v, other.v, error_tolerance);
   }
 };
@@ -76,7 +76,7 @@ public:
   constexpr Vec(float x, float y, float z) noexcept : x(x), y(y), z(z) {}
 
   /// @brief Constructor for a normalized Vec accepting polar coordinates
-  constexpr Vec(float theta, float phi) noexcept
+  Vec(float theta, float phi) noexcept
       : x(std::sin(theta) * std::cos(phi)), y(std::sin(theta) * std::sin(phi)), z(std::cos(theta)) {}
 
   //--------------------Methods----------------------
@@ -92,7 +92,7 @@ public:
   void print() const { std::cout << to_string() << std::endl; }
 
   /// @brief Check if two vectors are close
-  constexpr bool is_close(const Vec &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+  bool is_close(const Vec &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return are_close(x, other.x, error_tolerance) && are_close(y, other.y, error_tolerance) &&
            are_close(z, other.z, error_tolerance);
   }
@@ -104,11 +104,11 @@ public:
   constexpr float squared_norm() const noexcept { return x * x + y * y + z * z; }
 
   /// @brief Return norm of vector
-  constexpr float norm() const noexcept { return std::sqrt(squared_norm()); }
+  float norm() const noexcept { return std::sqrt(squared_norm()); }
 
   /// @brief Normalize vector
   [[nodiscard]]
-  constexpr Vec normalized() const noexcept {
+  Vec normalized() const noexcept {
     float n = norm();
     return Vec(x / n, y / n, z / n);
   }
@@ -150,7 +150,7 @@ public:
   void print() const { std::cout << to_string() << std::endl; }
 
   /// @brief Check if two points are close
-  constexpr bool is_close(const Point &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+  bool is_close(const Point &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return are_close(x, other.x, error_tolerance) && are_close(y, other.y, error_tolerance) &&
            are_close(z, other.z, error_tolerance);
   }
@@ -189,7 +189,7 @@ public:
   void print() const { std::cout << to_string() << std::endl; }
 
   /// @brief Check if two normals are close
-  constexpr bool is_close(const Normal &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+  bool is_close(const Normal &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return are_close(x, other.x, error_tolerance) && are_close(y, other.y, error_tolerance) &&
            are_close(z, other.z, error_tolerance);
   }
@@ -201,11 +201,11 @@ public:
   constexpr float squared_norm() const noexcept { return x * x + y * y + z * z; }
 
   /// @brief Return norm of normal
-  constexpr float norm() const noexcept { return std::sqrt(squared_norm()); }
+  float norm() const noexcept { return std::sqrt(squared_norm()); }
 
   /// @brief Normalize normal
   [[nodiscard]]
-  constexpr Normal normalized() const noexcept {
+  Normal normalized() const noexcept {
     float n = norm();
     return Normal(x / n, y / n, z / n);
   }
@@ -350,13 +350,13 @@ public:
       : linear_part(linear_part), translation_vec() {}
 
   /// @brief Constructor accepting translation vector only
-  HomMatrix(const Vec &translation_vec) noexcept
+  constexpr HomMatrix(const Vec &translation_vec) noexcept
       : linear_part{{{1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}}}, translation_vec(translation_vec) {}
 
   //------------Methods-----------
 
   ///@brief Check if two matrices are close
-  constexpr bool is_close(const HomMatrix &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+  bool is_close(const HomMatrix &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     // check if the two linear parts are close
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
@@ -486,13 +486,13 @@ public:
   //------------Methods-----------
 
   /// @brief Check if hom_matrix and inverse_hom_matrix are indeed inverse
-  constexpr bool is_consistent() const noexcept {
+  bool is_consistent() const noexcept {
     Transformation identity_check = *this * inverse();
     return identity_check.is_close(Transformation());
   }
 
   /// @brief Check if transformation is close to another transformation
-  constexpr bool is_close(const Transformation &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
+  bool is_close(const Transformation &other, float error_tolerance = DEFAULT_ERROR_TOLERANCE) const noexcept {
     return hom_matrix.is_close(other.hom_matrix, error_tolerance) &&
            inverse_hom_matrix.is_close(other.inverse_hom_matrix, error_tolerance);
   }
@@ -586,7 +586,7 @@ struct ONB {
   /// @brief Branchless constructor from a Vec (cast into e_3)
   /// @details Assumes the input Vec to be normalized. Based on the algorithm by Duff et al. (2017)
   /// @param vec normalized Vec = e_3
-  constexpr ONB(Vec vec) noexcept : e3(vec) {
+  ONB(Vec vec) noexcept : e3(vec) {
     float sign = std::copysignf(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the
                                             // second one (sign is set negative if e3.z=0)
     const float a = -1.f / (sign + e3.z);
@@ -598,7 +598,7 @@ struct ONB {
 
   // -------------------- Methods ----------------------
   /// @brief Returns true if it's a well formed ONB, false otherwise
-  constexpr bool is_consistent() const noexcept {
+  bool is_consistent() const noexcept {
     if (!are_close(e1 * e2, 0.f) || !are_close(e1 * e3, 0.f) || !are_close(e2 * e3, 0.f)) {
       return false;
     }

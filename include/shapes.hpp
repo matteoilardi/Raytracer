@@ -176,7 +176,7 @@ private:
   }
 
   /// @brief Calculate (u, v) coordinates of given point (i. e. spherical coordinates)
-  static constexpr Vec2d calculate_uv(Point point) noexcept {
+  static Vec2d calculate_uv(Point point) noexcept {
     float u = atan2f(point.y, point.x) / (2.f * std::numbers::pi_v<float>); // atan2 is the arctangent
     if (u < 0.f) {
       u = u + 1.f;
