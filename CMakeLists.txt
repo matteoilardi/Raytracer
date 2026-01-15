@@ -8,6 +8,11 @@ project(raytracer
     LANGUAGES CXX
 )
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  message(STATUS "No build type selected, defaulting to Release")
+endif()
+
 # Use C++23
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
