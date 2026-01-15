@@ -35,10 +35,10 @@ public:
   //-----------Constructors-----------
 
   /// @brief Default constructor initializes to (0, 0)
-  constexpr Vec2d() noexcept : u(0.f), v(0.f) {}
+  constexpr Vec2d() noexcept : u{0.f}, v{0.f} {}
 
   /// @brief Constructor with parameters
-  constexpr Vec2d(float u, float v) noexcept : u(u), v(v) {}
+  constexpr Vec2d(float u, float v) noexcept : u{u}, v{v} {}
 
   //--------------------Methods----------------------
 
@@ -70,14 +70,14 @@ public:
   //-----------Constructors-----------
 
   /// @brief Default constructor initializes to (0, 0, 0)
-  constexpr Vec() noexcept : x(0.f), y(0.f), z(0.f) {}
+  constexpr Vec() noexcept : x{0.f}, y{0.f}, z{0.f} {}
 
   /// @brief Constructor accepting cartesian coordinates
-  constexpr Vec(float x, float y, float z) noexcept : x(x), y(y), z(z) {}
+  constexpr Vec(float x, float y, float z) noexcept : x{x}, y{y}, z{z} {}
 
   /// @brief Constructor for a normalized Vec accepting polar coordinates
   Vec(float theta, float phi) noexcept
-      : x(std::sin(theta) * std::cos(phi)), y(std::sin(theta) * std::sin(phi)), z(std::cos(theta)) {}
+      : x{std::sin(theta) * std::cos(phi)}, y{std::sin(theta) * std::sin(phi)}, z{std::cos(theta)} {}
 
   //--------------------Methods----------------------
 
@@ -98,7 +98,7 @@ public:
   }
 
   /// @brief Return negative vector
-  constexpr Vec operator-() const noexcept { return Vec(-x, -y, -z); }
+  constexpr Vec operator-() const noexcept { return Vec{-x, -y, -z}; }
 
   /// @brief Return squared norm of vector
   constexpr float squared_norm() const noexcept { return x * x + y * y + z * z; }
@@ -110,7 +110,7 @@ public:
   [[nodiscard]]
   Vec normalized() const noexcept {
     float n = norm();
-    return Vec(x / n, y / n, z / n);
+    return Vec{x / n, y / n, z / n};
   }
 
   /// @brief Convert vector to a normal
@@ -132,10 +132,10 @@ public:
   //-----------Constructors-----------
 
   /// @brief Default constructor: initialize to (0, 0, 0)
-  constexpr Point() noexcept : x(0.f), y(0.f), z(0.f) {}
+  constexpr Point() noexcept : x{0.f}, y{0.f}, z{0.f} {}
 
   /// @brief Constructor with parameters
-  constexpr Point(float x, float y, float z) noexcept : x(x), y(y), z(z) {}
+  constexpr Point(float x, float y, float z) noexcept : x{x}, y{y}, z{z} {}
 
   //------------Methods-----------
 
@@ -171,10 +171,10 @@ public:
   //-----------Constructors-----------
 
   /// @brief Default constructor: initialize to (0, 0, 0)
-  constexpr Normal() noexcept : x(0.f), y(0.f), z(0.f) {}
+  constexpr Normal() noexcept : x{0.f}, y{0.f}, z{0.f} {}
 
   /// @brief Constructor with parameters
-  constexpr Normal(float x, float y, float z) noexcept : x(x), y(y), z(z) {}
+  constexpr Normal(float x, float y, float z) noexcept : x{x}, y{y}, z{z} {}
 
   //------------Methods-----------
 
@@ -195,7 +195,7 @@ public:
   }
 
   /// @brief Return opposite normal
-  constexpr Normal operator-() const noexcept { return Normal(-x, -y, -z); }
+  constexpr Normal operator-() const noexcept { return Normal{-x, -y, -z}; }
 
   /// @brief Return squared norm of normal
   constexpr float squared_norm() const noexcept { return x * x + y * y + z * z; }
@@ -207,7 +207,7 @@ public:
   [[nodiscard]]
   Normal normalized() const noexcept {
     float n = norm();
-    return Normal(x / n, y / n, z / n);
+    return Normal{x / n, y / n, z / n};
   }
 
   /// @brief Convert normal to a vector
@@ -343,15 +343,15 @@ public:
 
   /// @brief Constructor accepting linear part and translation vector
   constexpr HomMatrix(const std::array<std::array<float, 3>, 3> &linear_part, const Vec &translation_vec) noexcept
-      : linear_part(linear_part), translation_vec(translation_vec) {}
+      : linear_part{linear_part}, translation_vec{translation_vec} {}
 
   /// @brief Constructor accepting linear part only
   constexpr HomMatrix(const std::array<std::array<float, 3>, 3> &linear_part) noexcept
-      : linear_part(linear_part), translation_vec() {}
+      : linear_part{linear_part}, translation_vec{} {}
 
   /// @brief Constructor accepting translation vector only
   constexpr HomMatrix(const Vec &translation_vec) noexcept
-      : linear_part{{{1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}}}, translation_vec(translation_vec) {}
+      : linear_part{{{1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, {0.f, 0.f, 1.f}}}, translation_vec{translation_vec} {}
 
   //------------Methods-----------
 
@@ -422,7 +422,7 @@ private:
       }
     }
 
-    return HomMatrix(linear_part, translation_vec);
+    return HomMatrix{linear_part, translation_vec};
   }
 };
 
@@ -431,21 +431,20 @@ private:
 //-------------------------------------------------------------------------------------------------------------
 class Transformation {
 public:
+
   //-------Properties--------
 
   HomMatrix hom_matrix;         // homogeneous transformation matrix
   HomMatrix inverse_hom_matrix; // inverse homogeneous transformation matrix
 
-  //-----------Constructors-----------
-
-  // The following constructors always build the inverse matrix too
-
-  /// @brief Default constructor: initializes to identity
-  constexpr Transformation() noexcept : hom_matrix(), inverse_hom_matrix() {}
+  //-------- "Protected" constructors---------
+  // The following constructors should be marked as protected and used by the derived
+  // classes of Transformation only, because they can be misused, leading to non
+  // consistent ransformations. This would hinder testability.
 
   /// @brief Constructor accepting assigned homogeneous matrix and its inverse
   constexpr Transformation(HomMatrix hom_matrix, HomMatrix inverse_hom_matrix) noexcept
-      : hom_matrix(hom_matrix), inverse_hom_matrix(inverse_hom_matrix) {}
+      : hom_matrix{hom_matrix}, inverse_hom_matrix{inverse_hom_matrix} {}
 
   /// @brief Constructor accepting assigned linear_part, inverse_linear_part and translation
   /// @param linear_part linear part as std::array<std::array<float, 3>, 3>
@@ -454,33 +453,30 @@ public:
   constexpr Transformation(const std::array<std::array<float, 3>, 3> &linear_part,
                            const std::array<std::array<float, 3>, 3> &inverse_linear_part, const Vec &translation_vec,
                            const Vec &inverse_translation_vec) noexcept
-      : hom_matrix(linear_part, translation_vec), inverse_hom_matrix(inverse_linear_part, inverse_translation_vec) {}
+      : hom_matrix{linear_part, translation_vec}, inverse_hom_matrix{inverse_linear_part, inverse_translation_vec} {}
+
+  //-------- Public contructors---------
+  // The following constructors always build the inverse HomMatrix too. Hence,
+  // all transformations defined in the code are guaranteed to be consistent.
+   
+  /// @brief Default constructor: initializes to identity
+  constexpr Transformation() noexcept : hom_matrix{}, inverse_hom_matrix{} {}
+
 
   /// @brief Constructor for translations
   /// @param translation_vec translation vector as Vec
   constexpr Transformation(const Vec &translation_vec) noexcept
-      : hom_matrix(translation_vec), inverse_hom_matrix((-translation_vec)) {}
+      : hom_matrix{translation_vec}, inverse_hom_matrix{-translation_vec} {}
 
   /// @brief Constructor for rotations
   /// @param rotation_matrix rotation matrix as std::array<std::array<float, 3>, 3>
   constexpr Transformation(const std::array<std::array<float, 3>, 3> &rotation_matrix) noexcept {
-    hom_matrix = HomMatrix(rotation_matrix);
-    inverse_hom_matrix = HomMatrix();
+    hom_matrix = HomMatrix{rotation_matrix};
+    inverse_hom_matrix = HomMatrix{};
     // Invert the rotation matrix by transposing it
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 3; ++j)
         inverse_hom_matrix.linear_part[i][j] = rotation_matrix[j][i];
-  }
-
-  /// @brief constructor for scalings and reflections (diagonal only)
-  /// @param diagonal diagonal of the linear part as std::array<float, 3>
-  constexpr Transformation(const std::array<float, 3> &diagonal) noexcept {
-    hom_matrix = HomMatrix();
-    inverse_hom_matrix = HomMatrix();
-    for (int i = 0; i < 3; ++i) {
-      hom_matrix.linear_part[i][i] = diagonal[i];
-      inverse_hom_matrix.linear_part[i][i] = 1.0f / diagonal[i];
-    }
   }
 
   //------------Methods-----------
@@ -488,7 +484,7 @@ public:
   /// @brief Check if hom_matrix and inverse_hom_matrix are indeed inverse
   bool is_consistent() const noexcept {
     Transformation identity_check = *this * inverse();
-    return identity_check.is_close(Transformation());
+    return identity_check.is_close(Transformation{});
   }
 
   /// @brief Check if transformation is close to another transformation
@@ -498,7 +494,7 @@ public:
   }
 
   /// @brief Return the inverse transofrmation
-  constexpr Transformation inverse() const noexcept { return Transformation(inverse_hom_matrix, hom_matrix); }
+  constexpr Transformation inverse() const noexcept { return Transformation{inverse_hom_matrix, hom_matrix}; }
 
   /// @brief Product between a transformation and a point
   constexpr Point operator*(const Point &p) const noexcept { return hom_matrix.apply(p); }
@@ -513,7 +509,7 @@ public:
   constexpr Transformation operator*(const Transformation &other) const noexcept {
     // The components of the inverse matrix are computed using
     //     (T_A * T_B)^{-1} = T_B^{-1} * T_A^{-1}.
-    return Transformation(hom_matrix.compose(other.hom_matrix), other.inverse_hom_matrix.compose(inverse_hom_matrix));
+    return Transformation{hom_matrix.compose(other.hom_matrix), other.inverse_hom_matrix.compose(inverse_hom_matrix)};
   }
 };
 
@@ -526,7 +522,7 @@ public:
   /// @brief Constructor: builds rotation matrix around x-axis (calls Transformation constructor that accepts a rotation matrix)
   /// @param rotation angle (rads)
   constexpr rotation_x(const float &theta) noexcept
-      : Transformation({{{1.f, 0.f, 0.f}, {0.f, std::cos(theta), -std::sin(theta)}, {0.f, std::sin(theta), std::cos(theta)}}}) {}
+      : Transformation{{{{1.f, 0.f, 0.f}, {0.f, std::cos(theta), -std::sin(theta)}, {0.f, std::sin(theta), std::cos(theta)}}}} {}
 };
 
 class rotation_y : public Transformation {
@@ -534,7 +530,7 @@ public:
   /// @brief Constructor: builds rotation matrix around y-axis (calls Transformation constructor that accepts a rotation matrix)
   /// @param rotation angle (rads)
   constexpr rotation_y(const float &theta) noexcept
-      : Transformation({{{std::cos(theta), 0.f, std::sin(theta)}, {0.f, 1.f, 0.f}, {-std::sin(theta), 0.f, std::cos(theta)}}}) {}
+      : Transformation{{{{std::cos(theta), 0.f, std::sin(theta)}, {0.f, 1.f, 0.f}, {-std::sin(theta), 0.f, std::cos(theta)}}}} {}
 };
 
 class rotation_z : public Transformation {
@@ -542,7 +538,7 @@ public:
   /// @brief Constructor builds rotation matrix around z-axis (calls Transformation constructor that accepts a rotation matrix)
   /// @param rotation angle (rads)
   constexpr rotation_z(const float &theta) noexcept
-      : Transformation({{{std::cos(theta), -std::sin(theta), 0.f}, {std::sin(theta), std::cos(theta), 0.f}, {0.f, 0.f, 1.f}}}) {}
+      : Transformation{{{{std::cos(theta), -std::sin(theta), 0.f}, {std::sin(theta), std::cos(theta), 0.f}, {0.f, 0.f, 1.f}}}} {}
 };
 
 class translation : public Transformation {
@@ -556,16 +552,22 @@ class scaling : public Transformation {
 public:
   /// @brief Contructor: calls Transformation constructor that accepts the diagonal of the linear part
   /// @param array of length 3 representing diagonal of linear part
-  constexpr scaling(std::array<float, 3> diagonal) noexcept : Transformation{diagonal} {}
+  constexpr scaling(const std::array<float, 3>& diagonal) noexcept : Transformation{} {
+    for (int i = 0; i < 3; ++i) {
+      hom_matrix.linear_part[i][i] = diagonal[i];
+      inverse_hom_matrix.linear_part[i][i] = 1.0f / diagonal[i];
+
+    }
+  }
 };
 
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- FURTHER GLOBAL CONSTANTS ----------------------
 //-------------------------------------------------------------------------------------------------------------
 
-inline constexpr Vec VEC_X = Vec(1.f, 0.f, 0.f);
-inline constexpr Vec VEC_Y = Vec(0.f, 1.f, 0.f);
-inline constexpr Vec VEC_Z = Vec(0.f, 0.f, 1.f);
+inline constexpr Vec VEC_X = Vec{1.f, 0.f, 0.f};
+inline constexpr Vec VEC_Y = Vec{0.f, 1.f, 0.f};
+inline constexpr Vec VEC_Z = Vec{0.f, 0.f, 1.f};
 
 //-------------------------------------------------------------------------------------------------------------
 //------------------------------- ORTHONORMAL BASIS OBJECT ----------------------
@@ -581,19 +583,19 @@ struct ONB {
   constexpr ONB() noexcept : e1(VEC_X), e2(VEC_Y), e3(VEC_Z) {};
 
   /// @brief Constructor from three Vec
-  constexpr ONB(Vec e1, Vec e2, Vec e3) noexcept : e1(e1), e2(e2), e3(e3) {};
+  constexpr ONB(Vec e1, Vec e2, Vec e3) noexcept : e1{e1}, e2{e2}, e3{e3} {};
 
   /// @brief Branchless constructor from a Vec (cast into e_3)
   /// @details Assumes the input Vec to be normalized. Based on the algorithm by Duff et al. (2017)
   /// @param vec normalized Vec = e_3
-  ONB(Vec vec) noexcept : e3(vec) {
+  ONB(Vec vec) noexcept : e3{vec} {
     float sign = std::copysignf(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the
                                             // second one (sign is set negative if e3.z=0)
     const float a = -1.f / (sign + e3.z);
     const float b = e3.x * e3.y * a;
 
-    e1 = Vec(1.f + sign * e3.x * e3.x * a, sign * b, -sign * e3.x);
-    e2 = Vec(b, sign + e3.y * e3.y * a, -e3.y);
+    e1 = Vec{1.f + sign * e3.x * e3.x * a, sign * b, -sign * e3.x};
+    e2 = Vec{b, sign + e3.y * e3.y * a, -e3.y};
   }
 
   // -------------------- Methods ----------------------

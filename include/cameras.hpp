@@ -46,10 +46,10 @@ public:
   constexpr Ray() noexcept : origin{}, direction{} {};
 
   /// Constructor with parameters
-  constexpr Ray(Point origin, Vec direction) noexcept : origin(origin), direction(direction) {};
+  constexpr Ray(Point origin, Vec direction) noexcept : origin{origin}, direction{direction} {};
 
   constexpr Ray(Point origin, Vec direction, float tmin, float tmax, int depth) noexcept
-      : origin(origin), direction(direction), tmin(tmin), tmax(tmax), depth(depth) {};
+      : origin{origin}, direction{direction}, tmin{tmin}, tmax{tmax}, depth{depth} {};
 
   //--------------------Methods----------------------
   ///@brief check if origin and direction are close to the other ray's
@@ -59,11 +59,11 @@ public:
 
   /// @brief returns Point at the given distance from the screen
   /// @param t distance from the screen
-  constexpr Point at(float t) const noexcept { return origin + Vec(t * direction); }
+  constexpr Point at(float t) const noexcept { return origin + Vec{t * direction}; }
 
   /// @brief apply a transformation to the ray (origin transformed like a point, direction transformed like a vector)
   /// @param transformation to be applied
-  constexpr Ray transform(const Transformation &T) const noexcept { return Ray(T * origin, T * direction, tmin, tmax, depth); };
+  constexpr Ray transform(const Transformation &T) const noexcept { return Ray{T * origin, T * direction, tmin, tmax, depth}; };
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -81,11 +81,11 @@ public:
   /// @brief Constructor with parameters
   /// @param aspect ratio
   /// @param tranformation encoding observer's orientation
-  Camera(std::optional<float> asp_ratio, Transformation transformation = Transformation())
-      : asp_ratio(asp_ratio), transformation(transformation) {};
+  Camera(std::optional<float> asp_ratio, Transformation transformation = Transformation{})
+      : asp_ratio{asp_ratio}, transformation{transformation} {};
 
   Camera(float asp_ratio, Transformation transformation)
-      : asp_ratio(std::make_optional<float>(asp_ratio)), transformation(transformation) {};
+      : asp_ratio(std::make_optional<float>(asp_ratio)), transformation{transformation} {};
 
   virtual ~Camera() {}
 
@@ -126,14 +126,14 @@ public:
   //-----------Constructors-----------
   //
   /// Constructor with parameters
-  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, const Transformation &transformation = Transformation())
-      : Camera(asp_ratio, transformation) {}
+  OrthogonalCamera(std::optional<float> asp_ratio = std::nullopt, const Transformation &transformation = Transformation{})
+      : Camera{asp_ratio, transformation} {}
   //--------------------Methods----------------------
 
   virtual Ray fire_ray(float u, float v) const override {
-    Point origin = Point(-1.f, u_to_y(u), v_to_z(v));
-    constexpr Vec direction = VEC_X;
-    return Ray(origin, direction).transform(transformation);
+    Point origin = Point{-1.f, u_to_y(u), v_to_z(v)};
+    constexpr Vec direction{VEC_X};
+    return Ray{origin, direction}.transform(transformation);
   };
 };
 
@@ -146,16 +146,16 @@ public:
 
   /// Constructor with parameters
   PerspectiveCamera(float distance = 1.f, std::optional<float> asp_ratio = std::nullopt,
-                    Transformation transformation = Transformation())
-      : Camera(asp_ratio, transformation), distance(distance) {}
+                    Transformation transformation = Transformation{})
+      : Camera{asp_ratio, transformation}, distance{distance} {}
 
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
   virtual Ray fire_ray(float u, float v) const override {
-    Point origin = Point(-distance, 0.f, 0.f);
-    Vec direction = Vec(distance, u_to_y(u), v_to_z(v));
-    return Ray(origin, direction).transform(transformation);
+    Point origin{-distance, 0.f, 0.f};
+    Vec direction{distance, u_to_y(u), v_to_z(v)};
+    return Ray{origin, direction}.transform(transformation);
   };
 };
 
@@ -177,7 +177,7 @@ public:
   /// @brief Constructor with parameters
   ImageTracer(std::unique_ptr<HdrImage> image, std::shared_ptr<Camera> camera, int samples_per_pixel_edge = 1,
               std::unique_ptr<PCG> pcg = nullptr)
-      : image(std::move(image)), camera(camera), samples_per_pixel_edge(samples_per_pixel_edge), pcg(std::move(pcg)) {
+      : image{std::move(image)}, camera{camera}, samples_per_pixel_edge{samples_per_pixel_edge}, pcg{std::move(pcg)} {
     if (!pcg) {
       this->pcg = std::make_unique<PCG>();
     }

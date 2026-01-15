@@ -68,7 +68,7 @@ private:
   std::string error_message;
 
 public:
-  InvalidPfmFileFormat(const std::string &em) : error_message("Invalid PFM file format: " + em) {}
+  InvalidPfmFileFormat(const std::string &em) : error_message{"Invalid PFM file format: " + em} {}
 
   const char *what() const noexcept override {
     // Convert to cstring for compatibility
@@ -97,10 +97,10 @@ public:
   float r, g, b; // 32-bit for memory efficiency
 
   // Constructors
-  constexpr Color() noexcept : r(0.f), g(0.f), b(0.f) {} // Default constructor (sets color to black)
+  constexpr Color() noexcept : r{0.f}, g{0.f}, b{0.f} {} // Default constructor (sets color to black)
 
   constexpr Color(float red, float green, float blue) noexcept // Constructor with externally assigned values
-      : r(red), g(green), b(blue) {}
+      : r{red}, g{green}, b{blue} {}
 
   // Methods
 
@@ -114,7 +114,7 @@ public:
   friend bool are_close(const Color &color1, const Color &color2) noexcept { return color1.is_close(color2); }
 
   /// @brief Sum of two colors
-  constexpr Color operator+(const Color &other) const noexcept { return Color(r + other.r, g + other.g, b + other.b); }
+  constexpr Color operator+(const Color &other) const noexcept { return Color{r + other.r, g + other.g, b + other.b}; }
 
   /// @brief Compound addition assigmenent
   constexpr Color &operator+=(const Color &other) noexcept {
@@ -123,7 +123,7 @@ public:
   }
 
   /// @brief Product of two colors
-  constexpr Color operator*(const Color &other) const noexcept { return Color(r * other.r, g * other.g, b * other.b); }
+  constexpr Color operator*(const Color &other) const noexcept { return Color{r * other.r, g * other.g, b * other.b}; }
 
   /// @brief Compound product assigmenent of two colors
   constexpr Color &operator*=(const Color &other) noexcept {
@@ -132,7 +132,7 @@ public:
   }
 
   /// @brief Product of color and scalar
-  constexpr Color operator*(float scalar) const noexcept { return Color(r * scalar, g * scalar, b * scalar); }
+  constexpr Color operator*(float scalar) const noexcept { return Color{r * scalar, g * scalar, b * scalar}; }
 
   /// @brief Compound product assigmenent of a color and a scalar
   constexpr Color &operator*=(float scalar) noexcept {
@@ -188,7 +188,6 @@ public:
 /// @param endianness
 void _write_float(std::ostream &stream, float value, Endianness endianness) {
   // Convert "value" in a sequence of 32 bits
-
   uint32_t double_word = std::bit_cast<uint32_t>(value);
   // uint32_t double_word{*((uint32_t *)&value)}; // C-style solution, violates C++'s aliasing rules
 
@@ -240,7 +239,7 @@ float _read_float(std::istream &stream, Endianness endianness) {
 /// @brief Read the line of bytes already converting into ASCII
 /// @param stream
 std::string _read_line(std::istream &stream) {
-  std::string result = "";
+  std::string result{""};
   char cur_byte;
 
   while (stream.get(cur_byte)) {
@@ -255,7 +254,7 @@ std::string _read_line(std::istream &stream) {
 /// @brief Parse image dimensions (columns, rows) from the appropriate line of a PFM file header
 /// @param line to parse
 std::pair<int, int> _parse_img_size(const std::string &line) {
-  std::istringstream iss(line);
+  std::istringstream iss{line};
   int width, height;
 
   // Read two integers
@@ -280,7 +279,7 @@ std::pair<int, int> _parse_img_size(const std::string &line) {
 /// @brief Parse endianness from the appropriate line of a PFM file header
 /// @param line
 Endianness _parse_endianness(const std::string &line) {
-  std::istringstream iss(line);
+  std::istringstream iss{line};
   float value = 0.f;
   if (!(iss >> value)) {
     // Fed value is not a valid float
@@ -300,6 +299,21 @@ Endianness _parse_endianness(const std::string &line) {
   // this and raise a warning otherwise
   throw std::logic_error("Unreachable code reached in _parse_endianness");
 }
+
+
+//-------------------------------------------------------------------------------------------------------------
+//---------- PREDEFINED COLORS ------------------
+//-------------------------------------------------------------------------------------------------------------
+
+inline constexpr Color BLACK{0.0f, 0.0f, 0.0f};
+inline constexpr Color WHITE{1.0f, 1.0f, 1.0f};
+inline constexpr Color RED{1.0f, 0.0f, 0.0f};
+inline constexpr Color GREEN{0.0f, 1.0f, 0.0f};
+inline constexpr Color BLUE{0.0f, 0.0f, 1.0f};
+inline constexpr Color YELLOW{1.0f, 1.0f, 0.0f};
+inline constexpr Color PURPLE{1.0f, 0.0f, 1.0f};
+inline constexpr Color CYAN{0.0f, 1.0f, 1.0f};
+
 
 // ------------------------------------------------------------------------------------------------------------
 // HDR IMAGE
@@ -349,7 +363,7 @@ private:
         }
 
         // Set the pixel at position (x, y) with the color just read
-        set_pixel(x, y, Color(r, g, b));
+        set_pixel(x, y, Color{r, g, b});
       }
     }
 
@@ -368,11 +382,11 @@ public:
 
   // Constructors
 
-  HdrImage(int32_t w, int32_t h) : width(w), height(h) {
+  HdrImage(int32_t w, int32_t h) : width{w}, height{h} {
     if (w <= 0 || h <= 0) {
       throw std::invalid_argument("HdrImage dimensions must be positive");
     }
-    pixels.resize(static_cast<size_t>(w * h), Color());
+    pixels.resize(static_cast<size_t>(w * h), Color{});
   }
 
   /// @brief PFM file --> HDR image
@@ -384,9 +398,9 @@ public:
   explicit HdrImage(const std::string &file_name) {
     std::ifstream stream(file_name, std::ios::binary); // Open the file in binary mode
     if (!stream.is_open()) {
-      std::string error_msg = "Failed to open file \"" + file_name + "\"";
+      std::string error_msg{"Failed to open file \"" + file_name + "\""};
       if (errno) {                                        // errno is a system-specific number that identifies an error occured
-        error_msg += ": " + std::string(strerror(errno)); // convert errno to the string describing the message
+        error_msg += ": " + std::string{strerror(errno)}; // convert errno to the string describing the message
       }
       throw std::runtime_error(error_msg);
     }
@@ -422,7 +436,7 @@ public:
   }
 
   void write_pfm(const std::string &filename) {
-    std::ofstream of(filename);
+    std::ofstream of{filename};
     write_pfm(of);
     of.close();
   }
@@ -518,16 +532,3 @@ public:
     stbi_write_png(filename.c_str(), width, height, 3, buffer.data(), width * 3);
   }
 };
-
-//-------------------------------------------------------------------------------------------------------------
-//---------- PREDEFINED COLORS ------------------
-//-------------------------------------------------------------------------------------------------------------
-
-inline constexpr Color BLACK(0.0f, 0.0f, 0.0f);
-inline constexpr Color WHITE(1.0f, 1.0f, 1.0f);
-inline constexpr Color RED(1.0f, 0.0f, 0.0f);
-inline constexpr Color GREEN(0.0f, 1.0f, 0.0f);
-inline constexpr Color BLUE(0.0f, 0.0f, 1.0f);
-inline constexpr Color YELLOW(1.0f, 1.0f, 0.0f);
-inline constexpr Color PURPLE(1.0f, 0.0f, 1.0f);
-inline constexpr Color CYAN(0.0f, 1.0f, 1.0f);
