@@ -18,6 +18,7 @@
 #include <memory>
 #include <numbers>
 #include <optional>
+
 // ------------------------------------------------------------------------------------------------------------
 // --------GLOBAL FUNCTIONS, CONSTANTS, FORWARD DECLARATIONS------------------
 // ----------------------------------------------------------------------------------------
@@ -30,13 +31,12 @@ class Plane;
 class PointLightSource;
 class World;
 
-
 //-------------------------------------------------------------------------------------------------------------
 // --------------UTILS------------------
 // ------------------------------------------------------------------------------------------------------------
 
 /// @brief Merges two ordered arrays into one, preserving order
-template<typename T, typename Compare>
+template <typename T, typename Compare>
 std::vector<T> merge_ordered_vectors(const std::vector<T> &v1, const std::vector<T> &v2, Compare cmp) noexcept {
   std::vector<T> result;
   result.reserve(v1.size() + v2.size());
@@ -45,8 +45,10 @@ std::vector<T> merge_ordered_vectors(const std::vector<T> &v1, const std::vector
   auto it2 = v2.begin();
 
   while (it1 != v1.end() && it2 != v2.end()) {
-    if (cmp(*it1, *it2)) result.push_back(*it1++);
-    else result.push_back(*it2++);
+    if (cmp(*it1, *it2))
+      result.push_back(*it1++);
+    else
+      result.push_back(*it2++);
   }
 
   result.insert(result.end(), it1, v1.end());
@@ -86,13 +88,12 @@ public:
            ray.is_close(other.ray, error_tolerance) && are_close(t, other.t, error_tolerance);
   }
 
-  void transform_in_place(const Transformation &transformation) noexcept { 
+  void transform_in_place(const Transformation &transformation) noexcept {
     world_point = transformation * world_point;
     normal = transformation * normal;
-    ray = ray.transform(transformation); 
+    ray = ray.transform(transformation);
   }
 };
-
 
 // ------------------------------------------------------------------------------------------------------------
 // -----------OBJECT CLASS (abstract) ------------------
@@ -101,14 +102,13 @@ public:
 /// @brief Object class is the base class for all shapes in the scene
 class Object {
 public:
-  
   //-------Properties--------
   ///@brief transformation describing the actual position of the shape in the world reference frame
   Transformation transformation;
 
   //-----------Constructors-----------
   /// @brief Constructor with parameters
-  /// @param tranformation to apply to the standard shape 
+  /// @param tranformation to apply to the standard shape
   /// @param material properties of the shape (pigment and brdf) as a function of (u, v)
   Object(const Transformation &transformation) : transformation{transformation} {}
 
@@ -122,11 +122,10 @@ public:
 
   /// @brief Finds all intersections of a given ray with the shape, returns vector ordered by increasing t
   /// @param incoming ray (possibly) hitting the shape
-  virtual std::vector<HitRecord> all_ray_intersections(const Ray &ray_world_frame) const noexcept = 0; 
+  virtual std::vector<HitRecord> all_ray_intersections(const Ray &ray_world_frame) const noexcept = 0;
 
   /// @brief Check if a point lies inside the shape
   virtual bool is_point_inside(Point point_world_frame) const noexcept = 0;
-
 };
 
 // ------------------------------------------------------------------------------------------------------------
@@ -143,8 +142,8 @@ public:
   //-----------Constructors-----------
 
   /// @brief Constructor with parameters
-  /// @param tranformation to apply to the standard shape 
-  /// @param material 
+  /// @param tranformation to apply to the standard shape
+  /// @param material
   Shape(const Transformation &transformation, const Material &material) : Object{transformation}, material{material} {}
 
   virtual ~Shape() {}
@@ -171,10 +170,10 @@ protected:
   /// @param ray in the sphere's reference frame
   /// @param ray's t at intersection
   /// @param ray in the world's reference frame
-  HitRecord make_hit(const Ray &ray, float t, const Ray& ray_world_frame) const noexcept {
+  HitRecord make_hit(const Ray &ray, float t, const Ray &ray_world_frame) const noexcept {
     // Find the corresponding hitting point in the *standard* sphere's reference frame
     Point hit_point = ray.at(t);
-    
+
     // Compute the normal to the surface at the intersection point in the *standard* sphere's reference frame
     Normal normal = calculate_normal(hit_point);
     normal = enforce_correct_normal_orientation(normal, ray);
@@ -183,7 +182,7 @@ protected:
     Vec2d uv = calculate_uv(hit_point);
 
     // Transform the intersection point parameters back to the world's reference frame
-    return HitRecord{this, transformation*hit_point, transformation*normal, uv, ray_world_frame, t};
+    return HitRecord{this, transformation * hit_point, transformation * normal, uv, ray_world_frame, t};
   }
 };
 
@@ -212,10 +211,11 @@ public:
     Ray ray = ray_world_frame.transform(transformation.inverse());
 
     auto [t1, t2] = solve_ray_sphere(ray);
-    
+
     // Return if no hit is found
-    if (!t1.has_value()) return std::nullopt;
-    
+    if (!t1.has_value())
+      return std::nullopt;
+
     // Build HitRecord for the first hit
     return make_hit(ray, *t1, ray_world_frame);
   }
@@ -228,9 +228,9 @@ public:
     Ray ray = ray_world_frame.transform(transformation.inverse());
 
     auto ts = solve_ray_sphere(ray);
-   
+
     std::vector<HitRecord> valid_hits;
-    
+
     // Build HitRecords for valid hits
     for (auto t : ts) {
       if (t && *t > ray.tmin && *t < ray.tmax) {
@@ -267,37 +267,40 @@ private:
 
   /// @brief Calculate the t's corrseponding to valid ray intersections with the standard sphere (two at most)
   static std::array<std::optional<float>, 2> solve_ray_sphere(const Ray &ray) noexcept {
-    
+
     // Compute the discriminant of the 2nd degree equation in t for ray-sphere intersection (cfr. slides 8b 29-31),
     // return {nullopt, mullopt} if the ray doesn't intersect the sphere.
     Vec O = ray.origin.to_vector();
-    
+
     float a = ray.direction.squared_norm();
     float b = O * ray.direction;
     float c = O.squared_norm() - 1.f;
 
-    float reduced_disc = b*b - a * c;
+    float reduced_disc = b * b - a * c;
     if (reduced_disc <= 0.f) {
       return {std::nullopt, std::nullopt};
     }
 
     float t1 = (-b - std::sqrt(reduced_disc)) / a;
     float t2 = (-b + std::sqrt(reduced_disc)) / a;
-    
+
     if (t1 > t2) {
       std::swap(t1, t2);
     }
 
     // Pick valid solutions and order them by increasing things (first intersection first)
     if (t1 < ray.tmin) {
-      if (t2 > ray.tmin && t2 < ray.tmax) return {t2, std::nullopt};
-      else return {std::nullopt, std::nullopt};
+      if (t2 > ray.tmin && t2 < ray.tmax)
+        return {t2, std::nullopt};
+      else
+        return {std::nullopt, std::nullopt};
     }
 
-    if (t2 < ray.tmax) return {t1, t2};
-    else return {t1, std::nullopt};
+    if (t2 < ray.tmax)
+      return {t1, t2};
+    else
+      return {t1, std::nullopt};
   }
-
 };
 
 //-------------------------------------------------------------------------------------------------------------
@@ -337,12 +340,12 @@ public:
     return make_hit(ray, t_hit, ray_world_frame);
   }
 
-
   std::vector<HitRecord> all_ray_intersections(const Ray &ray_world_frame) const noexcept override {
     std::vector<HitRecord> hits;
     auto hit = ray_intersection(ray_world_frame);
 
-    if (hit.has_value()) hits.push_back(*hit);
+    if (hit.has_value())
+      hits.push_back(*hit);
     return hits;
   }
 
@@ -362,9 +365,7 @@ private:
   Vec2d calculate_uv(Point point) const noexcept override {
     return Vec2d{point.x - std::floor(point.x), point.y - std::floor(point.y)};
   }
-
 };
-
 
 //-------------------------------------------------------------------------------------------------------------
 // -----------CSGObject CLASS ------------------
@@ -375,7 +376,6 @@ public:
   //-------Properties--------
   std::unique_ptr<Object> object1;
   std::unique_ptr<Object> object2;
-  Transformation transformation;
 
   enum class Operation { UNION, INTERSECTION, DIFFERENCE, FUSION };
   Operation operation;
@@ -385,8 +385,9 @@ public:
   // A CSGObject should be built from ground up starting from Shapes in order to make sense. Deleting the default
   // constructor makes invalid states unrepresentable.
 
-  CSGObject(std::unique_ptr<Object> object1, std::unique_ptr<Object> object2, Operation operation, const Transformation& transformation) noexcept :
-    Object{transformation}, object1{std::move(object1)}, object2{std::move(object2)}, operation{operation}  {}
+  CSGObject(std::unique_ptr<Object> object1, std::unique_ptr<Object> object2, Operation operation,
+            const Transformation &transformation = Transformation{}) noexcept
+      : Object{transformation}, object1{std::move(object1)}, object2{std::move(object2)}, operation{operation} {}
 
   //--------Methods---------
   /// @brief Finds the closest intersection of a given ray with the shape
@@ -394,14 +395,16 @@ public:
   /// @details This method is required to calculate and return (inside HitRecord) a normalized normal
   std::optional<HitRecord> ray_intersection(const Ray &ray_world_frame) const noexcept override {
     auto valid_hits = all_ray_intersections(ray_world_frame); // Ordered by increasing t
-    if (valid_hits.empty()) return std::nullopt;
-    return valid_hits.front(); 
+    if (valid_hits.empty())
+      return std::nullopt;
+    return valid_hits.front();
   }
 
   /// @brief Finds all intersections of a given ray with the shape
   /// @param incoming ray (possibly) hitting the shape
   std::vector<HitRecord> all_ray_intersections(const Ray &ray_world_frame) const noexcept override {
-    // Transoform ray to the children objects' refrence frame 
+
+    // Transoform ray to the children objects' refrence frame
     Ray ray = ray_world_frame.transform(transformation.inverse());
 
     // Calculate all intersections with child objects
@@ -412,21 +415,24 @@ public:
     std::vector<HitRecord> valid_hits1;
     valid_hits1.reserve(hits1.size());
     for (const auto &hit : hits1)
-      if (hit_on_obj1_valid(hit.world_point)) valid_hits1.push_back(hit);
+      if (hit_on_obj1_valid(hit.world_point))
+        valid_hits1.push_back(hit);
 
     std::vector<HitRecord> valid_hits2;
     valid_hits2.reserve(hits2.size());
     for (const auto &hit : hits2)
-      if (hit_on_obj2_valid(hit.world_point)) valid_hits2.push_back(hit);
+      if (hit_on_obj2_valid(hit.world_point))
+        valid_hits2.push_back(hit);
 
-    auto valid_hits =  merge_ordered_vectors(valid_hits1, valid_hits2, [](const HitRecord &hit1, const HitRecord &hit2) {
-          return hit1.t < hit2.t;
-        });
+    auto valid_hits = merge_ordered_vectors(valid_hits1, valid_hits2,
+                                            [](const HitRecord &hit1, const HitRecord &hit2) { return hit1.t < hit2.t; });
 
     // Transform the hits back to the world's reference frame
-    for (auto &hit : valid_hits) { hit.transform_in_place(transformation); }
+    for (auto &hit : valid_hits) {
+      hit.transform_in_place(transformation);
+    }
     return valid_hits;
-  } 
+  }
 
   /// @brief Check if a point lies inside the shape
   bool is_point_inside(Point point_world_frame) const noexcept override {
@@ -434,37 +440,35 @@ public:
     // Transform the ray to the children objects' reference frame
     Point point = transformation.inverse() * point_world_frame;
 
-    const bool inside1 = object1->is_point_inside(point_world_frame);
-    const bool inside2 = object2->is_point_inside(point_world_frame);
+    const bool inside1 = object1->is_point_inside(point);
+    const bool inside2 = object2->is_point_inside(point);
 
     switch (operation) {
-      case Operation::UNION:
-        return inside1 || inside2;
-      case Operation::INTERSECTION:
-        return inside1 && inside2;
-      case Operation::DIFFERENCE:
-        return inside1 && !inside2;
-      case Operation::FUSION:
-        return inside1 || inside2;
+    case Operation::UNION:
+      return inside1 || inside2;
+    case Operation::INTERSECTION:
+      return inside1 && inside2;
+    case Operation::DIFFERENCE:
+      return inside1 && !inside2;
+    case Operation::FUSION:
+      return inside1 || inside2;
     }
     std::unreachable();
   }
 
-
 private:
-
   bool hit_on_obj1_valid(Point hit_point) const noexcept {
     const bool inside2 = object2->is_point_inside(hit_point);
 
     switch (operation) {
-      case Operation::UNION:
-        return true;
-      case Operation::INTERSECTION:
-        return inside2;
-      case Operation::DIFFERENCE:
-        return !inside2;
-       case Operation::FUSION:
-        return !inside2;
+    case Operation::UNION:
+      return true;
+    case Operation::INTERSECTION:
+      return inside2;
+    case Operation::DIFFERENCE:
+      return !inside2;
+    case Operation::FUSION:
+      return !inside2;
     }
     std::unreachable();
   }
@@ -473,19 +477,18 @@ private:
     const bool inside1 = object1->is_point_inside(hit_point);
 
     switch (operation) {
-      case Operation::UNION:
-        return true;
-      case Operation::INTERSECTION:
-        return inside1;
-      case Operation::DIFFERENCE:
-        return inside1;
-       case Operation::FUSION:
-        return !inside1;
+    case Operation::UNION:
+      return true;
+    case Operation::INTERSECTION:
+      return inside1;
+    case Operation::DIFFERENCE:
+      return inside1;
+    case Operation::FUSION:
+      return !inside1;
     }
     std::unreachable();
   }
 };
-
 
 //-------------------------------------------------------------------------------------------------------------
 // ----------- POINT LIGHT SOURCE CLASS ------------------
@@ -508,8 +511,6 @@ public:
   PointLightSource(Point point = Point(), Color color = WHITE, float emission_radius = 0.f)
       : point{point}, color{color}, emission_radius{emission_radius} {}
 };
-
-
 
 //-------------------------------------------------------------------------------------------------------------
 // -----------WORLD CLASS ------------------
@@ -590,7 +591,7 @@ public:
     }
 
     // Note that the algorithm doesn't consider the case where the point light source is visible via a specular
-    // reflection. Loop over the objects in the World and return nullopt if one of them sits before surface_point 
+    // reflection. Loop over the objects in the World and return nullopt if one of them sits before surface_point
     // (i. e. if the hit with ray in_dir has t < 1).
     for (const auto &object : objects) {
       std::optional<HitRecord> hit = object->ray_intersection(in_ray);
