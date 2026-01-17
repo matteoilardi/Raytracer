@@ -14,7 +14,7 @@ A simple raytracer written in modern C++ for educational and experimental purpos
 This project uses CMake and requires a C++17-compatible compiler.
 
 ```bash
-git clone <https://github.com/matteoilardi/Raytracer>
+git clone https://github.com/matteoilardi/Raytracer
 cd raytracer
 mkdir build
 cd build
@@ -97,9 +97,10 @@ The scene file uses a custom format supporting:
 - Camera orientation
 - Materials definition
 - Object creation and transformation
+- Object creation using base shapes (currently spheres and planes), with support for Constructive Solid Geometry (CSG) operations
 - Variable substitution with command-line overrides (`--define-float`)
 
-See `samples/demo_scene.txt` for usage. See EBNF.md for a formal EBNF grammar description.
+See `samples/demo_scene.txt` and `samples/csg_example.txt` for usage. See EBNF.md for a formal EBNF grammar description.
 
 ---
 
