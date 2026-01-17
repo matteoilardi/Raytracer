@@ -206,7 +206,7 @@ TEST(InputStreamTest, test_GrammarError) {
 // Create a string stream with somewhat messy input file (R "..." syntax is to allow breaking line in the string)
 TEST(SceneTest, test_parse_scene) {
   std::istringstream ss{R"(
-		float clock(150)
+		    float clock(150)
 
         material sky_material(
             diffuse(uniform(<0, 0, 0>)),
@@ -286,7 +286,7 @@ TEST(SceneTest, test_parse_scene) {
   EXPECT_NE(sphere_emitted_radiance, nullptr);
   EXPECT_TRUE(sphere_emitted_radiance->color.is_close(BLACK));
 
-  // Check defined Shapes
+  // Check defined Objects
   EXPECT_EQ(scene.world.objects.size(), 3);
   EXPECT_NE(dynamic_cast<Plane *>(scene.world.objects[0].get()), nullptr);
   EXPECT_TRUE(

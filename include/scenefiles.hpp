@@ -1,12 +1,9 @@
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
-// ------------ LIBRARY FOR COMPILERS -----------------
+// ------------ LIBRARY FOR SCENE FILES DSL PARSER  -----------------
 // ------------------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------------------------------------------
-// INCLUDED LIBRARIES
-// ------------------------------------------------------------------------------------------------------------
 #pragma once
 
 #include <cassert>
@@ -39,8 +36,14 @@ inline constexpr std::string_view SYMBOLS{"()[]<>,*"};
 /// @brief DSL keyword definition
 enum class Keyword {
   MATERIAL,
+  NORENDER,
   PLANE,
   SPHERE,
+  CSGOBJECT,
+  UNION,
+  INTERSECTION,
+  DIFFERENCE,
+  FUSION,
   DIFFUSE,
   SPECULAR,
   UNIFORM,
@@ -60,14 +63,20 @@ enum class Keyword {
   POINT_LIGHT
 };
 
-inline constexpr size_t KEYWORD_NUMBER = 20;
+inline constexpr size_t KEYWORD_NUMBER = 26;
 
 /// @brief (string, keyword) pairs
 /// @note std::pair is constexpr friendly and allows defining the string array used for reverse lookup at compile time
 /// @note a std::unordered_map is also derived at runtime for fast keyword lookup
 inline constexpr std::pair<std::string_view, Keyword> KEYWORD_PAIRS[] = {{"material", Keyword::MATERIAL},
+                                                                         {"norender", Keyword::NORENDER},
                                                                          {"plane", Keyword::PLANE},
                                                                          {"sphere", Keyword::SPHERE},
+                                                                         {"csg", Keyword::CSGOBJECT},
+                                                                         {"union", Keyword::UNION},
+                                                                         {"intersection", Keyword::INTERSECTION},
+                                                                         {"difference", Keyword::DIFFERENCE},
+                                                                         {"fusion", Keyword::FUSION},
                                                                          {"diffuse", Keyword::DIFFUSE},
                                                                          {"specular", Keyword::SPECULAR},
                                                                          {"uniform", Keyword::UNIFORM},
@@ -151,7 +160,7 @@ public:
   //------- Properties --------
   SourceLocation source_location; // source location
   TokenKind type;                 // tag
-  TokenValue value;               // type-safe tagged union
+  TokenValue value;               // union
 
   //----------- Constructors -----------
   Token(const SourceLocation &loc, TokenKind type) : source_location(loc), type(type), value(std::monostate{}) {};
@@ -192,6 +201,13 @@ public:
   void assign_number(float val) {
     type = TokenKind::LITERAL_NUMBER;
     value = val;
+  }
+
+  /// @brief Checks if the token is the provided keyword
+  bool is_keyword(Keyword kw) const {
+    if (type != TokenKind::KEYWORD)
+      return false;
+    return std::get<Keyword>(value) == kw;
   }
 
   /// @brief Print token information
@@ -529,9 +545,11 @@ public:
 class Scene {
 public:
   // ---- properties ----
-  std::unordered_map<std::string, Material> materials;    // map of material names to Material objects
-  World world;                                            // world object top render
-  std::shared_ptr<Camera> camera = nullptr;               // camera used for firing rays
+  World world;                                         // world object top render
+  std::shared_ptr<Camera> camera = nullptr;            // camera used for firing rays
+  std::unordered_map<std::string, Material> materials; // map of material names to Material objects
+  std::unordered_map<std::string, std::unique_ptr<Object>>
+      cached_objects;                                     // Map "norender" defined object: cache and add later to the scene
   std::unordered_map<std::string, float> float_variables; // float identifiers table
   std::unordered_set<std::string> overwritten_variables;  // set of float identifiers that can be overwritten from command line
 
@@ -798,6 +816,50 @@ public:
     return std::make_unique<Plane>(plane_transformation, materials_it->second);
   }
 
+  /// @brief Parse the description of a CSGObject from the inpu stream
+  std::unique_ptr<CSGObject> parse_csg_object(InputStream &input_stream) {
+    // Parse identifier for object 1
+    expect_symbol(input_stream, '(');
+    SourceLocation source_location1 = input_stream.location;
+    std::string object1_identifier = expect_identifier(input_stream);
+    auto object1 = extract_cached_object(object1_identifier, source_location1);
+
+    // Parse identifier for object 2
+    expect_symbol(input_stream, ',');
+    SourceLocation source_location2 = input_stream.location;
+    std::string object2_identifier = expect_identifier(input_stream);
+    auto object2 = extract_cached_object(object2_identifier, source_location2);
+
+    // Parse operation
+    expect_symbol(input_stream, ',');
+    Keyword symbol_keyword =
+        expect_keywords(input_stream, {Keyword::UNION, Keyword::INTERSECTION, Keyword::DIFFERENCE, Keyword::FUSION});
+    CSGObject::Operation operation;
+    switch (symbol_keyword) {
+    case Keyword::UNION:
+      operation = CSGObject::Operation::UNION;
+      break;
+    case Keyword::INTERSECTION:
+      operation = CSGObject::Operation::INTERSECTION;
+      break;
+    case Keyword::DIFFERENCE:
+      operation = CSGObject::Operation::DIFFERENCE;
+      break;
+    case Keyword::FUSION:
+      operation = CSGObject::Operation::FUSION;
+      break;
+    default:
+      std::unreachable();
+    }
+
+    // Parse transformation
+    expect_symbol(input_stream, ',');
+    Transformation transformation = parse_transformation(input_stream);
+    expect_symbol(input_stream, ')');
+
+    return std::make_unique<CSGObject>(std::move(object1), std::move(object2), operation, transformation);
+  }
+
   /// @brief Parse the description of a Camera from the input stream
   std::shared_ptr<Camera> parse_camera(InputStream &input_stream) {
     expect_symbol(input_stream, '(');
@@ -867,23 +929,33 @@ public:
     // The scene actually consists of a sequence of definitions. The user is allowed to define the following types: float,
     // material, sphere, plane, camera, point_light
     while (true) {
+      Keyword keyword;                                 // Type that is being defined in this iteration
+      std::optional<std::string> norender_object_name; // Name of the norender object that is being (possibly) defined
+      SourceLocation definition_kw_source_loc; // Used to save the source location of the keyword (only if the definition being
+                                               // parsed is not marked norender)
+
       Token new_token = input_stream.read_token();
+
       if (new_token.type == TokenKind::STOP_TOKEN) {
         break;
+      } else if (new_token.is_keyword(Keyword::NORENDER)) {
+        keyword = expect_keywords(input_stream, {Keyword::SPHERE, Keyword::PLANE, Keyword::CSGOBJECT});
+        norender_object_name = expect_identifier(input_stream);
       } else {
         input_stream.unread_token(new_token);
+        definition_kw_source_loc = input_stream.location;
+        keyword = expect_keywords(input_stream, {Keyword::FLOAT, Keyword::MATERIAL, Keyword::SPHERE, Keyword::PLANE,
+                                                 Keyword::CSGOBJECT, Keyword::CAMERA, Keyword::POINT_LIGHT});
       }
 
-      SourceLocation source_location = input_stream.location;
-      Keyword keyword = expect_keywords(input_stream, {Keyword::FLOAT, Keyword::MATERIAL, Keyword::SPHERE, Keyword::PLANE,
-                                                       Keyword::CAMERA, Keyword::POINT_LIGHT});
       switch (keyword) {
       case Keyword::FLOAT: {
         std::string float_name = expect_identifier(input_stream);
 
         // Throw if a variable with the same name has already been defined but is not among the overwritten ones
         if (float_variables.count(float_name) && !overwritten_variables.count(float_name)) {
-          throw GrammarError(source_location, "float variable \"" + float_name + "\" already declared elsewhere in the file");
+          throw GrammarError(definition_kw_source_loc,
+                             "float variable \"" + float_name + "\" already declared elsewhere in the file");
         }
         expect_symbol(input_stream, '(');
         float float_value = expect_number(input_stream);
@@ -900,7 +972,7 @@ public:
         std::string material_name = expect_identifier(input_stream);
         // Check if a variable with the same name has already been defined, throw exception in case it has
         if (materials.count(material_name)) {
-          throw GrammarError(source_location, "material variable \"" + material_name + "\" already declared");
+          throw GrammarError(definition_kw_source_loc, "material variable \"" + material_name + "\" already declared");
         }
         // Parse material definition and add map entry
         materials[material_name] = parse_material(input_stream);
@@ -908,21 +980,39 @@ public:
       }
 
       case Keyword::SPHERE: {
-        // Add Sphere to World
-        world.add_object(parse_sphere(input_stream));
+        // Add Sphere to World or cache it if marked 'norender'
+        auto sphere = parse_sphere(input_stream);
+        if (norender_object_name.has_value()) {
+          cached_objects[*norender_object_name] = std::move(sphere);
+        } else
+          world.add_object(std::move(sphere));
         break;
       }
 
       case Keyword::PLANE: {
-        // Add Plane to World
-        world.add_object(parse_plane(input_stream));
+        // Add Plane to World or cache it if marke 'norender'
+        auto plane = parse_plane(input_stream);
+        if (norender_object_name.has_value()) {
+          cached_objects[*norender_object_name] = std::move(plane);
+        } else
+          world.add_object(std::move(plane));
+        break;
+      }
+
+      case Keyword::CSGOBJECT: {
+        // Add CSGObject to World or cache it if marke 'norender'
+        auto csg_object = parse_csg_object(input_stream);
+        if (norender_object_name.has_value()) {
+          cached_objects[*norender_object_name] = std::move(csg_object);
+        } else
+          world.add_object(std::move(csg_object));
         break;
       }
 
       case Keyword::CAMERA: {
         // Throw if a Camera was already defined
         if (camera) {
-          throw GrammarError(source_location, "camera already defined");
+          throw GrammarError(definition_kw_source_loc, "camera already defined");
         }
         // Parse Camera and assign to Scene data member
         camera = parse_camera(input_stream);
@@ -936,10 +1026,12 @@ public:
       }
 
       default:
-        throw GrammarError(source_location, "definition of \"" + to_string(keyword) + "\" not allowed");
+        throw GrammarError(definition_kw_source_loc, "definition of \"" + to_string(keyword) + "\" not allowed");
       }
     }
   }
+
+  //-----------------OTHER METHODS-----------------
 
   void initialize_float_variables_with_priority(std::unordered_map<std::string, float> &&variables_from_cl) {
     assert(float_variables.empty()); // For the logic of parse_scene() to work correctly, float variables from command line are to
@@ -949,5 +1041,17 @@ public:
     for (const auto &name : float_variables) {
       overwritten_variables.insert(name.first);
     }
+  }
+
+  std::unique_ptr<Object> extract_cached_object(std::string object_identifier, SourceLocation source_location) {
+    auto object_it = cached_objects.find(object_identifier);
+    if (object_it == cached_objects.end()) {
+      throw GrammarError(source_location, "unknown object \"" + object_identifier + "\"");
+    }
+
+    auto extracted_object = std::move(object_it->second);
+    cached_objects.erase(object_it);
+
+    return extracted_object;
   }
 };

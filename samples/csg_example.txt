@@ -1,0 +1,52 @@
+# CSG example
+
+# MATERIALS
+material floor_material(
+    diffuse(checkered(<0.3, 0.5, 0.1>, <0.1, 0.2, 0.5>, 4)),
+    uniform(<0, 0, 0>)
+)
+
+material sky_material(
+    diffuse(uniform(<0, 0, 0>)),
+    uniform(<0.2, 0.3, 1>)
+)
+
+material sphere_material_1(
+    specular(uniform(<0.5, 0.5, 0.5>)),
+    uniform(<0, 0, 0>)
+)
+
+material sphere_material_2(
+    diffuse(uniform(<0.8, 0.1, 0>)),
+    uniform(<0, 0, 0>)
+)
+
+material csg_plane_material(
+    diffuse(uniform(<0.5, 0, 0.4>)),
+    uniform(<0, 0, 0>)
+)
+
+# OBJECTS
+# floor
+plane(translation([0, 0, -2]), floor_material)
+
+# sky
+sphere(scaling([50, 50, 50]), sky_material)
+
+# CSG objects components
+norender sphere sph1(identity, sphere_material_1)
+norender sphere sph2(translation([0, -1, 0]), sphere_material_2)
+norender plane pl1(scaling([1, 1, -1]), csg_plane_material)
+norender plane pl2(translation([0, 0, 0.5]), csg_plane_material)
+
+# Combine the first two
+norender csg first_two(sph1, sph2, intersection, identity)
+
+# Combine the third
+norender csg first_three(first_two, pl1, intersection, identity)
+
+# Combine with the remaining one and render
+csg(first_three, pl2, intersection, translation([0, 0, -1]))
+
+# CAMERA
+camera(perspective, translation([-3, 0, 0]), exact_asp_ratio, 1)
