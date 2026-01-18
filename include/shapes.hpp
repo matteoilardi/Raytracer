@@ -162,7 +162,7 @@ protected:
   /// @param incoming ray hitting the shape
   static Normal enforce_correct_normal_orientation(Normal normal, const Ray &ray) noexcept {
     // The normal and the ray must have opposite directions, if this is false (dot product>0), flip the normal
-    float sign = std::copysignf(1.0f, -(normal * ray.direction));
+    float sign = std::copysign(1.0f, -(normal * ray.direction));
     return normal * sign;
   }
 
@@ -257,7 +257,7 @@ private:
 
   /// @brief Calculate (u, v) coordinates of given point (i. e. spherical coordinates)
   Vec2d calculate_uv(Point point) const noexcept override {
-    float u = atan2f(point.y, point.x) / (2.f * std::numbers::pi_v<float>); // atan2 is the arctangent
+    float u = atan2(point.y, point.x) / (2.f * std::numbers::pi_v<float>); // atan2 is the arctangent
     if (u < 0.f) {
       u = u + 1.f;
     } // This is necessary in order to have v in range (0, 1] because the output of atan2 is in range (-pi, pi]

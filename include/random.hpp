@@ -66,7 +66,7 @@ public:
   /// @brief Generate random float uniformly distributed in [0, 1)
   float random_float() {
     uint32_t ran = random();
-    return static_cast<float>(ran) / std::powf(2.f, 32);
+    return static_cast<float>(ran) / std::pow(2.f, 32);
   }
 
   /// @brief Generate random (theta, phi) sampling Phong distribution on hemiphere
@@ -75,7 +75,7 @@ public:
   std::pair<float, float> random_phong(int n) {
     // Sample theta: the cumultaive of the marginal for theta is: P(theta) = 1 - (cos(theta))^(n+1)
     float x = random_float();
-    float theta = std::acosf(std::powf(x, 1.f / (n + 1)));
+    float theta = std::acos(std::pow(x, 1.f / (n + 1)));
 
     // Sample phi: the conditional distribution for phi is actually independent of the theta value you pick
     float phi = random_float() * 2 * std::numbers::pi_v<float>;

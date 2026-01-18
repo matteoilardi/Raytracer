@@ -104,7 +104,7 @@ TEST(PointLightTracer, test_example) {
 
   // Expected r component: cos_theta * brdf_r_component * light_source_color (= 1) / pi for each visible source
   Color expected_color = Color{0.f, 0.3f, 0.1f} +
-                         (1.f / std::sqrtf(5.f) + 1.f / std::sqrtf(10.f)) * Color{0.2f, 0.f, 0.f} / std::numbers::pi_v<float>;
+                         (1.f / std::sqrt(5.f) + 1.f / std::sqrt(10.f)) * Color{0.2f, 0.f, 0.f} / std::numbers::pi_v<float>;
   EXPECT_TRUE(tracer.image->get_pixel(0, 0).is_close(expected_color));
 }
 
@@ -152,7 +152,7 @@ TEST(PointLightTracer, test_reflections) {
   Color color2 = renderer(ray);
 
   Color screen_brdf_attenuation =
-      (Color{0.5f, 0.5f, 0.5f} / std::numbers::pi_v<float>)*std::cosf(std::numbers::pi_v<float> / 4.f);
+      (Color{0.5f, 0.5f, 0.5f} / std::numbers::pi_v<float>)*std::cos(std::numbers::pi_v<float> / 4.f);
   Color mirror_brdf_attenuation = Color{0.5f, 0.5f, 0.5f};
   Color expected_color = (ambient_color + WHITE * screen_brdf_attenuation) * mirror_brdf_attenuation;
 

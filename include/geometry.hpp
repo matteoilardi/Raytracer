@@ -589,7 +589,7 @@ struct ONB {
   /// @details Assumes the input Vec to be normalized. Based on the algorithm by Duff et al. (2017)
   /// @param vec normalized Vec = e_3
   ONB(Vec vec) noexcept : e3{vec} {
-    float sign = std::copysignf(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the
+    float sign = std::copysign(1.f, e3.z); // copysignf returns the absolute value of the first argument with the sign of the
                                             // second one (sign is set negative if e3.z=0)
     const float a = -1.f / (sign + e3.z);
     const float b = e3.x * e3.y * a;

@@ -159,7 +159,7 @@ public:
 
       if (in_dir.has_value()) {
         float distance = in_dir->norm();
-        float distance_factor = (source->emission_radius > 0.f) ? std::powf((source->emission_radius / distance), 2) : 1.f;
+        float distance_factor = (source->emission_radius > 0.f) ? std::pow((source->emission_radius / distance), 2) : 1.f;
         // angle between normal at hitting point and incoming direction (from light source)
         float cos_theta = (-1.f / distance) * (*in_dir) * hit->normal.normalized();
         cum_radiance += source->color * distance_factor * cos_theta *
