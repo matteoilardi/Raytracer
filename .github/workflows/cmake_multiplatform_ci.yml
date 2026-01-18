@@ -2,9 +2,9 @@ name: CMake multiplatform ci
 
 on:
   push:
-    branches: ["main", "pre-release/1.0.0", "csg-port"]
+    branches: ["main", "pre-release/1.0.0"]
   pull_request:
-    branches: ["main", "pre-release/1.0.0", "csg-port"]
+    branches: ["main", "pre-release/1.0.0"]
   workflow_dispatch:  #(added from github template) allow manual triggering of the workflow
 
 jobs:

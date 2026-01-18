@@ -63,8 +63,6 @@ enum class Keyword {
   POINT_LIGHT
 };
 
-inline constexpr size_t KEYWORD_NUMBER = 26;
-
 /// @brief (string, keyword) pairs
 /// @note std::pair is constexpr friendly and allows defining the string array used for reverse lookup at compile time
 /// @note a std::unordered_map is also derived at runtime for fast keyword lookup
@@ -94,6 +92,8 @@ inline constexpr std::pair<std::string_view, Keyword> KEYWORD_PAIRS[] = {{"mater
                                                                          {"exact_asp_ratio", Keyword::EXACT_ASP_RATIO},
                                                                          {"float", Keyword::FLOAT},
                                                                          {"point_light", Keyword::POINT_LIGHT}};
+
+inline constexpr size_t KEYWORD_NUMBER = std::size(KEYWORD_PAIRS);
 
 /// @brief Keyword string array for reverse mapping
 inline constexpr std::array<std::string_view, KEYWORD_NUMBER> KEYWORD_STRINGS = [] {
@@ -130,7 +130,7 @@ struct SourceLocation {
 
   //----------- Constructors -----------
   /// @brief Default constructor initializing to empty file name, line one and column one
-  SourceLocation(const std::string &file = "", int line = 1, int column = 1) : file(file), line(line), column(column) {}
+  SourceLocation(const std::string &file = "", int line = 1, int column = 1) : file{file}, line{line}, column{column} {}
 
   //----------- Methods -----------
   /// @brief Convert source location to string (for debugging)
@@ -142,7 +142,6 @@ struct SourceLocation {
 //------------ TOKEN TYPE (used for dispatching at runtime)---------------
 
 enum class TokenKind {
-  // these are the 6 types of token implemented in Pytracer
   STOP_TOKEN,     // token signalling the end of a file
   KEYWORD,        // token containing a keyword
   SYMBOL,         // token containing a symbol
@@ -163,7 +162,7 @@ public:
   TokenValue value;               // union
 
   //----------- Constructors -----------
-  Token(const SourceLocation &loc, TokenKind type) : source_location(loc), type(type), value(std::monostate{}) {};
+  Token(const SourceLocation &loc, TokenKind type) : source_location{loc}, type{type}, value{std::monostate{}} {};
 
   //----------- Methods -----------
 
@@ -252,7 +251,7 @@ public:
     case TokenKind::LITERAL_NUMBER:
       return "LITERAL_NUMBER";
     default:
-      throw std::logic_error("Unreachable code: unknown TokenKind");
+      std::unreachable();
     }
   }
 };
@@ -270,7 +269,7 @@ public:
   std::string full_message; // Cached full message (location and explanation) for what()
 
   //----------- Constructors -----------
-  GrammarError(const SourceLocation &loc, const std::string &msg) : location(loc), message(msg) {
+  GrammarError(const SourceLocation &loc, const std::string &msg) : location{loc}, message{msg} {
     full_message = "GrammarError at " + location.to_string() + ": " + message;
   }
 
@@ -286,21 +285,24 @@ public:
 class InputStream {
 public:
   //----------- Properties -----------
-  std::istream &stream;                   // underlying input stream
-  SourceLocation location;                // current location in the file (filename, line, column)
-  std::optional<char> saved_char;         // character "pushback" buffer (std::optional since possibly empty)
-  SourceLocation saved_location;          // SourceLocation corresponding to the saved_char; not an std::optional: it has a very
-                                          // different role from that of saved_char
-  int tabulations;                        // number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 4)
-  std::optional<Token> saved_token;       // Token "pushback" buffer (nullptr if unused)
-  SourceLocation last_on_stream_location; // most recent location of a token *in the stream* (as opposed to the location of the
-                                          // saved token): needed after after reading consuming the saved token
+  std::istream &stream;    // input stream to parse
+  SourceLocation location; // current location in the file (filename, line, column)
+  int tabulations;         // number of spaces a tab '\t' is worth (usually 4 or 8 spaces, default set to 4)
+
+  // Character
+  std::optional<char> saved_char; // character "pushback" buffer (possibly empty)
+  SourceLocation saved_location;  // source location of the last char read: used to retrieve the location of unread tokens
+
+  // Token
+  std::optional<Token> saved_token;       // token "pushback" buffer (possibly empty)
+  SourceLocation last_on_stream_location; // most recent location of the first non consumed token *in the stream* (as opposed to
+                                          // the location of the saved token): needed after consuming the saved token
 
   //----------- Constructor -----------
   /// @brief Deafult constructor for InputStream (does not take ownership of the stream)
   InputStream(std::istream &stream, const std::string &file_name = "", int tabulations = 4)
-      : stream(stream), location(file_name), // Start at line 1, column 1
-        saved_char(std::nullopt), saved_location(file_name), tabulations(tabulations), saved_token(std::nullopt) {}
+      : stream{stream}, location{file_name}, // Start at line 1, column 1
+        saved_char{std::nullopt}, saved_location{file_name}, tabulations{tabulations}, saved_token{std::nullopt} {}
 
   //------------------------------Methods------------------------------------
 
@@ -464,9 +466,9 @@ public:
     auto kw_it = KEYWORD_MAP.find(token_str);
     if (kw_it != KEYWORD_MAP.end()) { // if it is a keyword, create a token accordingly
       Token token(token_location, TokenKind::KEYWORD);
-      token.assign_keyword(kw_it->second); // kw_it->second is the Keyword value
+      token.assign_keyword(kw_it->second);
       return token;
-    } else { // If it is not a keyword, it must be an identifier
+    } else { // If it's not a keyword, it must be an identifier
       Token token(token_location, TokenKind::IDENTIFIER);
       token.assign_identifier(token_str);
       return token;
@@ -501,8 +503,9 @@ public:
     }
 
     // Handle single-character symbols or otherwise start parsing other token types
-    if (SYMBOLS.find(ch) != std::string_view::npos) { // std::string::npos means ch was not found in SYMBOLS string
-      Token token(token_location, TokenKind::SYMBOL); // Create a symbol token
+    if (SYMBOLS.find(ch) != std::string_view::npos) {
+      // If is found among the symbols, return the correspoding token
+      Token token(token_location, TokenKind::SYMBOL);
       token.assign_symbol(ch);
       _skip_whitespaces_and_comments();
       return token;
@@ -572,7 +575,7 @@ public:
   /// @brief Read a token and check it is one of the keywords your grammar allow in that position. Return the keyword.
   [[nodiscard]]
   static Keyword expect_keywords(InputStream &input_stream, const std::vector<Keyword> &keywords) {
-    // second argument is a {...} list of keywords from Keyword class
+    // second argument is a list of keywords from Keyword class
     Token token = input_stream.read_token();
     if (token.type != TokenKind::KEYWORD) {
       throw GrammarError(token.source_location, "expected KEYWORD instead of " + token.type_to_string());
@@ -597,7 +600,7 @@ public:
       if (map_it == float_variables.end()) {             // If not found, throw an error
         throw GrammarError(token.source_location, "unknown variable \"" + variable_name + "\"");
       }
-      return map_it->second; // Otherwise return the value of the variable stored in the `dictionary'
+      return map_it->second; // Otherwise return the value of the stored variable
     } else {
       throw GrammarError(token.source_location, "expected LITERAL_NUMBER or IDENTIFIER instead of " + token.type_to_string());
     }
@@ -881,8 +884,6 @@ public:
       }
       asp_ratio = std::nullopt;
     } else {
-      // NOTE This is the only case the DSL grammar - other than the production rule for transformation - where
-      // tokens of two different kinds can appear in the same place. This is why it makes sense to use unread_char.
       input_stream.unread_token(asp_ratio_token);
       asp_ratio = std::make_optional<float>(expect_number(input_stream));
     }
@@ -952,8 +953,11 @@ public:
       case Keyword::FLOAT: {
         std::string float_name = expect_identifier(input_stream);
 
+        // Check if the command line is overwriting this variable
+        auto is_overwritten = static_cast<bool>(overwritten_variables.count(float_name));
+
         // Throw if a variable with the same name has already been defined but is not among the overwritten ones
-        if (float_variables.count(float_name) && !overwritten_variables.count(float_name)) {
+        if (float_variables.count(float_name) && !is_overwritten {
           throw GrammarError(definition_kw_source_loc,
                              "float variable \"" + float_name + "\" already declared elsewhere in the file");
         }
@@ -962,7 +966,7 @@ public:
         expect_symbol(input_stream, ')');
 
         // Assign value only if float_name is not among the overwritten variables
-        if (!overwritten_variables.count(float_name)) {
+        if (!is_overwritten) {
           float_variables[float_name] = float_value;
         }
         break;
