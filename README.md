@@ -4,122 +4,207 @@ A simple raytracer written in modern C++ for educational and experimental purpos
 
 ## Features
 
-- Ray tracing with four rendering algorithms: on/off tracing, flat shading, point light tracing, and path tracing.
+- Ray tracing with four rendering algorithms: on/off tracing, flat tracing (also called flat shading), point light tracing, and path tracing.
 - External scene description files with variable definitions and parsing.
 - Conversion of HDR `.pfm` images to `.png` with tone mapping.
 - Optional animation generation via a shell script (requires `ffmpeg`).
 
 ## Installation
 
-This project uses CMake and requires a C++17-compatible compiler.
+This project uses CMake and requires a C++23-compatible compiler.
 
 ```bash
 git clone https://github.com/matteoilardi/Raytracer
-cd raytracer
+cd Raytracer
 mkdir build
 cd build
 cmake ..
 make
 ```
 
-Except for Google Test, which is fetched from remote, all dependencies are header-only: [CLI11](https://github.com/CLIUtils/CLI11) and [stb_image_write](https://github.com/nothings/stb).
+The installation defaults to Release mode. If you want Debug mode instead, add the flag `-DCMAKE_BUILD_TYPE=Debug` to the CMake invocation.
+
+Except for Google Test (fetched remotely), all dependencies are header-only: [CLI11](https://github.com/CLIUtils/CLI11) and [stb_image_write](https://github.com/nothings/stb).
+
+---
 
 ## Command-Line Usage
 
-The program supports three main subcommands via CLI11.
+The executable supports **exactly one subcommand**, chosen among:
+
+- `render`   – render a scene from a text description file
+- `pfm2png`  – convert an HDR PFM image into a PNG
+
+Invoke the program as:
+
+```bash
+./raytracer <subcommand> [options]
+```
 
 ---
 
-### 1. Convert PFM to PNG
+## pfm2png — Convert PFM to PNG
 
-Convert an HDR `.pfm` file to a tone-mapped `.png` image:
+Convert an HDR `.pfm` file to a tone-mapped `.png` image.
 
 ```bash
-./raytracer pfm2png -i input.pfm -o output.png -a 0.18 -g 2.2
+./raytracer pfm2png input.pfm -o out
 ```
 
-| Option               | Description                                     |
-|----------------------|-------------------------------------------------|
-| `-i`, `--input-file` | Input image in `.pfm` format (required)         |
-| `-o`, `--output-file`| Output `.png` filename (required)               |
-| `-a`, `--alpha`      | Exposure normalization factor (default: 0.18)   |
-| `-g`, `--gamma`      | Gamma correction value (default: 2.2)           |
+The command produces:
+- `out.png`
+
+
+### Positional Argument
+
+| Argument | Description |
+|--------|-------------|
+| `input` | Path to the PFM input file (required) |
+
+
+### Other options
+
+| Option | Description |
+|------|------------|
+| `-o`, `--output-file` | Output file name stem (default: `out`) |
+| `-a`, `--alpha` | Exposure normalization factor (default: `0.18`) |
+| `-g`, `--gamma` | Gamma correction factor (default: `2.2`) |
+| `--dark` | Use a fixed exposure suitable for very dark images |
 
 ---
 
-### 2. Generate a Demo Image
+## render — Render a Scene from its Description
 
-Render a built-in demo scene composed of an array of spheres (mode `onoff`) or a scene composed of a checkered floor, a reflective sphere, a diffusive sphere and a light-emitting sky (mode `path`).
-The output PNG images can be found at `/samples/demo_onoff_tracing.png` and `/samples/demo_path_tracing.png` respectively.
-
-```bash
-./raytracer demo -m RENDER_MODE -o demo --width 1280 --height 960 --distance 1.0 --theta-deg 90 --phi-deg 180 --antialiasing 3
-```
-
-| Option               | Description                                                               |
-|----------------------|---------------------------------------------------------------------------|
-| `-m`, `--mode`       | Rendering mode: `onoff` (default) or `path`                               |
-| `--width`, `--height`| Output resolution (defaults: 1280x960)                                    |
-| `--orthogonal`       | Use orthogonal projection (default: perspective)                          |
-| `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)                                |
-| `-d`, `--distance`   | Scene origin - screen distance (excluded if using `--orthogonal`)         |
-| `--theta-deg`        | Polar viewing angle in degrees (default: 90)                              |
-| `--phi-deg`          | Azimuthal viewing angle in degrees (default: 180)                         |
-| `--antialiasing`     | Samples per pixel edge (default: 3)                                       |
-
----
-
-### 3. Render Scene from File
-
-Render a scene described in a custom text-based file format:
+Render a scene described in a custom DSL.
 
 ```bash
-./raytracer render scene.txt -o output --width 1280 --height 960 --antialiasing 3 --define-float radius=1.5
+./raytracer render scene.txt -o output --width 1280 --height 960 --antialiasing 2
 ```
 
-| Option               | Description                                           |
-|----------------------|-------------------------------------------------------|
-| [*first positional argument*]     | Path to the scene description file (required)         |
-| `-o`, `--output-file`| Output base name (saves `.pfm` and `.png`)            |
-| `--width`, `--height`| Output resolution (defaults: 1280x960)                |
-| `--antialiasing`     | Samples per pixel edge (default: 3)                   |
-| `--define-float`     | Define float variables (e.g., `--define-float radius=1.5`) |
-| `-m`, `--mode`       | Rendering mode: `flat` (default), `onoff`, `point_light`, `path` |
-| `--n_rays`           | Number of rays scattered at each hit (path tracing)   |
-| `--roulette`         | Ray depth threshold for Russian roulette (path tracing) |
-| `--max-depth`        | Maximum ray recursion depth (path tracing)           |
+This command produces:
+- `output.pfm` (HDR intermediate result)
+- `output.png` (tone-mapped LDR image)
+
+### Positional Argument
+
+| Argument | Description |
+|--------|-------------|
+| `source` | Path to the scene description file (required) |
+
+### Image Size
+
+| Option | Description |
+|------|-------------|
+| `--width` | Image width in pixels (default: `1280`) |
+| `--height` | Image height in pixels (default: `960`) |
+
+### Output and Tone Mapping
+
+| Option | Description |
+|------|-------------|
+| `-o`, `--output-file` | Output file name stem (default: `out`) |
+| `-a`, `--alpha` | Exposure normalization factor (default: `0.18`) |
+| `-g`, `--gamma` | Gamma correction factor (default: `2.2`) |
+| `--dark` | Use default exposure for dark scenes |
+
+### Rendering Mode
+
+Select the rendering algorithm:
+
+```bash
+-m, --mode <onoff|flat|pointlight|path>
+```
+
+Default mode is `flat`.
+
+| Mode | Description |
+|-----|-------------|
+| `onoff` | Binary visibility rendering |
+| `flat` | Flat shading |
+| `pointlight` | Point-light illumination |
+| `path` | Monte Carlo path tracing |
+
+### Path Tracing Parameters (mode = `path`)
+
+These options are only meaningful when using `--mode path`.
+
+| Option | Description |
+|------|-------------|
+| `--n_rays` | Number of rays scattered at each hit (default: `10`) |
+| `--roulette` | Ray depth before Russian roulette starts (default: `3`) |
+| `--max-depth` | Maximum ray recursion depth (default: `5`) |
+| `--seq-number` | PCG random generator sequence number (default: `54`) |
+
+### Antialiasing
+
+| Option | Description |
+|------|-------------|
+| `--antialiasing` | Samples per pixel edge (square root of samples per pixel, default: `1`) |
+
+### Scene Variables from Command Line
+
+Floating-point variables defined in the scene file can be overridden from the command line:
+
+```bash
+--define-float name=value
+```
+
+Example:
+
+```bash
+./raytracer render scene.txt --define-float radius=1.5 --define-float intensity=3.0
+```
+
+Command-line definitions take priority over values defined in the scene file.
 
 ---
 
 ## Scene File Format
 
-The scene file uses a custom format supporting:
-- Camera orientation
-- Materials definition
-- Object creation and transformation
-- Object creation using base shapes (currently spheres and planes), with support for Constructive Solid Geometry (CSG) operations
-- Variable substitution with command-line overrides (`--define-float`)
+The scene file uses a custom text format supporting:
 
-See `samples/demo_scene.txt` and `samples/csg_example.txt` for usage. See EBNF.md for a formal EBNF grammar description.
+- Camera definition
+- Materials and textures
+- Object creation and transformations
+- Base primitives (spheres and planes)
+- Constructive Solid Geometry (CSG)
+- Named float variables
+
+Examples:
+- `samples/demo_scene.txt`
+- `samples/csg_example.txt`
+
+A formal grammar is provided in `EBNF.md`.
 
 ---
 
-## Generate a Demo Animation
+## Demo Animation
 
-A helper script in `scripts/` generates an animation by rendering frames at varying angles:
+A sample path-tracing animation is provided at `samples/demo_path_tracing_animation.mp4`.
+[▶ Watch the animation](https://github.com/matteoilardi/Raytracer/tree/main/samples/demo_path_tracing_animation.mp4)
+
+The animation is obtained by rendering a sequence of frames with varying camera parameters and assembling them into a video.
+
+To generate a similar animation:
+
+1. Render multiple frames while changing camera angles or scene parameters.
+2. Save each frame as a PNG.
+3. Use `ffmpeg` to assemble the frames into a video.
+
+A helper script is provided:
 
 ```bash
 cd scripts
 ./generate_animation.sh
 ```
 
-> **Note**: `ffmpeg` must be installed and available in your system's `PATH`.
+`ffmpeg` must be installed and available in your system `PATH`.
 
 ---
 
 ## Unit Testing
 
-Google Test is used for testing core components:
+Google Test is used for unit testing.
 
 ```bash
 cd build
@@ -132,17 +217,18 @@ Tests are located in the `test/` directory.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE.md](https://github.com/matteoilardi/Raytracer/blob/main/LICENSE.md) for details.
+This project is licensed under the MIT License. See `LICENSE.md` for details.
 
 ---
 
 ## History
 
-See [CHANGELOG.MD](https://github.com/matteoilardi/Raytracer/blob/main/CHANGELOG.md).
+See `CHANGELOG.md`.
 
 ---
 
 ## Authors
 
 Developed by Master’s students in Theoretical Physics at the University of Milan.  
-Contributions, bug reports, and suggestions are welcome!
+Contributions, bug reports, and suggestions are welcome.
+
