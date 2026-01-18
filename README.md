@@ -4,10 +4,8 @@ A simple raytracer written in modern C++ for educational and experimental purpos
 
 ## Features
 
-- Ray tracing with four rendering algorithms: on/off tracing, flat tracing (also called flat shading), point light tracing, and path tracing.
-- External scene description files with variable definitions and parsing.
-- Conversion of HDR `.pfm` images to `.png` with tone mapping.
-- Optional animation generation via a shell script (requires `ffmpeg`).
+Ray tracer implementing multiple algorithms (on/off tracing, flat tracing - also called flat shading, point light tracing, and path tracing) over a set of geometric primitives with CSG support.
+Scenes are described using a custom DSL, and rendered HDR `.pfm` images can be converted to `.png` via tone mapping.
 
 ## Installation
 
@@ -30,7 +28,7 @@ Except for Google Test (fetched remotely), all dependencies are header-only: [CL
 
 ## Command-Line Usage
 
-The executable supports **exactly one subcommand**, chosen among:
+The executable supports **one subcommand**, chosen among:
 
 - `render`   – render a scene from a text description file
 - `pfm2png`  – convert an HDR PFM image into a PNG
