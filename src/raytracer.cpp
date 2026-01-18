@@ -196,7 +196,7 @@ int main(int argc, char **argv) {
 /// @brief Add option for single input file
 ConvInput& add_pfm2png_input(CLI::App *subc) {
   static ConvInput conv_input;
-  subc->add_option("-i,--input-file", conv_input.file, "Name of the input PFM file")->required();
+  subc->add_option("input", conv_input.file, "Name of the input PFM file")->required();
   return conv_input;
 }
 
@@ -205,7 +205,7 @@ RenderInput& add_render_input(CLI::App *subc) {
   static RenderInput render_input;
 
   // Input (source) file
-  subc->add_option("source", render_input.file, "Specify input (source) .txt containing the scene to render")
+  subc->add_option("source", render_input.file, "Input file containing the scene to render")
       ->required();
 
   // Float variable definition from command line
@@ -228,7 +228,7 @@ RenderInput& add_render_input(CLI::App *subc) {
           render_input.floats_from_cl[name] = value;
         }
       },
-      "Define named float variables as name=value");
+      "Float variables defined as name=value");
 
   return render_input;
 }
@@ -251,7 +251,7 @@ PngCfg& add_hdr_options(CLI::App *subc) {
       ->default_val("false");
 
   subc->add_option("-o,--output-file", png_cfg.output_file,
-                          "Name of the output file name stem (extension is PNG)")
+                 "Name of the output file name stem (extension is PNG)")
       ->default_val("out");
 
   return png_cfg;
@@ -264,10 +264,10 @@ ImgSize& add_img_size_options(CLI::App *subc) {
 
   // Add options for image width and height (# pixels) and provide description in the help output
   // Default values are 1280x960
-  subc->add_option("--width", img_size.width, "Specify image width")
+  subc->add_option("--width", img_size.width, "Image width (number of pixels)")
       ->check(CLI::PositiveNumber)
       ->default_val("1280"); // Reject negative values
-  subc->add_option("--height", img_size.height, "Specify image height")
+  subc->add_option("--height", img_size.height, "Image height (number of pixels)")
       ->check(CLI::PositiveNumber)
       ->default_val("960"); // Reject negative values
 
@@ -300,7 +300,7 @@ ModeCfg& add_mode_options(CLI::App *subc) {
 
   // Antialiasing
   subc->add_option<int>("--antialiasing", mode_cfg.samples_per_pixel_edge,
-                        "Specify #samples per pixel edge (square root of #samples per pixel)")
+                        "Number of samples per pixel edge (square root of #samples per pixel)")
       ->default_val("1");
 
   // Initialize ModeCfg based on the selected value of mode
