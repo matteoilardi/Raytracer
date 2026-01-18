@@ -1,154 +1,217 @@
 #include "CLI11.hpp"
 #include "colors.hpp"
-#include "demo.hpp"
 #include "geometry.hpp"
 #include "profiling.hpp"
 #include "renderers.hpp"
 #include "scenefiles.hpp"
 #include "shapes.hpp"
-#include <filesystem> // Constains functions to extract file name stem from a path
 #include <fstream>
 #include <iostream>
 
+// -----------------------------------------------------------
+// Helpers for command line parsing
+// -----------------------------------------------------------
+
+/// @brief Input for pfm2png mode
+struct ConvInput { std::string file; };
+
+/// @brief Input for render mode
+struct RenderInput {
+  std::string file;
+  std::unordered_map<std::string, float> floats_from_cl;
+};
+
+/// @brief Output HDR image configuration
+struct PngCfg {
+  float alpha;
+  float gamma;
+  bool dark_mode;
+  std::string output_file;
+};
+
+/// @brief Image size (pixels)
+/// @details Used for render mode
+struct ImgSize {
+  int width;
+  int height;
+};
+
+struct PathCfg {
+  int n_rays;
+  int russian_roulette_lim;
+  int max_depth;
+  int seq_number;
+};
+
+struct ModeCfg {
+  enum class Mode { PATH, FLAT, POINTLIGHT, ONOFF } mode;
+  std::variant<std::monostate, PathCfg> params;
+  int samples_per_pixel_edge; // Antialiasing
+};
+
+/// @brief Add option for single input file
+ConvInput& add_pfm2png_input(CLI::App *subc);
+
+/// @brief Add option for input file and float definitions
+RenderInput& add_render_input(CLI::App *subc);
+
+/// @brief Add options for HDR output parameters
+PngCfg& add_hdr_options(CLI::App *subc);
+
+/// @brief Add option for image size (number of pixels)
+ImgSize& add_img_size_options(CLI::App *subc);
+
+/// @brief Add options for rendering algorithm parameters
+ModeCfg& add_mode_options(CLI::App *subc);
+
+
+// -----------------------------------------------------------
+// Other helpers
+// -----------------------------------------------------------
+
+/// @brief Define renderer given its settings and an instance of World
+std::unique_ptr<Renderer> build_renderer(const ModeCfg& mode_cfg, const World& world);
+
+// -----------------------------------------------------------
+// Main
+// -----------------------------------------------------------
+
 int main(int argc, char **argv) {
+
+  // -----------------Command line parsing--------------------
   CLI::App app{"Raytracer"};    // Define the main CLI11 App
   argv = app.ensure_utf8(argv); // Ensure utf8 standard
 
-  // The main App requires exactly one subcommand from the command line: the user has to choose between pfm2png and demo mode
+  // The main App requires exactly one subcommand from the command line
+  // The user has to choose between pfm2png and render mode
   app.require_subcommand(1);
 
-  // -----------------------------------------------------------
-  // Parameters that are common to at least two of the modes
-  // -----------------------------------------------------------
+  // Command line parsing for render mode
+  auto render_subc = app.add_subcommand("render", "Render the scene reading description from an input file");
 
-  // Default values of gamma and alpha for HDR to LDR image conversion
-  float gamma;
-  float alpha;
+  auto& render_input = add_render_input(render_subc);
+  auto& render_png_cfg = add_hdr_options(render_subc);
+  auto& render_img_size = add_img_size_options(render_subc);
+  auto& render_mode_cfg = add_mode_options(render_subc);
 
-  // Name of output file
-  std::string output_file_name;
+  // Command line parsing for pfm2png converter mode
+  auto pfm2png_subc = app.add_subcommand("pfm2png", "Convert a PFM file into a PNG file");
 
-  // Image size (# pixels)
-  int width;
-  int height;
+  auto& pfm2png_input = add_pfm2png_input(pfm2png_subc);
+  auto& pfm2png_png_cfg = add_hdr_options(pfm2png_subc);
 
-  // Antialisasing parameter
-  int samples_per_pixel_edge;
+  // Parse command line
+  CLI11_PARSE(app, argc, argv);
 
-  // Flag for dark image tone mapping
-  bool dark_mode;
+  // -----------------Program pipeline--------------------
+  PngCfg png_cfg;
+  std::unique_ptr<HdrImage> img;
 
-  // -----------------------------------------------------------
-  // Command line parsing for "demo" mode
-  // -----------------------------------------------------------
+  // RENDERER
+  if (*render_subc) {
 
-  // Add a subcommand for the demo mode
-  auto demo_subc =
-      app.add_subcommand("demo", "Run demo rendering and save PFM and PNG files"); // Returns a pointer to an App object
+    // Initialize input stream
+    std::ifstream is;
+    is.open(render_input.file);
+    if (!is) {
+        std::cerr << "Error opening input (source) file \"" << render_input.file << "\"" << std::endl;
+        return EXIT_FAILURE;
+    }
+    InputStream input_stream{is, render_input.file};
 
-  // Add option for on/off tracing or path tracing rendering
-  // Default is on/off tracing
-  std::string demo_mode_str;
-  demo_subc->add_option("-m,--mode", demo_mode_str, "Rendering mode: on/off tracing (default) or path tracing")
-      ->check(CLI::IsMember({"onoff", "path"}))
-      ->default_val("onoff");
+    // Parse scene
+    Scene scene;
+    if (!render_input.floats_from_cl.empty()) {
+      scene.initialize_float_variables_with_priority(std::move(render_input.floats_from_cl));
+    }
+    try {
+      scene.parse_scene(input_stream);
+    } catch (const std::exception &err) {
+      std::cerr << err.what() << '\n';
+      return EXIT_FAILURE;
+    }
 
-  // Add options for image width and height (# pixels) and provide description in the help output
-  // Default values are 1280x960
-  demo_subc->add_option("--width", width, "Specify image width")
-      ->check(CLI::PositiveNumber)
-      ->default_val("1280"); // Reject negative values
-  demo_subc->add_option("--height", height, "Specify image height")
-      ->check(CLI::PositiveNumber)
-      ->default_val("960"); // Reject negative values
+    // Define the image tracer
+    ImageTracer tracer = ImageTracer{
+      std::make_unique<HdrImage>(render_img_size.width, render_img_size.height),
+      scene.camera,
+      render_mode_cfg.samples_per_pixel_edge
+    };
 
-  // Add option for perspective or orthogonal projection
-  bool orthogonal = false;
-  auto orthogonal_flag = demo_subc->add_flag("--orthogonal", orthogonal, "Use orthogonal projection (default is perspective)");
+    // Define the renderer
+    std::unique_ptr<Renderer> renderer = build_renderer(render_mode_cfg, scene.world);
 
-  // Add option for output file name
-  // Default value is "demo"
-  std::string output_file_name_demo;
-  demo_subc->add_option("-o,--output-file", output_file_name_demo, "Insert name of the output PNG file")->default_val("demo");
-  demo_subc->callback([&]() { output_file_name = output_file_name_demo; });
+    // Render the image
+    std::cout << "Rendering image in " << render_input.file << std::endl << std::flush;
+    run_with_timer([&renderer, &tracer]() {
+      tracer.fire_all_rays([&renderer](const Ray &ray) { return (*renderer)(ray); }, show_progress);
+    });
 
-  // Add option for observer transformation: rotation around the scene and camera-screen distance (only for perspective camera).
-  // Angles phi and theta: longitude and colatitude (theta=0 -> north pole). Default position along the negative x direction:
-  // theta = 90, phi = 180.
-  float distance = 1.f;
-  float theta = std::numbers::pi_v<float> / 2.f;
-  float phi = std::numbers::pi_v<float>;
+    // Save PFM image
+    tracer.image->write_pfm(png_cfg.output_file + ".pfm");
+    img = std::move(tracer.image);
 
-  demo_subc->add_option("-d,--distance", distance, "Specify observer's distance from screen (default is 1)")
-      ->excludes(orthogonal_flag);
+    png_cfg = render_png_cfg;
 
-  demo_subc->add_option_function<float>(
-      "--theta-deg", [&theta](const float &theta_deg) { theta = (theta_deg / 180.f) * std::numbers::pi_v<float>; },
-      "Specify observer's colatitude angle theta (0 degree is north pole, default is 90)");
+  // CONVERTER
+  } else if (*pfm2png_subc) {
+    try {
+      img = make_unique<HdrImage>(pfm2png_input.file);
+      std::cout << "File \"" << pfm2png_input.file << "\" has been read from disk.\n";
+    } catch (const std::exception &err) {
+      std::cerr << "Error reading image. " << err.what() << '\n';
+      return EXIT_FAILURE;
+    }
 
-  demo_subc->add_option_function<float>(
-      "--phi-deg", [&phi](const float &phi_deg) { phi = (phi_deg / 180.f) * std::numbers::pi_v<float>; },
-      "Specify observer's longitude angle phi (default is 180 degrees, observer along negative direction of x-axis)");
+    png_cfg = pfm2png_png_cfg;
+  }
+  // Note that these are the only possibilities, since the user is required to run a subcommand
 
-  demo_subc
-      ->add_option<int>("--antialiasing", samples_per_pixel_edge,
-                        "Specify #samples per pixel edge (square root of #samples per pixel)")
-      ->default_val("1");
+  // RENDERER AND CONVERTER
+  // Process the image (normalize and clamp)
+  if (!png_cfg.dark_mode) {
+    img->normalize_image(png_cfg.alpha);
+  } else {
+    img->normalize_image(png_cfg.alpha, DEFAULT_AVG_LUMINOSITY_DARK_MODE);
+  }
+  img->clamp_image();
 
-  demo_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber)
-      ->default_val("2.2"); // Reject negative values
-  demo_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber)
-      ->default_val("0.18"); // Reject negative values
+  // Save the output image
+  try {
+    img->write_ldr_image(png_cfg.output_file + ".png", png_cfg.gamma);
+    std::cout << "File \"" << png_cfg.output_file + ".png" << "\" has been written to disk.\n";
+  } catch (const std::exception &err) {
+    std::cerr << "Error writing image. " << err.what() << '\n';
+    return EXIT_FAILURE;
+  }
 
-  // -----------------------------------------------------------
-  // Command line parsing for "render" mode
-  // -----------------------------------------------------------
+  return EXIT_SUCCESS;
+}
 
-  auto render_subc =
-      app.add_subcommand("render", "Render the scene encoded in an input file"); // Returns a pointer to an App object
 
-  // Option to decide which rendering algorithm to use
-  std::string render_mode_str;
-  render_subc
-      ->add_option("-m,--mode", render_mode_str,
-                   "Rendering mode: on/off tracing, flat tracing, point light tracing or path tracing")
-      ->check(CLI::IsMember({"onoff", "flat", "point_light", "path"}))
-      ->default_val("flat");
+// -----------------------------------------------------------
+// Helpers for command line parsing
+// -----------------------------------------------------------
 
-  // Image width and height (# pixels)
-  render_subc->add_option("--width", width, "Specify image width")->check(CLI::PositiveNumber)->default_val("1280");
-  render_subc->add_option("--height", height, "Specify image height")->check(CLI::PositiveNumber)->default_val("960");
+/// @brief Add option for single input file
+ConvInput& add_pfm2png_input(CLI::App *subc) {
+  static ConvInput conv_input;
+  subc->add_option("-i,--input-file", conv_input.file, "Name of the input PFM file")->required();
+  return conv_input;
+}
+
+/// @brief Add option for input file and float definitions
+RenderInput& add_render_input(CLI::App *subc) {
+  static RenderInput render_input;
 
   // Input (source) file
-  std::string source_file_name;
-  render_subc->add_option("source", source_file_name, "Specify input (source) file.txt containing the scene to render")
+  subc->add_option("source", render_input.file, "Specify input (source) .txt containing the scene to render")
       ->required();
 
-  // Output file
-  std::string output_file_name_render;
-  render_subc->add_option("-o,--output-file", output_file_name_render,
-                          "Insert name of the output file name stem (default: <source>_<mode>)");
-  render_subc->callback([&]() {
-    if (output_file_name_render.empty()) { // Extract and assign source file name stem and render mode
-      std::filesystem::path source_path(source_file_name);
-      output_file_name_render = source_path.stem().string() + "_" + render_mode_str;
-    }
-    output_file_name = output_file_name_render;
-  });
-
-  // Antialiasing
-  render_subc
-      ->add_option<int>("--antialiasing", samples_per_pixel_edge,
-                        "Specify #samples per pixel edge (square root of #samples per pixel)")
-      ->default_val("1");
-
   // Float variable definition from command line
-  std::unordered_map<std::string, float> floats_from_cl;
-  render_subc->add_option_function<std::vector<std::string>>(
+  subc->add_option_function<std::vector<std::string>>(
       "--define-float",
-      [&floats_from_cl](const std::vector<std::string> definition_strings) { // lambda function parsing float definitions from CL
+      [](const std::vector<std::string> definition_strings) {
         for (const auto &def : definition_strings) {
           auto pos = def.find('=');
           if (pos == std::string::npos) {
@@ -162,171 +225,127 @@ int main(int argc, char **argv) {
           } catch (...) {
             throw CLI::ValidationError("Invalid float value");
           }
-          floats_from_cl[name] = value;
+          render_input.floats_from_cl[name] = value;
         }
       },
       "Define named float variables as name=value");
 
-  // Parameters for path tracing
-  int n_rays;
-  int russian_roulette_lim;
-  int max_depth;
-  render_subc->add_option("--n_rays", n_rays, "Specify number of rays scattered at every hit (requires path tracing)")
+  return render_input;
+}
+
+/// @brief Add options for HDR output parameters
+PngCfg& add_hdr_options(CLI::App *subc) {
+  static PngCfg png_cfg;
+
+  subc->add_option("-g,--gamma", png_cfg.gamma, "Factor gamma for tone mapping")
+      ->check(CLI::PositiveNumber)
+      ->default_val("2.2"); // Reject negative values
+  subc->add_option("-a,--alpha", png_cfg.alpha, "Factor alpha for luminosity regularization")
+      ->check(CLI::PositiveNumber)
+      ->default_val("0.18"); // Reject negative values
+
+  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
+  // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
+  subc ->add_flag("--dark", png_cfg.dark_mode,
+                 "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
+      ->default_val("false");
+
+  subc->add_option("-o,--output-file", png_cfg.output_file,
+                          "Name of the output file name stem (extension is PNG)")
+      ->default_val("out");
+
+  return png_cfg;
+}
+
+
+/// @brief Add option for image size (number of pixels)
+ImgSize& add_img_size_options(CLI::App *subc) {
+  static ImgSize img_size;
+
+  // Add options for image width and height (# pixels) and provide description in the help output
+  // Default values are 1280x960
+  subc->add_option("--width", img_size.width, "Specify image width")
+      ->check(CLI::PositiveNumber)
+      ->default_val("1280"); // Reject negative values
+  subc->add_option("--height", img_size.height, "Specify image height")
+      ->check(CLI::PositiveNumber)
+      ->default_val("960"); // Reject negative values
+
+  return img_size;
+}
+
+/// @brief Add options for rendering algorithm parameters
+ModeCfg& add_mode_options(CLI::App *subc) {
+  static ModeCfg mode_cfg;
+
+  // Mode (rendering algorithm)
+  static std::string mode_str;
+  subc->add_option("-m,--mode", mode_str, "Rendering mode: onoff, flat, path, pointlight")
+      ->check(CLI::IsMember({"onoff", "flat", "path", "pointlight"}))
+      ->default_val("flat");
+
+  // Path tracing specific parameters
+  static PathCfg path_cfg;
+  subc->add_option("--n_rays", path_cfg.n_rays,
+                     "Number of rays scattered at every hit (requires path tracing)")
       ->default_val("10");
-  render_subc
-      ->add_option("--roulette", russian_roulette_lim,
-                   "Specify ray depth reached before russian roulette starts applying (requires path tracing)")
+  subc->add_option("--roulette", path_cfg.russian_roulette_lim,
+                     "Ray depth reached before russian roulette starts applying (requires path tracing)")
       ->default_val("3");
-  render_subc->add_option("--max-depth", max_depth, "Specify maximum ray depth (requires path tracing)")->default_val("5");
+  subc->add_option("--max-depth", path_cfg.max_depth, "Maximum ray depth (requires path tracing)")
+      ->default_val("5");
+  subc->add_option("--seq-number", path_cfg.seq_number,
+      "Sequence number for PCG random number generator (requires path tracing)")
+      ->default_val("54");
 
-  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
-  // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
-  render_subc
-      ->add_flag("--dark", dark_mode,
-                 "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
-      ->default_val("false");
+  // Antialiasing
+  subc->add_option<int>("--antialiasing", mode_cfg.samples_per_pixel_edge,
+                        "Specify #samples per pixel edge (square root of #samples per pixel)")
+      ->default_val("1");
 
-  render_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber)
-      ->default_val("2.2"); // Reject negative values
-  render_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber)
-      ->default_val("0.18"); // Reject negative values
+  // Initialize ModeCfg based on the selected value of mode
+  subc->callback([&]() {
+    if (mode_str == "onoff") mode_cfg.mode = ModeCfg::Mode::ONOFF;
+    else if (mode_str == "flat") mode_cfg.mode = ModeCfg::Mode::FLAT;
+    else if (mode_str == "path") mode_cfg.mode = ModeCfg::Mode::PATH;
+    else if (mode_str == "pointlight") mode_cfg.mode = ModeCfg::Mode::POINTLIGHT;
+    else std::unreachable();
 
-  // -----------------------------------------------------------
-  // Command line parsing for pfm2png converter mode
-  // -----------------------------------------------------------
+    if (mode_str == "path") mode_cfg.params = path_cfg;
+    else mode_cfg.params = std::monostate();
+  });
 
-  auto pfm2png_subc = app.add_subcommand("pfm2png", "Convert a PFM file into a PNG file");
-  std::string input_pfm_file_name;
 
-  pfm2png_subc->add_option("-i,--input-file", input_pfm_file_name, "Insert name of the input PFM file")->required();
-  pfm2png_subc->add_option("-o,--output-file", output_file_name, "Insert name of the output PNG file")->required();
+  return mode_cfg;
+}
 
-  pfm2png_subc->add_option("-g,--gamma", gamma, "Insert gamma factor for tone mapping")
-      ->check(CLI::PositiveNumber)
-      ->default_val("2.2"); // Reject negative values
-  pfm2png_subc->add_option("-a,--alpha", alpha, "Insert alpha factor for luminosity regularization")
-      ->check(CLI::PositiveNumber)
-      ->default_val("0.18"); // Reject negative values
 
-  // Flag for dark (almost-black) image rendering: sets a fixed (default) value for parameter avg_luminosity of
-  // HdrImage::normalize_image() used in tone mapping (i. e. exposure)
-  pfm2png_subc
-      ->add_flag("--dark", dark_mode,
-                 "Set default exposure for dark images (works if rgb values of non-dark colors are of order 0.1-1)")
-      ->default_val("false");
+// -----------------------------------------------------------
+// Other helpers
+// -----------------------------------------------------------
 
-  // -----------------------------------------------------------
-  // Procedure
-  // -----------------------------------------------------------
+/// @brief Define renderer given its settings and an instance of World
+std::unique_ptr<Renderer> build_renderer(const ModeCfg& mode_cfg, const World& world) {
 
-  // 1. Parse command line
-  CLI11_PARSE(app, argc, argv);
-
-  // 2. Fill in HdrImage
-  std::unique_ptr<HdrImage> img;
-
-  if (*demo_subc) {
-    // A. (DEMO) Compute the demo image and save PFM file
-    Transformation screen_transformation;
-    // Default position of the screen is the origin, while the parameter distance (that actually matters only for a perspective
-    // camera) offsets the position of the observer along the negative direction of the x-axis.
-
-    if (demo_mode_str == "onoff") {
-      screen_transformation =
-          rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) * translation(-VEC_X);
-      // Default is translation(-VEC_X)
-    } else if (demo_mode_str == "path") {
-      screen_transformation = rotation_z(phi - std::numbers::pi_v<float>) * rotation_y(std::numbers::pi_v<float> / 2.f - theta) *
-                              translation(-3.f * VEC_X);
-      // Default is translation(-3.f * VEC_X)
+  switch (mode_cfg.mode) {
+    case ModeCfg::Mode::ONOFF: return std::make_unique<OnOffTracer>(world);
+    case ModeCfg::Mode::FLAT: return std::make_unique<FlatTracer>(world, BLACK);
+    case ModeCfg::Mode::PATH: {
+      auto pcg_init_seq = static_cast<uint64_t>(std::get<PathCfg>(mode_cfg.params).seq_number);
+      auto pcg = std::make_unique<PCG>(42ull, pcg_init_seq);
+      
+      return std::make_unique<PathTracer>(
+        world,
+        std::move(pcg),
+        std::get<PathCfg>(mode_cfg.params).n_rays,
+        std::get<PathCfg>(mode_cfg.params).russian_roulette_lim,
+        std::get<PathCfg>(mode_cfg.params).max_depth,
+        BLACK
+      );
     }
-
-    // Generate the demo image accordingly
-    std::cout << "Rendering demo image... " << std::endl << std::flush;
-    if (demo_mode_str == "onoff") {
-      img = make_demo_image_onoff(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
-    } else if (demo_mode_str == "path") {
-      img = make_demo_image_path(orthogonal, width, height, distance, screen_transformation, samples_per_pixel_edge);
+    case ModeCfg::Mode::POINTLIGHT: {
+      return std::make_unique<PointLightTracer>(world, DARK_GREY, BLACK);
     }
-    std::cout << std::endl;
-
-    // Save PFM image
-    img->write_pfm(output_file_name + ".pfm");
-
-  } else if (*render_subc) {
-    // B. (RENDERER) Parse input file
-    std::ifstream is;
-    is.open(source_file_name);
-    if (!is) {
-      std::cerr << "Error opening input (source) file \"" << source_file_name << "\"" << std::endl;
-      return EXIT_FAILURE;
-    }
-    InputStream input_stream(is, source_file_name);
-
-    Scene scene;
-    if (!floats_from_cl.empty()) {
-      scene.initialize_float_variables_with_priority(std::move(floats_from_cl));
-    }
-    try {
-      scene.parse_scene(input_stream);
-    } catch (const std::exception &err) {
-      std::cerr << err.what() << '\n';
-      return EXIT_FAILURE;
-    }
-
-    ImageTracer tracer = ImageTracer(std::make_unique<HdrImage>(width, height), scene.camera, samples_per_pixel_edge);
-
-    std::unique_ptr<Renderer> renderer;
-    if (render_mode_str == "onoff") {
-      renderer = std::make_unique<OnOffTracer>(scene.world);
-    } else if (render_mode_str == "flat") {
-      renderer = std::make_unique<FlatTracer>(scene.world, BLACK);
-    } else if (render_mode_str == "point_light") {
-      renderer = std::make_unique<PointLightTracer>(scene.world, Color(0.1f, 0.1f, 0.05f), BLACK);
-    } else if (render_mode_str == "path") {
-      auto pcg = std::make_unique<PCG>();
-      renderer = make_unique<PathTracer>(scene.world, std::move(pcg), n_rays, russian_roulette_lim, max_depth, BLACK);
-    }
-
-    std::cout << "Rendering image in " << source_file_name << "... " << std::endl << std::flush;
-    run_with_timer([&renderer, &tracer]() {
-      tracer.fire_all_rays([&renderer](const Ray &ray) { return (*renderer)(ray); }, show_progress);
-    });
-
-    // Save PFM image
-    tracer.image->write_pfm(output_file_name + ".pfm");
-    img = std::move(tracer.image);
-
-  } else if (*pfm2png_subc) {
-    // C. (CONVERTER) Read input image from file
-    try {
-      img = make_unique<HdrImage>(input_pfm_file_name);
-      std::cout << "File \"" << input_pfm_file_name << "\" has been read from disk.\n";
-    } catch (const std::exception &err) {
-      std::cerr << "Error reading image. " << err.what() << '\n';
-      return EXIT_FAILURE;
-    }
+    std::unreachable();
   }
-  // Note that these are the only possibilities, since the user is required to run a subcommand
-
-  // 3. Process the image (normalize and clamp)
-  if (!dark_mode) {
-    img->normalize_image(alpha);
-  } else {
-    img->normalize_image(alpha, DEFAULT_AVG_LUMINOSITY_DARK_MODE);
-  }
-  img->clamp_image();
-
-  // 4. Save the output image
-  try {
-    img->write_ldr_image(output_file_name + ".png", gamma);
-    std::cout << "File \"" << output_file_name + ".png" << "\" has been written to disk.\n";
-  } catch (const std::exception &err) {
-    std::cerr << "Error writing image. " << err.what() << '\n';
-    return EXIT_FAILURE;
-  }
-
-  return EXIT_SUCCESS;
 }

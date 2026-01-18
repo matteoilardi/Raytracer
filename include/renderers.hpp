@@ -100,6 +100,8 @@ public:
 // --------------- POINT LIGHT TRACER -------------------------------------------------
 // ------------------------------------------------------------------------------------------------------------
 
+inline constexpr Color DARK_GREY{0.1f, 0.1f, 0.1f};
+
 /// @brief functor performing point light tracing (see PR #11)
 class PointLightTracer : public Renderer {
 public:
@@ -112,7 +114,7 @@ public:
   /// @param world to render
   /// @param ambient color
   /// @param background color
-  PointLightTracer(const World &world, Color ambient_color = BLACK, Color background_color = BLACK)
+  PointLightTracer(const World &world, Color ambient_color = DARK_GREY, Color background_color = BLACK)
       : Renderer{world, background_color}, ambient_color{ambient_color} {}
 
   //------------Methods-----------
