@@ -43,10 +43,10 @@ public:
   //-----------Constructors-----------
 
   /// Default constructor
-  constexpr Ray() noexcept : origin{}, direction{} {};
+  constexpr Ray() noexcept : origin{}, direction{} {}
 
   /// Constructor with parameters
-  constexpr Ray(Point origin, Vec direction) noexcept : origin{origin}, direction{direction} {};
+  constexpr Ray(Point origin, Vec direction) noexcept : origin{origin}, direction{direction} {}
 
   constexpr Ray(Point origin, Vec direction, float tmin, float tmax, int depth) noexcept
       : origin{origin}, direction{direction}, tmin{tmin}, tmax{tmax}, depth{depth} {};
@@ -130,7 +130,7 @@ public:
       : Camera{asp_ratio, transformation} {}
   //--------------------Methods----------------------
 
-  virtual Ray fire_ray(float u, float v) const override {
+  Ray fire_ray(float u, float v) const override {
     Point origin = Point{-1.f, u_to_y(u), v_to_z(v)};
     constexpr Vec direction{VEC_X};
     return Ray{origin, direction}.transform(transformation);
@@ -152,7 +152,7 @@ public:
   //--------------------Methods----------------------
 
   ///@brief virtual method that fires a ray through the point of the screen of coordinates (u, v)
-  virtual Ray fire_ray(float u, float v) const override {
+  Ray fire_ray(float u, float v) const override {
     Point origin{-distance, 0.f, 0.f};
     Vec direction{distance, u_to_y(u), v_to_z(v)};
     return Ray{origin, direction}.transform(transformation);

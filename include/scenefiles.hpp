@@ -957,7 +957,7 @@ public:
         auto is_overwritten = static_cast<bool>(overwritten_variables.count(float_name));
 
         // Throw if a variable with the same name has already been defined but is not among the overwritten ones
-        if (float_variables.count(float_name) && !is_overwritten {
+        if (float_variables.count(float_name) && !is_overwritten) {
           throw GrammarError(definition_kw_source_loc,
                              "float variable \"" + float_name + "\" already declared elsewhere in the file");
         }

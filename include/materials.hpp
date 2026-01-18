@@ -61,7 +61,7 @@ struct UniformPigment : public Pigment {
   UniformPigment(Color color) : Pigment{}, color{color} {}
 
   //------------Methods-----------
-  virtual Color operator()(Vec2d uv) const override { return color; }
+  Color operator()(Vec2d uv) const override { return color; }
 };
 
 //-------------------------------------------------------------------------
@@ -117,7 +117,7 @@ public:
   /// @brief Given surface uv coordinates, return the corresponding Color from the texture
   /// @param uv coordinates in [0, 1)^2 identifying a point on the surface
   /// @return color extracted from the HDR image at that position
-  virtual Color operator()(Vec2d uv) const override {
+  Color operator()(Vec2d uv) const override {
     // Convert u, v ∈ [0,1) to pixel indices in the image (flooring positive integers)
     int col = static_cast<int>(uv.u * image.width);
     int row = static_cast<int>(uv.v * image.height);

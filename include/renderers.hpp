@@ -59,7 +59,7 @@ public:
   OnOffTracer(const World &world) : Renderer{world} {}
 
   //------------Methods-----------
-  virtual Color operator()(Ray ray) const {
+  Color operator()(Ray ray) const override {
     if (world.on_off_ray_intersection(
             ray)) { // Use ad hoc implemented on_off_ray_intersection method to stop looping over objects as soon as one is hit
       return WHITE; // Return white if any object is hit
@@ -85,7 +85,7 @@ public:
   FlatTracer(const World &world, Color background_color = BLACK) : Renderer(world, background_color) {}
 
   //------------Methods-----------
-  virtual Color operator()(Ray ray) const {
+  Color operator()(Ray ray) const override {
     std::optional<HitRecord> hit = world.ray_intersection(ray); // save the closest hit (if any)
     if (!hit) {
       return background_color;
@@ -116,7 +116,7 @@ public:
       : Renderer{world, background_color}, ambient_color{ambient_color} {}
 
   //------------Methods-----------
-  virtual Color operator()(Ray ray) const {
+  Color operator()(Ray ray) const override {
     // Forward declarations
     std::optional<HitRecord> hit;
     const Material *hit_material;
@@ -145,7 +145,7 @@ public:
 
       reflection_attenuation *= (*brdf->pigment)(hit->surface_point);
       Vec new_dir = ray.direction - 2 * hit->normal.to_vector() * (hit->normal * ray.direction);
-      // Note that hit shapes always return normalized normals (Shape::ray_intersection)
+      // Note that hit shapes always return normalized normals (Object::ray_intersection)
       ray = Ray(hit->world_point, new_dir);
     }
 
@@ -203,7 +203,7 @@ public:
   }
 
   //------------Methods-----------
-  virtual Color operator()(Ray ray) const {
+  Color operator()(Ray ray) const override {
     // 1. Stop recursion if maximum depth is reached
     if (ray.depth > max_depth) {
       return BLACK;
