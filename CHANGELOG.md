@@ -1,5 +1,8 @@
 # HEAD
 
+
+# [1.0.0] - 2026-01-19
+
 ## 2026-01-18
 - Major internal refactor [PR#17](https://github.com/matteoilardi/Raytracer/pull/14): 
     - unified coding style
