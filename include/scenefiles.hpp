@@ -566,10 +566,15 @@ public:
   /// @brief Read a token and check that it matches the symbol expected from our grammar.
   static void expect_symbol(InputStream &input_stream, char symbol) {
     Token token = input_stream.read_token();
-    if (token.type != TokenKind::SYMBOL || std::get<char>(token.value) != symbol) {
+    if (token.type != TokenKind::SYMBOL) {
+      throw GrammarError(token.source_location,
+                          std::string("expected SYMBOL '") + symbol + "' instead of " + token.type_to_string());
+    } else if (std::get<char>(token.value) != symbol) {
       throw GrammarError(token.source_location,
                          "got '" + std::string(1, std::get<char>(token.value)) + "' instead of '" + symbol + "'");
     }
+
+    return;
   }
 
   /// @brief Read a token and check it is one of the keywords your grammar allow in that position. Return the keyword.
