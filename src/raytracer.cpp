@@ -5,6 +5,7 @@
 #include "renderers.hpp"
 #include "scenefiles.hpp"
 #include "shapes.hpp"
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -111,11 +112,15 @@ int main(int argc, char **argv) {
   if (*render_subc) {
 
     // Initialize input stream
+    if (!std::filesystem::is_regular_file(render_input.file)) {
+      std::cerr << "Path \"" << render_input.file << "\" does not exist or is not a regular file" << std::endl;
+      return EXIT_FAILURE;
+    }
     std::ifstream is;
     is.open(render_input.file);
     if (!is) {
-        std::cerr << "Error opening input (source) file \"" << render_input.file << "\"" << std::endl;
-        return EXIT_FAILURE;
+      std::cerr << "Error opening input file \"" << render_input.file << "\"" << std::endl;
+      return EXIT_FAILURE;
     }
     InputStream input_stream{is, render_input.file};
 

@@ -22,6 +22,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -396,17 +397,16 @@ public:
   /// @brief PFM file --> HDR image
   /// @param inupt file name
   explicit HdrImage(const std::string &file_name) {
+    if (!std::filesystem::is_regular_file(file_name)) {
+      throw std::runtime_error{"Path \"" + file_name + "\" does not exist or is not a regular file"};
+    }
+
     std::ifstream stream(file_name, std::ios::binary); // Open the file in binary mode
-    if (!stream.is_open()) {
-      std::string error_msg{"Failed to open file \"" + file_name + "\""};
-      if (errno) {                                        // errno is a system-specific number that identifies an error occured
-        error_msg += ": " + std::string{strerror(errno)}; // convert errno to the string describing the message
-      }
-      throw std::runtime_error(error_msg);
+    if (!stream) {
+      throw std::runtime_error{"Unable to open file \"" + file_name + '"'};
     }
 
     read_pfm_file(stream);
-    stream.close();
   }
 
   // Methods (those with a leading underscore are intended to be private)
