@@ -1,0 +1,79 @@
+#pragma once
+
+#include <metal_stdlib>
+using namespace metal;
+
+constant float PI = 3.14159265358979323846f;
+
+struct Affine3x4 { float4 row0, row1, row2; };
+struct ONB { float3 e1, e2, e3; };
+struct PolarCoords { float theta, phi; };
+struct SurfaceCoords { float u, v; };
+
+struct Ray { 
+  float3 origin, direction;
+  uint depth;
+  float tmin = 1e-5f;
+  float tmax = INFINITY;
+};
+
+float3 transform_point(Affine3x4 T, float3 point) {
+    float4 p = float4(point, 1.f);
+    float3 result;
+
+    result.x = dot(T.row0, p);
+    result.y = dot(T.row1, p);
+    result.z = dot(T.row2, p);
+
+    return result;
+}
+
+float3 transform_vector(Affine3x4 T, float3 vector) {
+    float4 v = float4(vector, 0.f);
+    float3 result;
+
+    result.x = dot(T.row0, v);
+    result.y = dot(T.row1, v);
+    result.z = dot(T.row2, v);
+
+    return result;
+}
+
+// Applies the transposed inverse, given the inverse
+float3 transform_normal_with_transposed(Affine3x4 T_inv, float3 n) {
+    float3 result;
+
+    result.x = T_inv.row0.x * n.x + T_inv.row1.x * n.y + T_inv.row2.x * n.z;
+    result.y = T_inv.row0.y * n.x + T_inv.row1.y * n.y + T_inv.row2.y * n.z;
+    result.z = T_inv.row0.z * n.x + T_inv.row1.z * n.y + T_inv.row2.z * n.z;
+
+    return result;
+}
+
+Ray transform_ray(Affine3x4 T, Ray ray) {
+  Ray result;
+  result.origin = transform_point(T, ray.origin);
+  result.direction = transform_vector(T, ray.direction);
+  result.depth = ray.depth;
+  result.tmin = ray.tmin;
+  result.tmax = ray.tmax;
+  return result;
+}
+
+// Requires e3 to be normalized
+ONB build_onb(float3 e3) {
+  const float sign = copysign(1.f, e3.z);
+  const float a = -1.f / (sign + e3.z);
+  const float b = e3.x * e3.y * a;
+
+  ONB result;
+  result.e1 = float3(1.f + sign * e3.x * e3.x * a, sign * b, -sign * e3.x);
+  result.e2 = float3(b, sign + e3.y * e3.y * a, -e3.y);
+  result.e3 = e3;
+
+  return result;
+}
+
+float3 ray_at(Ray ray, float t) {
+  return ray.origin + t * ray.direction;
+}

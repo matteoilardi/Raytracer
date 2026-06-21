@@ -1,10 +1,13 @@
 #include "CLI11.hpp"
 #include "colors.hpp"
+#include "cpu_backend.hpp"
 #include "geometry.hpp"
+#include "gpu_lowering.hpp"
+#include "metal_backend.hpp"
 #include "profiling.hpp"
-#include "renderers.hpp"
 #include "scenefiles.hpp"
 #include "shapes.hpp"
+#include "render_config.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -20,6 +23,7 @@ struct ConvInput { std::string file; };
 struct RenderInput {
   std::string file;
   std::unordered_map<std::string, float> floats_from_cl;
+  bool use_gpu;
 };
 
 /// @brief Output HDR image configuration
@@ -37,19 +41,6 @@ struct ImgSize {
   int height;
 };
 
-struct PathCfg {
-  int n_rays;
-  int russian_roulette_lim;
-  int max_depth;
-  int seq_number;
-};
-
-struct ModeCfg {
-  enum class Mode { PATH, FLAT, POINTLIGHT, ONOFF } mode;
-  std::variant<std::monostate, PathCfg> params;
-  int samples_per_pixel_edge; // Antialiasing
-};
-
 /// @brief Add option for single input file
 ConvInput& add_pfm2png_input(CLI::App *subc);
 
@@ -65,13 +56,6 @@ ImgSize& add_img_size_options(CLI::App *subc);
 /// @brief Add options for rendering algorithm parameters
 ModeCfg& add_mode_options(CLI::App *subc);
 
-
-// -----------------------------------------------------------
-// Other helpers
-// -----------------------------------------------------------
-
-/// @brief Define renderer given its settings and an instance of World
-std::unique_ptr<Renderer> build_renderer(const ModeCfg& mode_cfg, const World& world);
 
 // -----------------------------------------------------------
 // Main
@@ -103,6 +87,13 @@ int main(int argc, char **argv) {
 
   // Parse command line
   CLI11_PARSE(app, argc, argv);
+
+#if !RAYTRACER_HAS_METAL_BACKEND
+  if (render_input.use_gpu) {
+    std::cerr << "This binary was built without Metal support. Reconfigure with -DRAYTRACER_ENABLE_METAL=ON.\n";
+    return EXIT_FAILURE;
+  }
+#endif
 
   // -----------------Program pipeline--------------------
   PngCfg png_cfg;
@@ -136,27 +127,44 @@ int main(int argc, char **argv) {
       return EXIT_FAILURE;
     }
 
-    // Define the image tracer
-    ImageTracer tracer = ImageTracer{
-      std::make_unique<HdrImage>(render_img_size.width, render_img_size.height),
-      scene.camera,
-      render_mode_cfg.samples_per_pixel_edge
-    };
-
-    // Define the renderer
-    std::unique_ptr<Renderer> renderer = build_renderer(render_mode_cfg, scene.world);
+    // Supply exact aspect ratio if aspect ratio was not chosen
+    if (!scene.camera->asp_ratio.has_value()) {
+      scene.camera->asp_ratio.emplace(static_cast<float>(render_img_size.width) /
+                                      static_cast<float>(render_img_size.height));
+    }
 
     // Render the image
     std::cout << "Rendering image in " << render_input.file << std::endl << std::flush;
-    run_with_timer([&renderer, &tracer]() {
-      tracer.fire_all_rays([&renderer](const Ray &ray) { return (*renderer)(ray); }, show_progress);
-    });
+    png_cfg = render_png_cfg;
+
+    try {
+      run_with_timer([&]() {
+        if (render_input.use_gpu) {
+#if RAYTRACER_HAS_METAL_BACKEND
+          mtl::Backend backend;
+          gpu::Scene gpu_scene = gpu::lower_scene(scene);
+          // NOTE see note on antialiasing in the GPU path
+          img = backend.render(gpu_scene, render_mode_cfg, render_img_size.width, render_img_size.height);
+#else
+          std::unreachable();
+#endif
+        } else {
+          cpu::Backend backend;
+          img = backend.render(scene, render_mode_cfg, render_img_size.width, render_img_size.height);
+        }
+      });
+    } catch (const std::exception &err) {
+      std::cerr << "Error rendering image. " << err.what() << '\n';
+      return EXIT_FAILURE;
+    }
 
     // Save PFM image
-    tracer.image->write_pfm(png_cfg.output_file + ".pfm");
-    img = std::move(tracer.image);
-
-    png_cfg = render_png_cfg;
+    try {
+      img->write_pfm(png_cfg.output_file + ".pfm");
+    } catch (const std::exception &err) {
+      std::cerr << "Error writing PFM image. " << err.what() << '\n';
+      return EXIT_FAILURE;
+    }
 
   // CONVERTER
   } else if (*pfm2png_subc) {
@@ -235,6 +243,9 @@ RenderInput& add_render_input(CLI::App *subc) {
       },
       "Float variables defined as name=value");
 
+  subc->add_flag("--gpu", render_input.use_gpu, "Render using the Metal GPU backend")
+      ->default_val("false");
+
   return render_input;
 }
 
@@ -307,6 +318,9 @@ ModeCfg& add_mode_options(CLI::App *subc) {
   subc->add_option<int>("--antialiasing", mode_cfg.samples_per_pixel_edge,
                         "Number of samples per pixel edge (square root of #samples per pixel)")
       ->default_val("1");
+  // NOTE In the GPU path, antialiasing is not yet implemented. However, this option is used in path tracing to
+  // calculate the number of statistically independent paths per pixel to sample. Note that all of these paths
+  // start form the same ray (no stratified sampling).
 
   // Initialize ModeCfg based on the selected value of mode
   subc->callback([&]() {
@@ -322,35 +336,4 @@ ModeCfg& add_mode_options(CLI::App *subc) {
 
 
   return mode_cfg;
-}
-
-
-// -----------------------------------------------------------
-// Other helpers
-// -----------------------------------------------------------
-
-/// @brief Define renderer given its settings and an instance of World
-std::unique_ptr<Renderer> build_renderer(const ModeCfg& mode_cfg, const World& world) {
-
-  switch (mode_cfg.mode) {
-    case ModeCfg::Mode::ONOFF: return std::make_unique<OnOffTracer>(world);
-    case ModeCfg::Mode::FLAT: return std::make_unique<FlatTracer>(world, BLACK);
-    case ModeCfg::Mode::PATH: {
-      auto pcg_init_seq = static_cast<uint64_t>(std::get<PathCfg>(mode_cfg.params).seq_number);
-      auto pcg = std::make_unique<PCG>(42ull, pcg_init_seq);
-      
-      return std::make_unique<PathTracer>(
-        world,
-        std::move(pcg),
-        std::get<PathCfg>(mode_cfg.params).n_rays,
-        std::get<PathCfg>(mode_cfg.params).russian_roulette_lim,
-        std::get<PathCfg>(mode_cfg.params).max_depth,
-        BLACK
-      );
-    }
-    case ModeCfg::Mode::POINTLIGHT: {
-      return std::make_unique<PointLightTracer>(world, DARK_GREY, BLACK);
-    }
-    std::unreachable();
-  }
 }

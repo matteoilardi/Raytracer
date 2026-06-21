@@ -93,10 +93,10 @@ public:
   /// @brief Fires a ray through the point of the screen of coordinates (u, v)
   /// @param Screen coordinate u
   /// @param Screen coordinate v
-  /// @details This method is supposed to be called after asp_ratio is given a float value,
-  /// which usually happens when the instance of Camera starts seeing an HdrImage object,
-  /// inside Imagetracer. This is because the default aspect ratio is inferred from the size
-  /// of the image.
+  /// @details This method is supposed to be called only after asp_ratio has been given a
+  /// concrete value. When the camera is created without an explicit aspect ratio, the render
+  /// preparation path should ideally infer it from the output image size before ray generation
+  /// starts.
   virtual Ray fire_ray(float u, float v) const = 0;
 
 protected:
@@ -183,6 +183,7 @@ public:
     }
     if (!camera->asp_ratio.has_value()) {
       camera->asp_ratio.emplace(static_cast<float>(this->image->width) / static_cast<float>(this->image->height));
+      // TODO handle default aspect ratio at a cleaner shared render-preparation level without relying on ImageTracer.
     }
   }
   // Note that it is ok for image and camera to stay in the heap, since they will be created once and after that access to

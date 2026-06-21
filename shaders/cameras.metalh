@@ -1,0 +1,64 @@
+#pragma once
+
+#include <metal_stdlib>
+#include "geometry.metalh"
+using namespace metal;
+
+enum class CameraType : uint {
+  PERSPECTIVE = 0,
+  ORTHOGONAL = 1
+};
+
+struct Camera {
+  Affine3x4 camera_to_world;
+  float distance;
+  float asp_ratio;
+  CameraType camera_type;
+  uint _padding0;
+};
+
+
+float _screen_u_to_y(float u, float asp_ratio) {
+  return (1.f - 2.f * u) * asp_ratio;
+}
+
+float _screen_v_to_z(float v) {
+  return -1.f + 2.f * v;
+}
+
+Ray orthogonal_camera_cast_first_ray(float u, float v, float asp_ratio, Affine3x4 transformation) {
+  Ray ray;
+  ray.origin = float3(-1.f, _screen_u_to_y(u, asp_ratio), _screen_v_to_z(v));
+  ray.direction = float3(1.f, 0.f, 0.f);
+  ray.depth = 0; 
+  return transform_ray(transformation, ray); 
+}
+
+Ray perspective_camera_cast_first_ray(float u, float v, float asp_ratio, float distance, Affine3x4 transformation) {
+  Ray ray;
+  ray.origin = float3(-distance, 0.f, 0.f);
+  ray.direction = float3(distance, _screen_u_to_y(u, asp_ratio), _screen_v_to_z(v));
+  ray.depth = 0; 
+  return transform_ray(transformation, ray); 
+}
+
+// TODO consider using types uint/uint2 for the arguments
+Ray cast_first_ray(Camera camera, int col, int row, int width, int height) {
+  float u = ((float)col + 0.5f) / width;
+  float v = 1.f - ((float)row + 0.5f) / height;
+
+  switch (camera.camera_type) {
+  case CameraType::ORTHOGONAL:
+    return orthogonal_camera_cast_first_ray(u, v, camera.asp_ratio, camera.camera_to_world);
+  case CameraType::PERSPECTIVE:
+    return perspective_camera_cast_first_ray(u, v, camera.asp_ratio, camera.distance, camera.camera_to_world);
+  }
+
+  Ray sentinel;
+  sentinel.origin = float3(INFINITY, INFINITY, INFINITY);
+  sentinel.direction = float3(0.f, 0.f, 0.f);
+  sentinel.depth = 0;
+  sentinel.tmin = 1.f;
+  sentinel.tmax = 0.f;
+  return sentinel;
+}

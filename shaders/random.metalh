@@ -1,0 +1,42 @@
+#pragma once
+
+#include <metal_stdlib>
+#include "geometry.metalh"
+using namespace metal;
+
+struct PCGState{ ulong value, inc; };
+
+uint pcg_random(thread PCGState &state) {
+  ulong old_value = state.value;
+  state.value = old_value * 6364136223846793005ull + state.inc;
+  
+  uint xorshifted = (uint)(((old_value >> 18ull) ^ old_value) >> 27ull);
+  uint rot = (uint)(old_value >> 59ull);
+  return (xorshifted >> rot) | (xorshifted << ((32 - rot) & 31));
+}
+
+void pcg_init(thread PCGState &state, ulong init_value, ulong init_seq) {
+  state.value = 0ull;
+  state.inc = (init_seq << 1ull) | 1ull;
+
+  (void)pcg_random(state);
+  state.value += init_value;
+  (void)pcg_random(state);
+}
+
+float pcg_random_float(thread PCGState &state) {
+  uint r = pcg_random(state);
+  return (float)r / 4294967296.f; // 2^32
+}
+
+PolarCoords pcg_random_phong(thread PCGState &state, int n) {
+  PolarCoords theta_phi;
+  float x = pcg_random_float(state);
+  theta_phi.theta = acos(pow(x, 1.f / (float)(n + 1)));
+  theta_phi.phi = pcg_random_float(state) * 2.f * PI;
+  return theta_phi;
+}
+
+PolarCoords pcg_random_unif_hemisphere(thread PCGState &state) {
+  return pcg_random_phong(state, 0);
+}

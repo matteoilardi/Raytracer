@@ -1,0 +1,124 @@
+#pragma once
+
+#include <metal_stdlib>
+#include "geometry.metalh"
+using namespace metal;
+
+enum class ShapeType : uint {
+  SPHERE = 0,
+  PLANE = 1
+};
+
+struct Sphere {
+  Affine3x4 local_to_world;
+  Affine3x4 world_to_local;
+  uint material_idx;
+  uint _padding0;
+  uint _padding1;
+  uint _padding2;
+};
+
+struct Plane {
+  Affine3x4 local_to_world;
+  Affine3x4 world_to_local;
+  uint material_idx;
+  uint _padding0;
+  uint _padding1;
+  uint _padding2;
+};
+
+struct HitRecord {
+  float t;
+  float3 point;
+  float3 normal;
+  SurfaceCoords uv;
+  uint material_idx; 
+};
+
+// returns smallest valid t
+float intersect_sphere_t(Affine3x4 world_to_local, Ray world_ray) {
+  Ray ray = transform_ray(world_to_local, world_ray);  
+
+  float a = dot(ray.direction, ray.direction);
+  float b = dot(ray.origin, ray.direction);
+  float c = dot(ray.origin, ray.origin) - 1.f;
+  float reduced_disc = b * b - a * c;
+
+  if (reduced_disc <= 0.f) { return INFINITY; }
+
+  float t1 = (-b - sqrt(reduced_disc)) / a;
+  float t2 = (-b + sqrt(reduced_disc)) / a;
+
+  if (t1 > ray.tmin && t1 < ray.tmax) { return t1; }
+  if (t2 > ray.tmin && t2 < ray.tmax) { return t2; }
+
+  return INFINITY;
+}
+
+// returns smallest valid t
+float intersect_plane_t(Affine3x4 world_to_local, Ray world_ray) {
+  Ray ray = transform_ray(world_to_local, world_ray);  
+  
+  if (ray.direction.z == 0.f) { return INFINITY; }
+  float t = -ray.origin.z / ray.direction.z;
+  if (t > ray.tmin && t < ray.tmax) { return t; }
+
+  return INFINITY;
+}
+
+float3 _sphere_get_normal(float3 local_point, Affine3x4 world_to_local) {
+  return normalize(transform_normal_with_transposed(world_to_local, local_point)); // apply transposed inverse
+}
+
+SurfaceCoords _sphere_get_uv(float3 local_point) {
+  SurfaceCoords uv;
+  uv.u = atan2(local_point.y, local_point.x) / (2.f * PI); 
+  if (uv.u < 0.f) { uv.u += 1.f; }
+  uv.v = acos(local_point.z) / PI;
+  return uv; 
+}
+
+float3 _plane_get_normal(Affine3x4 world_to_local) {
+ return normalize(transform_normal_with_transposed(world_to_local, float3(0.f, 0.f, 1.f)));
+}
+
+SurfaceCoords _plane_get_uv(float3 local_point) {
+  SurfaceCoords uv;
+  uv.u = local_point.x - floor(local_point.x);
+  uv.v = local_point.y - floor(local_point.y);
+  return uv; 
+}
+
+HitRecord build_intersection(Ray world_ray, float t,
+                             ShapeType shape_type, Affine3x4 world_to_local, uint material_idx) {
+  float3 world_point = ray_at(world_ray, t);
+  float3 local_point = transform_point(world_to_local, world_point);
+  float3 world_normal;
+  SurfaceCoords uv;
+
+  switch (shape_type) {
+  case ShapeType::SPHERE:
+    world_normal = _sphere_get_normal(local_point, world_to_local);
+    uv = _sphere_get_uv(local_point);
+    break;
+  case ShapeType::PLANE:
+    world_normal = _plane_get_normal(world_to_local);
+    uv = _plane_get_uv(local_point);
+    break;
+  default: // sentinel values
+    world_normal = float3(INFINITY, INFINITY, INFINITY);
+    uv = SurfaceCoords{INFINITY, INFINITY};
+  }
+
+  // flip normal against the incoming direction
+  float sign = copysign(1.f, dot(world_normal, world_ray.direction));
+  world_normal = world_normal * (-1.f * sign);
+
+  HitRecord hit;
+  hit.t = t;
+  hit.point = world_point;
+  hit.normal = world_normal;
+  hit.uv = uv;
+  hit.material_idx = material_idx;
+  return hit;
+}

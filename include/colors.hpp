@@ -10,7 +10,6 @@
 #pragma once
 
 #define _CRT_SECURE_NO_WARNINGS // disable warning due to strerr function in the external library (for MVSC)
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h" // external library for LDR images
 
 #include <algorithm>
@@ -78,7 +77,9 @@ public:
 };
 
 /// @brief Check whether two floats are equal within a given tolerance
-bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) noexcept { return std::fabs(x - y) < error_tolerance; }
+inline bool are_close(float x, float y, float error_tolerance = DEFAULT_ERROR_TOLERANCE) noexcept {
+  return std::fabs(x - y) < error_tolerance;
+}
 
 /// @brief normalize a float number (between 0 and 1) using the formula
 /// x/(1+x) (almost x for small x, but saturates to 1 for large x)
@@ -187,7 +188,7 @@ public:
 /// @param stream
 /// @param value
 /// @param endianness
-void _write_float(std::ostream &stream, float value, Endianness endianness) {
+inline void _write_float(std::ostream &stream, float value, Endianness endianness) {
   // Convert "value" in a sequence of 32 bits
   uint32_t double_word = std::bit_cast<uint32_t>(value);
   // uint32_t double_word{*((uint32_t *)&value)}; // C-style solution, violates C++'s aliasing rules
@@ -215,7 +216,7 @@ void _write_float(std::ostream &stream, float value, Endianness endianness) {
 /// @brief Reads a stream of bytes and convert them to a float
 /// @param stream
 /// @param endianness
-float _read_float(std::istream &stream, Endianness endianness) {
+inline float _read_float(std::istream &stream, Endianness endianness) {
   uint8_t bytes[4];
 
   switch (endianness) {
@@ -239,7 +240,7 @@ float _read_float(std::istream &stream, Endianness endianness) {
 
 /// @brief Read the line of bytes already converting into ASCII
 /// @param stream
-std::string _read_line(std::istream &stream) {
+inline std::string _read_line(std::istream &stream) {
   std::string result{""};
   char cur_byte;
 
@@ -254,7 +255,7 @@ std::string _read_line(std::istream &stream) {
 
 /// @brief Parse image dimensions (columns, rows) from the appropriate line of a PFM file header
 /// @param line to parse
-std::pair<int, int> _parse_img_size(const std::string &line) {
+inline std::pair<int, int> _parse_img_size(const std::string &line) {
   std::istringstream iss{line};
   int width, height;
 
@@ -279,7 +280,7 @@ std::pair<int, int> _parse_img_size(const std::string &line) {
 
 /// @brief Parse endianness from the appropriate line of a PFM file header
 /// @param line
-Endianness _parse_endianness(const std::string &line) {
+inline Endianness _parse_endianness(const std::string &line) {
   std::istringstream iss{line};
   float value = 0.f;
   if (!(iss >> value)) {

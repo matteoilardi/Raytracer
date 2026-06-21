@@ -1,0 +1,102 @@
+#pragma once
+
+#include "geometry.metalh"
+#include "random.metalh"
+using namespace metal;
+
+enum class PigmentType : uint {
+  UNIFORM = 0,
+  CHECKERED = 1
+};
+
+enum class BRDFType : uint {
+  DIFFUSIVE = 0,
+  SPECULAR = 1
+};
+
+struct InlinePigment {
+  PigmentType pigment_type;
+  uint resource_idx;
+  int int_parameter;
+  uint _padding0;
+  float4 color1;
+  float4 color2;
+};
+
+struct Material {
+  BRDFType brdf_type;
+  uint _padding0;
+  uint _padding1;
+  uint _padding2;
+
+  InlinePigment brdf_pigment;
+  InlinePigment emitted_pigment;
+};
+
+
+// Assumes normal to be normalized
+Ray brdf_diffusive_scatter_ray(thread PCGState &pcg,
+                               float3 incoming_dir, float3 hit_point, float3 normal, uint depth) {
+  ONB onb = build_onb(normal);
+  PolarCoords theta_phi = pcg_random_phong(pcg, 1);
+  float theta = theta_phi.theta;
+  float phi = theta_phi.phi;
+
+  Ray scattered;
+  scattered.direction = (onb.e1 * sin(theta)*cos(phi)) + (onb.e2 * sin(theta)*sin(phi)) + (onb.e3 * cos(theta));
+  scattered.origin = hit_point;
+  scattered.depth = depth;
+  scattered.tmin = 1e-3f;
+  scattered.tmax = INFINITY;
+  return scattered;
+}
+
+// Assumes normal to be normalized
+Ray brdf_specular_scatter_ray(float3 incoming_dir, float3 hit_point, float3 normal, uint depth) {
+  Ray scattered;
+  scattered.direction = reflect(incoming_dir, normal);
+  scattered.origin = hit_point;
+  scattered.depth = depth;
+  scattered.tmin = 1e-3f;
+  scattered.tmax = INFINITY;
+  return scattered;
+}
+
+// Assumes normal to be normalized
+Ray brdf_scatter_ray(BRDFType brdf, thread PCGState &pcg,
+                               float3 incoming_dir, float3 hit_point, float3 normal, uint depth) {
+  switch(brdf) {
+  case BRDFType::DIFFUSIVE:
+    return brdf_diffusive_scatter_ray(pcg, incoming_dir, hit_point, normal, depth);
+  case BRDFType::SPECULAR:
+    return brdf_specular_scatter_ray(incoming_dir, hit_point, normal, depth);
+  }
+
+  Ray sentinel;
+  sentinel.origin = float3(INFINITY, INFINITY, INFINITY);
+  sentinel.direction = float3(0.f, 0.f, 0.f);
+  sentinel.depth = 0;
+  sentinel.tmin = 1.f;
+  sentinel.tmax = 0.f;
+  return sentinel;
+}
+
+float3 pigment_checkered_eval(SurfaceCoords uv, float3 color1, float3 color2, int n) {
+  int i = (int)(uv.u * n);
+  int j = (int)(uv.v * n);
+
+  if ((i + j) % 2 == 0) { return color1; }
+  else { return color2; }
+}
+
+float3 pigment_eval(InlinePigment pigment, SurfaceCoords uv) {
+  switch(pigment.pigment_type) {
+  case PigmentType::UNIFORM:
+    return pigment.color1.xyz;
+  case PigmentType::CHECKERED:
+    return pigment_checkered_eval(uv, pigment.color1.xyz, pigment.color2.xyz, pigment.int_parameter);
+  }
+  
+  float3 sentinel = float3(1.f, 0.f, 1.f); // magenta
+  return sentinel;
+}
